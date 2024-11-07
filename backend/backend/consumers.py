@@ -6,21 +6,23 @@ from io import BytesIO
 from PIL import Image
 
 class VideoFrameConsumer(WebsocketConsumer):
+    counter = 0  # Initialise the counter - used to name image file for each frame
+
     def connect(self):
         self.accept()
 
     def disconnect(self, close_code):
-        pass
+        self.counter = 0 # Reset counter on disconnection
 
     def receive(self, text_data):
         # Parse the received JSON message
         text_data_json = json.loads(text_data)
         frame_data = text_data_json.get('frame', None)
 
-        print("Received frame")
-
         if frame_data:
             self.save_frame(frame_data)
+
+        print("Received frame")
 
     def save_frame(self, frame_data):
         # Decode the base64-encoded image
@@ -34,15 +36,13 @@ class VideoFrameConsumer(WebsocketConsumer):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        # Generate a unique filename (you can use a timestamp or counter for uniqueness)
-        filename = os.path.join(save_dir, 'frame_{}.jpg'.format(self.get_next_filename(save_dir)))
+        # Generate a unique filename using the counter
+        filename = os.path.join(save_dir, f'frame_{self.counter}.jpg')
         
         # Save the image
         image.save(filename)
+
         print(f"Saved frame to {filename}")
 
-    def get_next_filename(self, save_dir):
-        # Count the number of images in the directory to get the next number
-        existing_files = os.listdir(save_dir)
-        image_files = [f for f in existing_files if f.endswith('.jpg')]
-        return len(image_files)
+        # Increment the counter after saving
+        self.counter += 1
