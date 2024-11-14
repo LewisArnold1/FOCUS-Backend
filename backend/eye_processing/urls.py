@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import RetrieveEyeMetricsView
+from .views import RetrieveLastBlinkCountView
 
 urlpatterns = [
-    path('metrics/', RetrieveEyeMetricsView.as_view(), name='retrieve_eye_metrics'),  # Retrieves metrics for a user
+    path('api/last-blink-count/', RetrieveLastBlinkCountView.as_view(), name='last-blink-count'),
 ]
