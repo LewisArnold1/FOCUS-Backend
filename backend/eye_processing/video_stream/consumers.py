@@ -1,9 +1,11 @@
 import json
 import base64
-import os
 from channels.generic.websocket import WebsocketConsumer
 from io import BytesIO
 from PIL import Image
+import numpy as np
+import cv2
+from eye_processing.blink_detection.count_blinks import process_blink
 
 class VideoFrameConsumer(WebsocketConsumer):
 
@@ -20,26 +22,27 @@ class VideoFrameConsumer(WebsocketConsumer):
         timestamp = text_data_json.get('timestamp', None)  # Extract timestamp
 
         if frame_data:
-            self.save_frame(frame_data, timestamp)
+            # Process the frame and get the blink count
+            self.process_frame(frame_data, timestamp)
 
-        print(f"Received frame with timestamp: {timestamp}")
-
-    def save_frame(self, frame_data, timestamp):
+    def process_frame(self, frame_data, timestamp):
         # Decode the base64-encoded image
-        image_data = base64.b64decode(frame_data.split(',')[1])  # Split to remove 'data:image/jpeg;base64,'
-
-        # Create a PIL Image from the decoded bytes
+        image_data = base64.b64decode(frame_data.split(',')[1])
         image = Image.open(BytesIO(image_data))
+        frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-        # Define the directory where images will be saved
-        save_dir = 'received_frames'
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
+        # Call the blink detection function with the frame
+        total_blinks, ear = process_blink(frame)
 
-        # Generate a unique filename using the timestamp
-        filename = os.path.join(save_dir, f'frame_{timestamp}.jpg')
+        # Print or send the results (e.g., to the frontend or console)
+        print(f"Timestamp: {timestamp}, Total Blinks: {total_blinks}, EAR: {ear}")
+
+        # If you want to send results back to the frontend
+        '''
+        self.send(text_data=json.dumps({
+            'timestamp': timestamp,
+            'total_blinks': total_blinks,
+            'ear': ear
         
-        # Save the image
-        image.save(filename)
-
-        print(f"Saved frame to {filename} with timestamp {timestamp}")
+        }))
+        '''
