@@ -20,4 +20,4 @@ class UserDisplaySerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email']
-    
+
