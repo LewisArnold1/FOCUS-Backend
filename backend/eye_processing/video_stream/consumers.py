@@ -2,7 +2,7 @@ import json
 import base64
 from channels.generic.websocket import WebsocketConsumer
 from io import BytesIO
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import numpy as np
 import cv2
 from eye_processing.blink_detection.count_blinks import process_blink
@@ -46,5 +46,5 @@ class VideoFrameConsumer(WebsocketConsumer):
             # Save the metrics for this frame in the database
             eye_metrics = SimpleEyeMetrics(timestamp=timestamp_dt, blink_count=total_blinks, eye_aspect_ratio=ear,)
             eye_metrics.save()
-        except (base64.binascii.Error, PIL.UnidentifiedImageError) as e:
+        except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
