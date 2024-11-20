@@ -1,7 +1,6 @@
 from django.urls import path
-from .views import ProcessVideoFrameView, RetrieveEyeMetricsView
+from .views import RetrieveLastBlinkCountView
 
 urlpatterns = [
-    path('process/', ProcessVideoFrameView.as_view(), name='process_eye_data'),  # Handles frame processing
-    path('metrics/', RetrieveEyeMetricsView.as_view(), name='retrieve_eye_metrics'),  # Retrieves metrics for a user
+    path('api/last-blink-count/', RetrieveLastBlinkCountView.as_view(), name='last-blink-count'),
 ]
