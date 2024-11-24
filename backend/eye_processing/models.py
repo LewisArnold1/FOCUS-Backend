@@ -14,9 +14,10 @@ class EyeMetrics(models.Model):
     
 
 class SimpleEyeMetrics(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  # Track the logged-in user
     timestamp = models.DateTimeField()  # Store the timestamp for each frame
     blink_count = models.IntegerField()  # Store the blink count
     eye_aspect_ratio = models.FloatField()  # Store the eye aspect ratio
 
     def __str__(self):
-        return f"Timestamp: {self.timestamp} - Blinks: {self.blink_count} - EAR: {self.eye_aspect_ratio}"
+        return f"User: {self.user.username} - Timestamp: {self.timestamp} - Blinks: {self.blink_count} - EAR: {self.eye_aspect_ratio}"

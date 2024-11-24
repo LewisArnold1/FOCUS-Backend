@@ -7,12 +7,44 @@ import numpy as np
 import cv2
 from eye_processing.blink_detection.count_blinks import process_blink
 from datetime import datetime
+from channels.exceptions import DenyConnection
+import urllib.parse
 
 class VideoFrameConsumer(WebsocketConsumer):
 
     def connect(self):
-        self.accept()
+        query_string = self.scope['query_string'].decode('utf-8')
+        print("Query string received:", query_string)  # Debugging log
 
+        try:
+            # Split by '=' to extract the token content
+            encoded_token_data = query_string.split('=')[1]
+            
+            # Decode URL encoding (e.g., %22 -> ")
+            decoded_token_data = urllib.parse.unquote(encoded_token_data)
+            print("Decoded token data:", decoded_token_data)
+
+            # Parse JSON content
+            token_data = json.loads(decoded_token_data)
+            print("Parsed token data:", token_data)
+
+            # Extract the "access" token
+            self.token = token_data.get("access", None)
+            if not self.token:
+                raise ValueError("Access token not found in query string")
+
+            print("Extracted token:", self.token)
+            from rest_framework_simplejwt.authentication import JWTAuthentication
+            validated_token = JWTAuthentication().get_validated_token(self.token)
+            self.user = JWTAuthentication().get_user(validated_token)
+            self.accept()
+        except IndexError:
+            print("Invalid query string format:", query_string)
+            self.close()
+        except Exception as e:
+            print("Authentication failed:", e)
+            self.close()
+            
     def disconnect(self, close_code):
         pass 
 
@@ -41,10 +73,16 @@ class VideoFrameConsumer(WebsocketConsumer):
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
-            print(f"Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}")
 
-            # Save the metrics for this frame in the database
-            eye_metrics = SimpleEyeMetrics(timestamp=timestamp_dt, blink_count=total_blinks, eye_aspect_ratio=ear,)
+             # Save the metrics for this frame in the database with the user
+            eye_metrics = SimpleEyeMetrics(
+                user=self.user,  # Associate the logged-in user
+                timestamp=timestamp_dt,
+                blink_count=total_blinks,
+                eye_aspect_ratio=ear,
+            )
             eye_metrics.save()
+
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
