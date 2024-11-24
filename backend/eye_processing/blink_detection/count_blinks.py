@@ -43,7 +43,7 @@ def process_blink(frame):
     global COUNTER, TOTAL
 
     # Initialize ear with a default value
-    ear = None
+    ear = 0.22 # for now initialise to value other than null so exception isnt triggered while testing db storage
 
     # Convert the frame to greyscale
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
