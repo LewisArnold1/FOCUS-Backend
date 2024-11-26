@@ -18,6 +18,7 @@ class SimpleEyeMetrics(models.Model):
     timestamp = models.DateTimeField()  # Store the timestamp for each frame
     blink_count = models.IntegerField()  # Store the blink count
     eye_aspect_ratio = models.FloatField(null=True, blank=True)  # Store the eye aspect ratio
+    session_id = models.IntegerField(default=999)  # Store session id
 
     def __str__(self):
-        return f"User: {self.user.username} - Timestamp: {self.timestamp} - Blinks: {self.blink_count} - EAR: {self.eye_aspect_ratio}"
+        return f"User: {self.user.username} - Timestamp: {self.timestamp} - Blinks: {self.blink_count} - EAR: {self.eye_aspect_ratio} - Session id: {self.session_id}"

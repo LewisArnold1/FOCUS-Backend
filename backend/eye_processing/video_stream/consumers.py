@@ -37,6 +37,14 @@ class VideoFrameConsumer(WebsocketConsumer):
             from rest_framework_simplejwt.authentication import JWTAuthentication
             validated_token = JWTAuthentication().get_validated_token(self.token)
             self.user = JWTAuthentication().get_user(validated_token)
+
+            # Retrieve the session ID directly from the session
+            self.session_id = self.scope['session'].get('current_session_id', None)
+            if not self.session_id:
+                raise ValueError("Session ID not found in the session. Did the user log in?")
+
+            print(f"User: {self.user.username}, Session ID: {self.session_id}")
+
             self.accept()
         except IndexError:
             print("Invalid query string format:", query_string)
@@ -73,16 +81,17 @@ class VideoFrameConsumer(WebsocketConsumer):
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
-
+            
              # Save the metrics for this frame in the database with the user
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
                 eye_aspect_ratio=ear,
+                session_id=self.session_id,
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, Session id: {self.session_id}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
