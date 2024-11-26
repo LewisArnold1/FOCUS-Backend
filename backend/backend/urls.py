@@ -12,5 +12,4 @@ urlpatterns = [
     path('api-auth/', include("rest_framework.urls")),
     path('api/user/', include('user_management.urls')),
     path('api/eye/', include('eye_processing.urls')),
-    path('api/session/', include('session_data.urls')),
 ]
