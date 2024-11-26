@@ -17,8 +17,6 @@ class RetrieveLastBlinkCountView(APIView):
             data = {
                 "blink_count": last_metric.blink_count
             }
-            print('test')
-            print(last_metric.blink_count) # for testing
         else:
             data = {
                 "blink_count": 0  # Default value if no data exists for the user
