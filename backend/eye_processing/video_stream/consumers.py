@@ -37,6 +37,12 @@ class VideoFrameConsumer(WebsocketConsumer):
             from rest_framework_simplejwt.authentication import JWTAuthentication
             validated_token = JWTAuthentication().get_validated_token(self.token)
             self.user = JWTAuthentication().get_user(validated_token)
+            
+            # Generate a new session ID for this video stream
+            import random, string
+            self.session_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+            print("Generated session ID:", self.session_id)
+
             self.accept()
         except IndexError:
             print("Invalid query string format:", query_string)
@@ -77,10 +83,12 @@ class VideoFrameConsumer(WebsocketConsumer):
              # Save the metrics for this frame in the database with the user
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
+                session_id=self.session_id, # Associate current sessionID
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
-                eye_aspect_ratio=ear,
+                eye_aspect_ratio=ear,   
             )
+            print(self.session_id)
             eye_metrics.save()
 
             print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}")

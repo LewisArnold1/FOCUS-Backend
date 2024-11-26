@@ -2,23 +2,40 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import SimpleEyeMetrics
+from user_management.serializers import UserDisplaySerializer
+from django.contrib.auth.models import User # remove?
 
 class RetrieveLastBlinkCountView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
-
+    serializer_class = UserDisplaySerializer
     def get(self, request, *args, **kwargs):
+        
         # Filter by the logged-in user and get the last entry
+        '''
+        last_metric = SimpleEyeMetrics.objects.filter(user=request.user, session_id=session_id).last()
+        
+        '''
+        # current session ID will always be most recent entry
         last_metric = SimpleEyeMetrics.objects.filter(user=request.user).last()
-
+        # add session id capability to look at prev sessions + changes over time later
+        # Get current session
+        print(last_metric.session_id)
+        '''
+        print(request.user.username)
+        print('test')
+'''
         # Check if there is any data for this user
         if last_metric:
             data = {
                 "blink_count": last_metric.blink_count
             }
+            print('test')
+            print(last_metric.blink_count) # for testing
         else:
             data = {
                 "blink_count": 0  # Default value if no data exists for the user
             }
+            
 
         # Send the blink count as a response
         return Response(data, status=200)
