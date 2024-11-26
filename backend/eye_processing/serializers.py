@@ -10,4 +10,5 @@ class VideoDataSerializer(serializers.Serializer):
 class SimpleEyeMetricsSerializer(serializers.ModelSerializer):
     class Meta:
         model = SimpleEyeMetrics
-        fields = ['timestamp', 'blink_count', 'eye_aspect_ratio'] # needs to change
+        fields = ['timestamp', 'blink_count', 'eye_aspect_ratio']
+        # needs to change? - probs not for now if we make second model in django for all metrics over all texts
