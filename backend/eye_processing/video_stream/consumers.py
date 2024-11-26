@@ -41,7 +41,9 @@ class VideoFrameConsumer(WebsocketConsumer):
             
             # increment max video id for this user
             from eye_processing.models import SimpleEyeMetrics
-            max_video_id = SimpleEyeMetrics.objects.filter(user=self.user).aggregate(Max('video_id'))['video_id__max'] or 0
+            from eye_processing.models import UserSession
+            # filter by user & session
+            max_video_id = SimpleEyeMetrics.objects.filter(user=self.user,session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']).aggregate(Max('video_id'))['video_id__max'] or 0
             self.video_id = max_video_id + 1
 
             self.accept()
