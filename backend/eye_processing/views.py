@@ -10,20 +10,8 @@ class RetrieveLastBlinkCountView(APIView):
     serializer_class = UserDisplaySerializer
     def get(self, request, *args, **kwargs):
         
-        # Filter by the logged-in user and get the last entry
-        '''
-        last_metric = SimpleEyeMetrics.objects.filter(user=request.user, session_id=session_id).last()
-        
-        '''
         # current session ID will always be most recent entry
-        last_metric = SimpleEyeMetrics.objects.filter(user=request.user).last()
-        # add session id capability to look at prev sessions + changes over time later
-        # Get current session
-        print(last_metric.session_id)
-        '''
-        print(request.user.username)
-        print('test')
-'''
+        last_metric = SimpleEyeMetrics.objects.filter(user=request.user).last() # to be changed to max (with incrementing id)
         # Check if there is any data for this user
         if last_metric:
             data = {
@@ -35,8 +23,6 @@ class RetrieveLastBlinkCountView(APIView):
             data = {
                 "blink_count": 0  # Default value if no data exists for the user
             }
-            
-
         # Send the blink count as a response
         return Response(data, status=200)
 """
@@ -55,7 +41,7 @@ class RetrieveEyeMetricsView(APIView):
                 "session_id": metric.session_id,
                 "blink_count": metric.blink_count,
                 "eye_aspect_ratio": metric.eye_aspect_ratio,
-                "frame_id": metric.frame_id,
+                "frame_id": metric.frame_id, #unnecessary?
             } for metric in metrics
         ]
         return Response(data, status=200)

@@ -40,7 +40,7 @@ class VideoFrameConsumer(WebsocketConsumer):
             
             # Generate a new session ID for this video stream
             import random, string
-            self.session_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+            self.session_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10)) # to be changeed to integer
             print("Generated session ID:", self.session_id)
 
             self.accept()
