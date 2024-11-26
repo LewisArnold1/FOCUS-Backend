@@ -82,15 +82,17 @@ class VideoFrameConsumer(WebsocketConsumer):
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
              # Save the metrics for this frame in the database with the user
+            from eye_processing.models import UserSession
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
-                video_id=self.video_id, # Associate current sessionID
+                session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max'],
+                video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
                 eye_aspect_ratio=ear,   
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, videoID: {self.video_id}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, Video ID: {self.video_id}, Session ID: {UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
