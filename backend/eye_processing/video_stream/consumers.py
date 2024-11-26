@@ -7,8 +7,9 @@ import numpy as np
 import cv2
 from eye_processing.blink_detection.count_blinks import process_blink
 from datetime import datetime
-from channels.exceptions import DenyConnection
+from channels.exceptions import DenyConnection # not currently used?
 import urllib.parse
+from django.db.models import Max
 
 class VideoFrameConsumer(WebsocketConsumer):
 
@@ -38,10 +39,10 @@ class VideoFrameConsumer(WebsocketConsumer):
             validated_token = JWTAuthentication().get_validated_token(self.token)
             self.user = JWTAuthentication().get_user(validated_token)
             
-            # Generate a new session ID for this video stream
-            import random, string
-            self.session_id = ''.join(random.choices(string.ascii_letters + string.digits, k=10)) # to be changeed to integer
-            print("Generated session ID:", self.session_id)
+            # increment max video id for this user
+            from eye_processing.models import SimpleEyeMetrics
+            max_video_id = SimpleEyeMetrics.objects.filter(user=self.user).aggregate(Max('video_id'))['video_id__max'] or 0
+            self.video_id = max_video_id + 1
 
             self.accept()
         except IndexError:
@@ -83,14 +84,13 @@ class VideoFrameConsumer(WebsocketConsumer):
              # Save the metrics for this frame in the database with the user
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
-                session_id=self.session_id, # Associate current sessionID
+                video_id=self.video_id, # Associate current sessionID
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
                 eye_aspect_ratio=ear,   
             )
-            print(self.session_id)
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, videoID: {self.video_id}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
