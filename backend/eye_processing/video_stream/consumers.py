@@ -7,7 +7,6 @@ import numpy as np
 import cv2
 from eye_processing.blink_detection.count_blinks import process_blink
 from datetime import datetime
-from channels.exceptions import DenyConnection # not currently used?
 import urllib.parse
 from django.db.models import Max
 
