@@ -2,11 +2,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import SimpleEyeMetrics
-from user_management.serializers import UserDisplaySerializer
 
 class RetrieveLastBlinkCountView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
-    serializer_class = UserDisplaySerializer
     def get(self, request, *args, **kwargs):
         
         # current session ID will always be most recent entry
