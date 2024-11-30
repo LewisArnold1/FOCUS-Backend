@@ -225,12 +225,7 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
 
 8. Open the PostgreSQL Shell using IPv4 SSL conection going forward:
     ```bash 
+    psql -U postgres -h localhost
     psql -U team -d focus -h localhost
     ```
 
-    
-
-
-
-
-   
