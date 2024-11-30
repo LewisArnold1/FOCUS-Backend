@@ -37,7 +37,8 @@ brew install postgresql && brew services start postgresql
 
 ### 2. Ensure PostgreSQL is running
 ```bash
-sudo service postgresql start
+brew services start postgresql@14 # macOS
+
 ```
 
 For Windows, you can check PostgreSQL is running using the pgAdmin GUI or the Windows Services Manager.
@@ -46,15 +47,27 @@ For Windows, you can check PostgreSQL is running using the pgAdmin GUI or the Wi
 ### 3. Create a Database and User
 
 Open the PostgreSQL Shell:
-```bash
-psql -U postgres
+
+#### macOS
+```bash 
+psql -d postgres # default method for macOS (Homebrew Installation)
+psql -U team -d focus # method for macOS you created a custom user (e.g., team) and database (e.g., focus)
 ```
 
-Create a database and user:
+#### Windows
+```bash 
+psql -U postgres # use the default postgres user if you installed PostgreSQL via the PostgreSQL installer
+psql -U postgres -d postgres # you might also need to specify the database
+```
+
+#### Create a database and user:
 ```sql
 CREATE DATABASE your_database_name;
 CREATE USER your_database_user WITH PASSWORD 'your_database_password';
 GRANT ALL PRIVILEGES ON DATABASE your_database_name TO your_database_user;
+ALTER ROLE your_database_user SET client_encoding TO 'utf8';
+ALTER ROLE your_database_user SET default_transaction_isolation TO 'read committed';
+ALTER ROLE your_database_user SET timezone TO 'UTC';
 ```
 
 Exit the shell:
