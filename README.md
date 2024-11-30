@@ -156,7 +156,7 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
 
 4. Generate SSL Certificates
 
-If you don’t already have SSL certificates (server.crt and server.key), generate self-signed certificates for local development:
+    If you don’t already have SSL certificates (server.crt and server.key), generate self-signed certificates for local development:
    
    - Generate a private key:
    ```bash
