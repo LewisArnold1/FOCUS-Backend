@@ -51,7 +51,7 @@ Open the PostgreSQL Shell:
 #### macOS
 ```bash 
 psql -d postgres # default method for macOS (Homebrew Installation)
-psql -U team -d focus # method for macOS you created a custom user (e.g., team) and database (e.g., focus)
+psql -U team -d focus # method for macOS if you created a custom user (e.g., team) and database (e.g., focus)
 ```
 
 #### Windows
@@ -138,7 +138,12 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
    
    - Run the following command in the psql shell to find the path to your postgresql.conf file:
    ```sql
-   SHOW config_file;
+   SHOW config_file; 
+   ```
+
+   You may need to login as a superuser if you do not have permission:
+   ```sql
+   CREATE ROLE postgres WITH SUPERUSER LOGIN PASSWORD 'your_password'; 
    ```
 
    - Open the postgresql.conf file:
@@ -215,7 +220,14 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
 
 7. (Optional) Use SSL in Production
 
-For production environments, replace self-signed certificates with certificates issued by a trusted Certificate Authority (CA), such as Let's Encrypt
+    For production environments, replace self-signed certificates with certificates issued by a trusted Certificate Authority (CA), such as Let's Encrypt
+
+
+8. Open the PostgreSQL Shell using IPv4 SSL conection going forward:
+    ```bash 
+    psql -U team -d focus -h localhost
+    ```
+
     
 
 

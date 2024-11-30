@@ -15,22 +15,16 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import os
 
-load_dotenv()
+# Specify the path to the .env file
+BASE_DIR = Path(__file__).resolve().parent.parent  # Adjust as needed
+env_path = os.path.join(BASE_DIR, '.env')
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Load the .env file
+load_dotenv(dotenv_path=env_path)
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-46_(+thsg(=4@8#!3g4i)m!d3)_se2kb)^a7wv3#0!1=n-0i5&'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ["*"]
+SECRET_KEY = os.getenv('SECRET_KEY')
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 
 # Application definition
@@ -89,8 +83,15 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME'),         # Add your database name
+        'USER': os.getenv('DB_USER'),         # Add your PostgreSQL username
+        'PASSWORD': os.getenv('DB_PASSWORD'), # Add your PostgreSQL password
+        'HOST': os.getenv('DB_HOST', 'localhost'),  # Default to localhost
+        'PORT': os.getenv('DB_PORT', '5432'),       # Default PostgreSQL port
+        'OPTIONS': {
+            'sslmode': 'require',  # Enforces SSL for all connections
+        },
     }
 }
 
