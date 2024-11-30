@@ -109,3 +109,116 @@ python -c 'from django.core.management.utils import get_random_secret_key; print
 python manage.py makemigrations
 python manage.py migrate
 ```
+
+### 7. Check SSL Status
+
+SSL is required for encryption between Django and PostgreSQL. To check whether SSL is enabled for your PostgreSQL setup:
+
+1. Open the PostgreSQL shell:
+   ```bash
+   psql -U your_database_user -d your_database_name
+   ```
+
+   Replace your_database_user and your_database_name with the credentials and database you created earlier.
+
+2. Run the following SQL command to check the SSL status:
+   ```sql
+   SHOW ssl;
+   ```
+   
+   If SSL is enabled, the output will show:
+   ```
+   ssl
+   -----
+   on
+   (1 row)
+   ```
+
+3. If SSL is not enabled (off), follow [link](https://www.postgresql.org/docs/current/ssl-tcp.html)
+   
+   - Run the following command in the psql shell to find the path to your postgresql.conf file:
+   ```sql
+   SHOW config_file;
+   ```
+
+   - Open the postgresql.conf file:
+   ```bash
+   nano /usr/local/var/postgres/postgresql.conf  # Replace with your config path
+   ```
+
+   - Find and update the following settings:
+   ```plaintext
+   ssl = on
+   ssl_cert_file = 'server.crt'
+   ssl_key_file = 'server.key'
+   ```
+   If these lines are commented out (with #), remove the # to uncomment them.
+
+4. Generate SSL Certificates
+
+If you don’t already have SSL certificates (server.crt and server.key), generate self-signed certificates for local development:
+   
+   - Generate a private key:
+   ```bash
+   openssl genrsa -out server.key 2048
+   ```
+
+   - Generate a certificate signing request (CSR):
+   ```bash
+   openssl req -new -key server.key -out server.csr
+   ```
+   When prompted, you can fill in the details or leave them blank.
+
+   - Generate a self-signed certificate:
+   ```bash
+   openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+   ```
+
+   - Move the certificates to the PostgreSQL directory:
+   ```bash
+   mv server.crt server.key /usr/local/var/postgres/
+   ```
+
+   - Set proper permissions for the private key:
+   ```bash
+   chmod 600 /usr/local/var/postgres/server.key
+   ```
+
+5. Restart PostgreSQL to apply changes
+   ```bash
+   brew services restart postgresql # Or equivalent
+   ```
+
+6. Verify SSL is Enabled
+   - Reconnect to the database and run:
+   ```sql
+   SHOW ssl;
+   ```
+   
+   You should see:
+   ```
+   ssl
+   -----
+   on
+   (1 row)
+   ```
+
+   - To confirm that a connection is using SSL, run:
+   ```sql
+   \conninfo
+   ```
+
+   You should see:
+   ```
+   SSL connection (protocol: TLSv1.3, cipher: AES256-GCM-SHA384, bits: 256, compression: off)
+   ```
+
+7. (Optional) Use SSL in Production
+
+For production environments, replace self-signed certificates with certificates issued by a trusted Certificate Authority (CA), such as Let's Encrypt
+    
+
+
+
+
+   
