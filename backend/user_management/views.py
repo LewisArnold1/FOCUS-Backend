@@ -40,3 +40,21 @@ class CalibrationView(APIView):
             )
         except Exception as e:
             return Response({"error": f"Failed to save data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class CalibrationRetrievalView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def get(self, request, *args, **kwargs):
+        # Filter by the logged-in user and get the last entry
+        calibration_data = CalibrationData.objects.filter(user=request.user).last()
+
+        # Check if no data exists for this user
+        if not calibration_data:
+            return Response(
+                {"error": "No calibration data found for this user."}, status=404
+            )
+
+        # If data exists, return it
+        return Response(
+            {"calibration_values": calibration_data.calibration_values}, status=200
+        )
