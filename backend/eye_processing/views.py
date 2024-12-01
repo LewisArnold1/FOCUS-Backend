@@ -20,3 +20,4 @@ class RetrieveLastBlinkCountView(APIView):
             }
         # Send the blink count as a response
         return Response(data, status=200)
+
