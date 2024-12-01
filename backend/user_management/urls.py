@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegisterUserView, CalibrationView
+from .views import RegisterUserView, CalibrationView, CalibrationRetrievalView
 
 # User-specific api end-points so when a user visits register or profile, django routes request to appropriate user management views
 urlpatterns = [
