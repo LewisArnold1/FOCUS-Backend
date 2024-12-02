@@ -44,7 +44,6 @@ def process_blink(frame):
 
     # Initialize ear with a default value
     ear = None
-
     # Convert the frame to greyscale
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
