@@ -86,7 +86,7 @@ ALTER DATABASE your_database_name OWNER TO your_database_user;
 ```
 
 Exit the shell:
-```
+```psql
 \q
 ```
 
@@ -148,7 +148,7 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
    ```
    
    If SSL is enabled, the output will show:
-   ```
+   ```psql
    ssl
    -----
    on
@@ -248,7 +248,7 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
    ```
    
    You should see:
-   ```
+   ```psql
    ssl
    -----
    on
@@ -257,7 +257,7 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
 
    - To confirm that a connection is using SSL, run:
 
-   ```
+   ```psql
    \conninfo
    ```
 
