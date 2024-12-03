@@ -257,7 +257,7 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
 
    - To confirm that a connection is using SSL, run:
 
-   ```bash
+   ```
    \conninfo
    ```
 
