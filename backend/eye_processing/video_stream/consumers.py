@@ -48,17 +48,19 @@ class VideoFrameConsumer(WebsocketConsumer):
     def disconnect(self, close_code):
         pass 
 
-    def receive(self, text_data):
+    def receive(self, data):
         # Parse the received JSON message
-        text_data_json = json.loads(text_data)
-        frame_data = text_data_json.get('frame', None)
-        timestamp = text_data_json.get('timestamp', None)  # Extract timestamp
+        data_json = json.loads(data)
+        frame_data = data_json.get('frame', None)
+        timestamp = data_json.get('timestamp', None)  # Extract timestamp
+        x_coordinate_px = data_json.get('xCoordinatePx', None)
+        y_coordinate_px = data_json.get('yCoordinatePx', None)
 
         if frame_data:
             # Process the frame and get the blink count
-            self.process_frame(frame_data, timestamp)
+            self.process_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
 
-    def process_frame(self, frame_data, timestamp):
+    def process_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px):
         try:
             from eye_processing.models import SimpleEyeMetrics
             # Decode the base64-encoded image
@@ -80,9 +82,11 @@ class VideoFrameConsumer(WebsocketConsumer):
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
                 eye_aspect_ratio=ear,
+                x_coordinate_px = x_coordinate_px,
+                y_coordinate_px = y_coordinate_px,
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
