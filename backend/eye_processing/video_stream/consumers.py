@@ -48,9 +48,9 @@ class VideoFrameConsumer(WebsocketConsumer):
     def disconnect(self, close_code):
         pass 
 
-    def receive(self, data):
+    def receive(self, text_data):
         # Parse the received JSON message
-        data_json = json.loads(data)
+        data_json = json.loads(text_data)
         frame_data = data_json.get('frame', None)
         timestamp = data_json.get('timestamp', None)  # Extract timestamp
         x_coordinate_px = data_json.get('xCoordinatePx', None)
