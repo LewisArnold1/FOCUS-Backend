@@ -8,8 +8,9 @@ Ensure the following are installed on your system:
 2. PostgreSQL (latest version is 17 as of Dec 2024)
 3. Virtual environment (venv)
 4. Daphne (installed as part of the project dependencies)
+5. Git (for version control management)
 
-## Running the Backend Server
+# Running the Backend Server
 Start the backend server using **Daphne** (ASGI):
 
 ```
@@ -139,7 +140,7 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
    psql -U your_database_user -d your_database_name
    ```
 
-   Replace your_database_user and your_database_name with the credentials and database you created earlier.
+   Replace `your_database_user` and `your_database_name` with the credentials and database you created earlier.
 
 #### 2. Run the following SQL command to check the SSL status:
 
@@ -172,6 +173,8 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
    ```
 
    - Open the postgresql.conf file:
+
+   You can use `nano` text editor like shown below, **or alternatively**, use your preferred text editor (e.g. VScode, Notepad)
    ```bash
    nano /usr/local/var/postgres/postgresql.conf  # Replace with your config path
 
@@ -180,8 +183,8 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
 
    - Find and update the following settings:
 
-   Within `nano`, use Ctrl+W for find tool
-   After changes, press Ctrl+O to save, then Ctrl+X to exit
+   *If you are using the `nano` text editor, use Ctrl+W for find tool
+   After changes, press Ctrl+O to save, then Ctrl+X to exit*
 
    ```plaintext
    ssl = on       # Line 107, uncomment and change 'off' to 'on'
@@ -192,13 +195,13 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
    ```
    If these lines are commented out (with #), remove the # to uncomment them.
 
-4. Generate SSL Certificates
+#### 4. Generate SSL Certificates
 
-    If you don’t already have SSL certificates (server.crt and server.key), generate self-signed certificates for local development:
+   If you don’t already have SSL certificates (server.crt and server.key), generate self-signed certificates for local development:
 
-    For Windows, make sure you are running `Git Bash` as admin inside the `\data` subdirectory of the PostgreSQL folder when running these commands.
+   For Windows, make sure you are running `Git Bash` as admin inside the `\data` subdirectory of the PostgreSQL folder when running these commands.
 
-    This makes sure that the SSL certificates are stored in the right directory and there is no need for file movement.
+   This makes sure that the SSL certificates are stored in the right directory and there is no need for file movement.
    
    - Generate a private key:
    ```bash
@@ -232,15 +235,28 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
    chmod 600 server.key # Windows
    ```
 
-5. Restart PostgreSQL to apply changes
+#### 5. Restart PostgreSQL to apply changes
+
+   ### macOS
 
    ```bash
-   brew services restart postgresql # macOS
+   brew services restart postgresql
+   ```
+   
+   ### Windows
 
-   net stop postgresql-x64-17 # Windows
+   ```bash
+   net stop postgresql-x64-17 
+   net start postgresql-x64-17
    ```
 
-6. Verify SSL is Enabled
+   If you are unable to start up the server again using `net` command above, then try the following:
+
+   ```bash
+   pg_ctl start -D "C:\path\to\PostgreSQL\17\data"  # Update to your path
+   ```
+
+#### 6. Verify SSL is Enabled
 
    - Reconnect to the database using psql (see Step 3) and run:
    ```sql
@@ -269,16 +285,17 @@ SSL is required for encryption between Django and PostgreSQL. To check whether S
    SSL connection (protocol: TLSv1.3, cipher: TLS_AES_256_GCM_SHA384, compression: off, ALPN: postgresql) # Windows
    ```
 
-7. (Optional) Use SSL in Production
+#### 7. (Optional) Use SSL in Production
 
-    For production environments, replace self-signed certificates with certificates issued by a trusted Certificate Authority (CA), such as Let's Encrypt
+   For production environments, replace self-signed certificates with certificates issued by a trusted Certificate Authority (CA), such as Let's Encrypt
 
 
-8. Open the PostgreSQL Shell using IPv4 SSL conection going forward:
-    ```bash 
-    psql -U postgres -h localhost
-    psql -U team -d focus -h localhost
-    ```
+#### 8. Open the PostgreSQL Shell using IPv4 SSL conection going forward:
+
+   ```bash 
+   psql -U postgres -h localhost
+   psql -U team -d focus -h localhost
+   ```
 
 ### 7. Apply migrations:
 
