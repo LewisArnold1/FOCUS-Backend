@@ -12,7 +12,7 @@ class SimpleEyeMetrics(models.Model):
     y_coordinate_px = models.FloatField(null=True, blank=True)
 
     def __str__(self):
-        return f"User: {self.user.username} - Timestamp: {self.timestamp} - Blinks: {self.blink_count} - EAR: {self.eye_aspect_ratio}"
+        return f"User: {self.user.username} - Session: {self.session_id}  - Video: {self.video_id} - Timestamp: {self.timestamp} - Blinks: {self.blink_count} - EAR: {self.eye_aspect_ratio}"
     
 class UserSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  # Track the logged-in user

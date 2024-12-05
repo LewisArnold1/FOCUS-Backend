@@ -10,13 +10,13 @@ class RetrieveLastBlinkCountView(APIView):
     #
     def get(self, request, *args, **kwargs):
 
-        # current session ID is largest value
-        current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('SessionId'))['SessionId__max']
-        # find max video ID for this user & session ID
-        max_video_id = SimpleEyeMetrics.objects.filter(user=request.user,SessionId=current_session_id).aggregate(Max('VideoID'))['VideoID__max']
-        #max_video_id = this_session_metrics.aggregate(Max('VideoID'))['VideoID__max']
-        # Filter by user, session & video
-        last_metric = SimpleEyeMetrics.objects.filter(user=request.user,SessionId=current_session_id,video_id=max_video_id)
+        # Filter by user to retrieve the latest session ID and video ID
+        current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
+        latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
+        
+        # Retrieve the last metric entry for the user, session, and video
+        last_metric = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id, video_id=latest_video_id).last()
+
         # Check if there is any data for this user
         if last_metric:
             data = {
