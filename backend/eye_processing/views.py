@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import SimpleEyeMetrics, UserSession
-from django.db.models import Max, Sum
+from django.db.models import Max, Sum, Min
 from datetime import timedelta
 
 class RetrieveLastBlinkCountView(APIView):
@@ -71,5 +71,23 @@ class RetrieveAllUserSessionsView(APIView):
         # Return all sessions data
         return Response({"sessions": sessions_data}, status=200)
     
+    def calculate_reading_time(user, session_id, video_id):
+        # Get the earliest and latest timestamps for the session and video
+        timestamps = SimpleEyeMetrics.objects.filter(
+            user=user,
+            session_id=session_id,
+            video_id=video_id
+        ).aggregate(
+            start_time=Min('timestamp'),
+            end_time=Max('timestamp')
+        )
 
+        # Calculate the reading time
+        start_time = timestamps['start_time']
+        end_time = timestamps['end_time']
 
+        if start_time and end_time:
+            return end_time - start_time
+        else:
+            return timedelta(0)  # Return 0 if no data is available
+    
