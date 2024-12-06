@@ -56,16 +56,15 @@ class RetrieveAllUserSessionsView(APIView):
 
             # Format video reading times
             video_data = [
-                {"video_id": video["video_id"], "total_reading_time": str(video["total_time"])}
+                {"video_id": video["video_id"], "total_reading_time": video["total_time"]}
                 for video in video_reading_times
             ]
 
             # Add session details to the response
             sessions_data.append({
                 "session_id": session.session_id,
-                "total_reading_time": str(session_total_time),
+                "total_reading_time": session_total_time,
                 "videos": video_data,
-                "date": session.session_id,  # Assuming `session_id` encodes session creation. Replace with proper field if necessary.
             })
 
         # Return all sessions data
