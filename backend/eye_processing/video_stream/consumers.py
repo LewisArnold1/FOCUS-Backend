@@ -6,6 +6,7 @@ from PIL import Image, UnidentifiedImageError
 import numpy as np
 import cv2
 from eye_processing.blink_detection.count_blinks import process_blink
+from eye_processing.depth.camera_distance import calculate_depth
 from datetime import datetime
 from channels.exceptions import DenyConnection
 import urllib.parse
@@ -68,6 +69,9 @@ class VideoFrameConsumer(WebsocketConsumer):
 
             # Call the blink detection function with the frame
             total_blinks, ear = process_blink(frame)
+            
+            # depth
+            depth = calculate_depth(frame)
 
             # Print or send the results (e.g., to the frontend or console)
             # Convert the timestamp from milliseconds to a datetime object
@@ -80,9 +84,10 @@ class VideoFrameConsumer(WebsocketConsumer):
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
                 eye_aspect_ratio=ear,
+                depth=depth,
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, Depth: {depth}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
