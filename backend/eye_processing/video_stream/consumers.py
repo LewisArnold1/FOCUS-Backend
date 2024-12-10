@@ -8,8 +8,8 @@ import cv2
 from eye_processing.blink_detection.count_blinks import process_blink
 from eye_processing.depth.camera_distance import calculate_depth
 from datetime import datetime
-from channels.exceptions import DenyConnection
 import urllib.parse
+from django.db.models import Max
 
 class VideoFrameConsumer(WebsocketConsumer):
 
@@ -38,6 +38,14 @@ class VideoFrameConsumer(WebsocketConsumer):
             from rest_framework_simplejwt.authentication import JWTAuthentication
             validated_token = JWTAuthentication().get_validated_token(self.token)
             self.user = JWTAuthentication().get_user(validated_token)
+            
+            # increment max video id for this user
+            from eye_processing.models import SimpleEyeMetrics
+            from eye_processing.models import UserSession
+            # filter by user & session
+            max_video_id = SimpleEyeMetrics.objects.filter(user=self.user,session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']).aggregate(Max('video_id'))['video_id__max'] or 0
+            self.video_id = max_video_id + 1
+
             self.accept()
         except IndexError:
             print("Invalid query string format:", query_string)
@@ -51,15 +59,17 @@ class VideoFrameConsumer(WebsocketConsumer):
 
     def receive(self, text_data):
         # Parse the received JSON message
-        text_data_json = json.loads(text_data)
-        frame_data = text_data_json.get('frame', None)
-        timestamp = text_data_json.get('timestamp', None)  # Extract timestamp
+        data_json = json.loads(text_data)
+        frame_data = data_json.get('frame', None)
+        timestamp = data_json.get('timestamp', None)  # Extract timestamp
+        x_coordinate_px = data_json.get('xCoordinatePx', None)
+        y_coordinate_px = data_json.get('yCoordinatePx', None)
 
         if frame_data:
             # Process the frame and get the blink count
-            self.process_frame(frame_data, timestamp)
+            self.process_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
 
-    def process_frame(self, frame_data, timestamp):
+    def process_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px):
         try:
             from eye_processing.models import SimpleEyeMetrics
             # Decode the base64-encoded image
@@ -70,7 +80,7 @@ class VideoFrameConsumer(WebsocketConsumer):
             # Call the blink detection function with the frame
             total_blinks, ear = process_blink(frame)
             
-            # depth
+            # call depth function 
             depth = calculate_depth(frame)
 
             # Print or send the results (e.g., to the frontend or console)
@@ -79,8 +89,11 @@ class VideoFrameConsumer(WebsocketConsumer):
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
              # Save the metrics for this frame in the database with the user
+            from eye_processing.models import UserSession
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
+                session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max'],
+                video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
                 eye_aspect_ratio=ear,
