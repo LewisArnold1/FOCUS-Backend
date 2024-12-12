@@ -12,6 +12,13 @@ class RegisterUserView(generics.CreateAPIView):
     serializer_class = RegisterUserSerializer # Required data to create user
     permission_classes = [AllowAny] # Any user should be able to register
 
+class ProfileView(APIView):
+   permission_classes = [IsAuthenticated]
+
+   def get(self, request, *args, **kwargs):
+        # Return the username of the authenticated user
+        return Response({"username": request.user.username}, status=status.HTTP_200_OK)
+
 class CalibrationView(APIView):
     permission_classes = [IsAuthenticated]
 
