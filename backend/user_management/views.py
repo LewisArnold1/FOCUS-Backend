@@ -21,7 +21,7 @@ class CalibrationView(APIView):
 
         # Extract and validate data from the request
         try:
-            self.calibration_data, self.timestamp = self.extract_data(request)
+            self.calibration_data, self.timestamp, self.accuracy = self.extract_data(request)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -42,26 +42,31 @@ class CalibrationView(APIView):
         # Extract data from the request
         calibration_data = request.data.get('data')
         timestamp = request.data.get('timestamp')
+        accuracy = request.data.get('accuracy')
 
-        if calibration_data is None or timestamp is None:
-            raise ValueError("Missing required fields: 'data' and 'timestamp' are required.")
+        if calibration_data is None or timestamp is None or accuracy is None:
+            raise ValueError("Missing required fields: 'data', 'timestamp' and 'accuracy' are required.")
 
         if not isinstance(timestamp, (int, float)):
             raise ValueError("Invalid timestamp: must be a numeric value.")
+
+        if not isinstance(accuracy, (int, float)):
+            raise ValueError("Invalid accuracy: must be a numeric value.")
 
         # Convert timestamp
         timestamp_s = timestamp / 1000
         timestamp_dt = datetime.fromtimestamp(timestamp_s)
         
-        return calibration_data, timestamp_dt
+        return calibration_data, timestamp_dt, accuracy
     
     def save_or_update_calibration(self):
 
         calibration_entry, _ = CalibrationData.objects.update_or_create(
             user=self.user,
             defaults={
-                'calibration_values': self.calibration_data,
                 'created_at': self.timestamp,
+                'accuracy': self.accuracy,
+                'calibration_values': self.calibration_data
             }
         )
         return calibration_entry
@@ -72,7 +77,7 @@ class CalibrationRetrievalView(APIView):
 
     def get(self, request, *args, **kwargs):
         # Filter by the logged-in user and get the last entry
-        calibration_data = CalibrationData.objects.filter(user=request.user).last()
+        calibration_data = CalibrationData.objects.filter(user=request.user)
 
         # Check if no data exists for this user
         if not calibration_data:
@@ -82,5 +87,10 @@ class CalibrationRetrievalView(APIView):
 
         # If data exists, return it
         return Response(
-            {"calibration_values": calibration_data.calibration_values}, status=200
+            {
+                "calibration_values": calibration_data.calibration_values,
+                "created_at": calibration_data.created_at,
+                "accuracy": calibration_data.accuracy
+            }, 
+            status=200
         )
