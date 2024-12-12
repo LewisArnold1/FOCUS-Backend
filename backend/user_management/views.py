@@ -3,9 +3,9 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import RegisterUserSerializer
-
 from django.contrib.auth.models import User
 from .models import CalibrationData
+from datetime import datetime
 
 class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.all() # Ensure user does not already exist
@@ -22,24 +22,36 @@ class CalibrationView(APIView):
         # Extract data from the request
         calibration_data = request.data.get('data')
         timestamp = request.data.get('timestamp')
-
+        print(timestamp)
+        timestamp_s = timestamp / 1000
+        timestamp_dt = datetime.fromtimestamp(timestamp_s)
+        print(timestamp_dt)
+        
         # Validate the data (optional, depends on your requirements)
-        if not calibration_data or not timestamp:
+        if not calibration_data or not timestamp_dt:
             return Response({"error": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Save the data to the database
-            calibration_entry = CalibrationData.objects.create(
-                user=user,
-                calibration_values=calibration_data,  # Assuming this is a JSONField in your model
-                created_at=timestamp  # Assuming your model has a DateTimeField
-            )
+            last_calibration = CalibrationData.objects.filter(user=request.user).order_by('created_at').first()
+
+            if last_calibration:
+                last_calibration.calibration_values=calibration_data
+                last_calibration.created_at=timestamp_dt
+                last_calibration.save()
+                calibration_entry=last_calibration
+            else:
+                calibration_entry = CalibrationData.objects.create(
+                    user=user,
+                    calibration_values=calibration_data,
+                    created_at=timestamp_dt
+                )
 
             return Response(
                 {"message": "Calibration data saved successfully.", "id": calibration_entry.id},
                 status=status.HTTP_201_CREATED,
             )
         except Exception as e:
+            print("Error: ", e)
             return Response({"error": f"Failed to save data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class CalibrationRetrievalView(APIView):
