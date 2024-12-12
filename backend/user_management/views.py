@@ -17,42 +17,55 @@ class CalibrationView(APIView):
 
     def post(self, request, *args, **kwargs):
         # Get the authenticated user
-        user = request.user
-        
-        # Extract data from the request
-        calibration_data = request.data.get('data')
-        timestamp = request.data.get('timestamp')
-        print(timestamp)
-        timestamp_s = timestamp / 1000
-        timestamp_dt = datetime.fromtimestamp(timestamp_s)
-        print(timestamp_dt)
-        
-        # Validate the data (optional, depends on your requirements)
-        if not calibration_data or not timestamp_dt:
-            return Response({"error": "Missing required fields."}, status=status.HTTP_400_BAD_REQUEST)
+        self.user = request.user
+
+        # Extract and validate data from the request
+        try:
+            self.calibration_data, self.timestamp = self.extract_data(request)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            last_calibration = CalibrationData.objects.filter(user=request.user).order_by('created_at').first()
-
-            if last_calibration:
-                last_calibration.calibration_values=calibration_data
-                last_calibration.created_at=timestamp_dt
-                last_calibration.save()
-                calibration_entry=last_calibration
-            else:
-                calibration_entry = CalibrationData.objects.create(
-                    user=user,
-                    calibration_values=calibration_data,
-                    created_at=timestamp_dt
-                )
-
+            calibration_entry = self.save_or_update_calibration()
             return Response(
                 {"message": "Calibration data saved successfully.", "id": calibration_entry.id},
                 status=status.HTTP_201_CREATED,
             )
         except Exception as e:
-            print("Error: ", e)
-            return Response({"error": f"Failed to save data: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": f"Failed to save calibration data: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+    
+    def extract_data(self, request):
+
+        # Extract data from the request
+        calibration_data = request.data.get('data')
+        timestamp = request.data.get('timestamp')
+
+        if calibration_data is None or timestamp is None:
+            raise ValueError("Missing required fields: 'data' and 'timestamp' are required.")
+
+        if not isinstance(timestamp, (int, float)):
+            raise ValueError("Invalid timestamp: must be a numeric value.")
+
+        # Convert timestamp
+        timestamp_s = timestamp / 1000
+        timestamp_dt = datetime.fromtimestamp(timestamp_s)
+        
+        return calibration_data, timestamp_dt
+    
+    def save_or_update_calibration(self):
+
+        calibration_entry, _ = CalibrationData.objects.update_or_create(
+            user=self.user,
+            defaults={
+                'calibration_values': self.calibration_data,
+                'created_at': self.timestamp,
+            }
+        )
+        return calibration_entry
+        
 
 class CalibrationRetrievalView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
