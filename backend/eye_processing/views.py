@@ -5,6 +5,49 @@ from .models import SimpleEyeMetrics, UserSession
 from django.db.models import Max, Sum, Min
 from datetime import timedelta
 
+def calculate_blink_rate(user, session_id, video_id, timestamp):
+
+    start_time = timestamp - timedelta(seconds=30)
+    end_time = timestamp + timedelta(seconds=30)
+
+    # Get all blink data in the 60-second window
+    blink_data = SimpleEyeMetrics.objects.filter(
+        user=user,
+        session_id=session_id,
+        video_id=video_id,
+        timestamp__gte=start_time,
+        timestamp__lte=end_time,
+        blink_rate=1,
+    )
+
+    # Count consecutive blinks as one by checking for the timestamp difference
+    blink_timestamps = [entry.timestamp for entry in blink_data]
+    if not blink_timestamps:
+        return 0  # No blinks detected in the window
+
+    # Make sure consecutive blinks are counted as a single blink
+    blink_timestamps.sort()
+    distinct_blinks = 1  # First blink counts as a blink
+    for i in range(1, len(blink_timestamps)):
+        if (blink_timestamps[i] - blink_timestamps[i - 1]).total_seconds() > 1:
+            distinct_blinks += 1
+
+    # If the video duration is less than 60 seconds, extrapolate (this can be adjusted)
+    total_duration = SimpleEyeMetrics.objects.filter(
+        user=user,
+        session_id=session_id,
+        video_id=video_id
+    ).aggregate(min_timestamp=Min('timestamp'), max_timestamp=Max('timestamp'))
+    
+    video_duration = (total_duration['max_timestamp'] - total_duration['min_timestamp']).total_seconds()
+    if video_duration < 60:
+        rate = distinct_blinks / video_duration * 60  # Extrapolate for a 1-minute blink rate
+    else:
+        rate = distinct_blinks  # Already per minute
+
+    return rate
+
+
 class RetrieveLastBlinkCountView(APIView):
 
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
@@ -20,12 +63,13 @@ class RetrieveLastBlinkCountView(APIView):
 
         # Check if there is any data for this user
         if last_metric:
+            rate = calculate_blink_rate( request.user, current_session_id, latest_video_id, last_metric.timestamp)
             data = {
-                "blink_count": last_metric.blink_count
+                "blink_rate_per_minute": rate
             }
         else:
             data = {
-                "blink_count": 0  # Default value if no data exists for the user
+                "blink_rate_per_minute": 0  # Default value if no data exists for the user
             }
         # Send the blink count as a response
         return Response(data, status=200)

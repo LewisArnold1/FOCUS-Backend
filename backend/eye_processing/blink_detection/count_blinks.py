@@ -40,7 +40,7 @@ def eye_aspect_ratio(eye):
     return ear
 
 def process_blink(frame):
-    global COUNTER, TOTAL
+    global COUNTER
 
     # Initialize ear with a default value
     ear = None
@@ -69,7 +69,7 @@ def process_blink(frame):
             COUNTER += 1
         else:
             if COUNTER >= EYE_AR_CONSEC_FRAMES:
-                TOTAL += 1
+                return  1 #blink detected
             COUNTER = 0
 
-    return TOTAL, ear
+    return 0 # no blink detected 

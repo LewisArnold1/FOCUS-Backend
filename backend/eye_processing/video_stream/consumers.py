@@ -77,7 +77,7 @@ class VideoFrameConsumer(WebsocketConsumer):
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
             # Call the blink detection function with the frame
-            total_blinks, ear = process_blink(frame)
+            blink_rate, ear = process_blink(frame) #either 1 or 0
 
             # Print or send the results (e.g., to the frontend or console)
             # Convert the timestamp from milliseconds to a datetime object
@@ -91,13 +91,13 @@ class VideoFrameConsumer(WebsocketConsumer):
                 session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max'],
                 video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
-                blink_count=total_blinks,
+                blink_rate= blink_rate,
                 eye_aspect_ratio=ear,
                 x_coordinate_px = x_coordinate_px,
                 y_coordinate_px = y_coordinate_px,
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_rate}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
