@@ -84,7 +84,7 @@ class CalibrationRetrievalView(APIView):
 
     def get(self, request, *args, **kwargs):
         # Filter by the logged-in user and get the last entry
-        calibration_data = CalibrationData.objects.filter(user=request.user)
+        calibration_data = CalibrationData.objects.get(user=request.user)
 
         # Check if no data exists for this user
         if not calibration_data:
