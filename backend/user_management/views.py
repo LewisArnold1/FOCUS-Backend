@@ -83,21 +83,21 @@ class CalibrationRetrievalView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
 
     def get(self, request, *args, **kwargs):
-        # Filter by the logged-in user and get the last entry
-        calibration_data = CalibrationData.objects.get(user=request.user)
+        try:
+            # Filter by the logged-in user and get the last entry
+            calibration_data = CalibrationData.objects.get(user=request.user)
 
-        # Check if no data exists for this user
-        if not calibration_data:
+            # If data exists, return it
+            return Response(
+                {
+                    "calibration_values": calibration_data.calibration_values,
+                    "created_at": calibration_data.created_at,
+                    "accuracy": calibration_data.accuracy
+                },
+                status=200
+            )
+        except CalibrationData.DoesNotExist:
+            # If no data exists for this user
             return Response(
                 {"error": "No calibration data found for this user."}, status=404
             )
-
-        # If data exists, return it
-        return Response(
-            {
-                "calibration_values": calibration_data.calibration_values,
-                "created_at": calibration_data.created_at,
-                "accuracy": calibration_data.accuracy
-            }, 
-            status=200
-        )
