@@ -1,14 +1,17 @@
-import json
 import base64
-from channels.generic.websocket import WebsocketConsumer
-from io import BytesIO
-from PIL import Image, UnidentifiedImageError
-import numpy as np
-import cv2
-from eye_processing.blink_detection.count_blinks import process_blink
-from datetime import datetime
+import json
 import urllib.parse
+from datetime import datetime
+from io import BytesIO
+
+import cv2
+import numpy as np
+from PIL import Image, UnidentifiedImageError
+from channels.generic.websocket import WebsocketConsumer
+
 from django.db.models import Max
+
+from eye_processing.eye_metrics import process_eye
 
 class VideoFrameConsumer(WebsocketConsumer):
 
@@ -65,6 +68,7 @@ class VideoFrameConsumer(WebsocketConsumer):
         y_coordinate_px = data_json.get('yCoordinatePx', None)
 
         if frame_data:
+            print('1')
             # Process the frame and get the blink count
             self.process_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
 
@@ -76,13 +80,14 @@ class VideoFrameConsumer(WebsocketConsumer):
             image = Image.open(BytesIO(image_data))
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-            # Call the blink detection function with the frame
-            total_blinks, ear = process_blink(frame)
+            # Extract eye metrics
+            total_blinks, ear, pupil = process_eye(frame)
 
-            # Print or send the results (e.g., to the frontend or console)
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
+
+            print('2')
 
              # Save the metrics for this frame in the database with the user
             from eye_processing.models import UserSession
