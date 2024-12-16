@@ -117,6 +117,6 @@ class VideoFrameConsumer(WebsocketConsumer):
                 
 
             #print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Current blink: {blink}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {self.session_id}, Video ID: {eye_metrics.video_id}")
-            print(f"Total Blinks: {total_blinks}")
+            print(f"Timestamp: {timestamp_dt}, Blink this frame: {blink}, Total Blinks: {total_blinks}, EAR: {ear}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
