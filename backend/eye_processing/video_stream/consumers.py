@@ -78,8 +78,8 @@ class VideoFrameConsumer(WebsocketConsumer):
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
             # Call the blink detection function with the frame current user, session & video
-            blink, ear = process_blink(frame)
-            #total_blinks, ear = process_blink(frame, self.user, self.session_id, self.video_id)
+            #blink, ear = process_blink(frame)
+            blink, ear = process_blink(frame, self.user, self.session_id, self.video_id)
 
             # Print or send the results (e.g., to the frontend or console)
             # Convert the timestamp from milliseconds to a datetime object
@@ -87,7 +87,11 @@ class VideoFrameConsumer(WebsocketConsumer):
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
              # Save the metrics for this frame in the database with the user
-            from eye_processing.models import UserSession
+
+            #remove?
+            from eye_processing.models import UserSession 
+            #remove?
+
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
                 session_id=self.session_id, # Associate current session ID

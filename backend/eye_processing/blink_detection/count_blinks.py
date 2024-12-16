@@ -8,15 +8,7 @@ import cvzone
 from cvzone.FaceMeshModule import FaceMeshDetector
 from cvzone.PlotModule import LivePlot
 
-# Initialize the blink detection counters
-counter = 0
-TOTAL = 0
-
-#from new threshold video
 idList = [22, 23, 24, 26, 110, 157, 158, 159, 160, 161, 130, 243]
-#idList = [23, 159]
-ratioList = []
-color = (255, 0, 255)
 detector = FaceMeshDetector(maxFaces=1)
 
 def eye_aspect_ratio(eye):
@@ -26,9 +18,7 @@ def eye_aspect_ratio(eye):
     ear = (A + B) / (2.0 * C)
     return ear
 
-def process_blink(frame):
-#def process_blink(frame, user, session_id, video_id):
-    global COUNTER, TOTAL
+def process_blink(frame, user, session_id, video_id):
     img = cv2.resize(frame, (640,360))
     img, faces = detector.findFaceMesh(img, draw=False)
 
@@ -46,34 +36,30 @@ def process_blink(frame):
         lenghtHor, _ = detector.findDistance(leftLeft, leftRight)
         cv2.line(img, leftUp, leftDown, (0, 200, 0), 3)
         cv2.line(img, leftLeft, leftRight, (0, 200, 0), 3)
-
+        # Calculate eye-aspect ratio
         ratio = int((lengthVer / lenghtHor) * 100)
-        ratioList.append(ratio)
-        if len(ratioList) > 3:
-            ratioList.pop(0)
-        if np.isnan(sum(ratioList) / len(ratioList)):
-            ratioAvg = None
-        else:
-            ratioAvg = sum(ratioList) / len(ratioList)
-            if ratioAvg < 28.5:
-                blink = 1
+        
+        # Smoothing Filter - average with prev 2 ratios
+        from eye_processing.models import SimpleEyeMetrics
+        this_video = SimpleEyeMetrics.objects.filter(user=user,session_id=session_id,video_id=video_id)   
+        if this_video: # if there are prev frames
+            video_ratios = list(this_video.values_list('eye_aspect_ratio', flat=True))
+            if len(video_ratios)>=2: # if there are at least two prev frames
+                ratio_list = [video_ratios[-2], video_ratios[-1], ratio]
+                if any(r is None for r in ratio_list): # check for NaNs
+                    ratioAvg = None
+                    blink = 0
+                else: # Calculate average
+                    ratioAvg = sum(ratio_list) / len(ratio_list)
+                    if ratioAvg < 28.5: # check against threshold
+                        blink = 1
+                    else:
+                        blink = 0
             else:
                 blink = 0
-        '''
-        # List of blinks in each frame for this video
-        this_video = SimpleEyeMetrics.objects.filter(user=self.user,session_id=self.session_id,video_id=self.video_id)            
-        # if prev frames exist
-        if this_video:
-            video_blinks = this_video.objects.values_list('blink_count')
-
-            # if prev frame was also a blink, set blink = 0
-            total_blinks = sum(list(video_blinks))+blink
         else:
-            total_blinks = 0
-        '''
-        
+            blink = 0        
     else:
-        ratioAvg = None
+        ratio = None
         blink = 0
-    #return TOTAL, ear
-    return blink, ratioAvg
+    return blink, ratio
