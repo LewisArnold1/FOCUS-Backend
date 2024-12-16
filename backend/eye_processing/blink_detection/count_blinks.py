@@ -27,6 +27,7 @@ def eye_aspect_ratio(eye):
     return ear
 
 def process_blink(frame):
+#def process_blink(frame, user, session_id, video_id):
     global COUNTER, TOTAL
     img = cv2.resize(frame, (640,360))
     img, faces = detector.findFaceMesh(img, draw=False)
@@ -55,8 +56,24 @@ def process_blink(frame):
         else:
             ratioAvg = sum(ratioList) / len(ratioList)
             if ratioAvg < 28.5:
-                TOTAL += 1
+                blink = 1
+            else:
+                blink = 0
+        '''
+        # List of blinks in each frame for this video
+        this_video = SimpleEyeMetrics.objects.filter(user=self.user,session_id=self.session_id,video_id=self.video_id)            
+        # if prev frames exist
+        if this_video:
+            video_blinks = this_video.objects.values_list('blink_count')
+
+            # if prev frame was also a blink, set blink = 0
+            total_blinks = sum(list(video_blinks))+blink
+        else:
+            total_blinks = 0
+        '''
+        
     else:
         ratioAvg = None
+        blink = 0
     #return TOTAL, ear
-    return TOTAL, ratioAvg
+    return blink, ratioAvg

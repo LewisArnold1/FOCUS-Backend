@@ -41,8 +41,9 @@ class VideoFrameConsumer(WebsocketConsumer):
             # increment max video id for this user
             from eye_processing.models import SimpleEyeMetrics
             from eye_processing.models import UserSession
-            # filter by user & session
+            # filter by user & session for maximum video ID
             max_video_id = SimpleEyeMetrics.objects.filter(user=self.user,session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']).aggregate(Max('video_id'))['video_id__max'] or 0
+            # Set maximum session and video in websocket
             self.video_id = max_video_id + 1
             self.session_id = UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']
             self.accept()
@@ -76,8 +77,9 @@ class VideoFrameConsumer(WebsocketConsumer):
             image = Image.open(BytesIO(image_data))
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-            # Call the blink detection function with the frame
-            total_blinks, ear = process_blink(frame)
+            # Call the blink detection function with the frame current user, session & video
+            blink, ear = process_blink(frame)
+            #total_blinks, ear = process_blink(frame, self.user, self.session_id, self.video_id)
 
             # Print or send the results (e.g., to the frontend or console)
             # Convert the timestamp from milliseconds to a datetime object
@@ -91,13 +93,26 @@ class VideoFrameConsumer(WebsocketConsumer):
                 session_id=self.session_id, # Associate current session ID
                 video_id=self.video_id, # Associate current video ID
                 timestamp=timestamp_dt,
-                blink_count=total_blinks,
+                blink_count=blink,
                 eye_aspect_ratio=ear,
                 x_coordinate_px = x_coordinate_px,
                 y_coordinate_px = y_coordinate_px,
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {self.session_id}, Video ID: {eye_metrics.video_id}")
+            # sum blinks in this video
+            this_video = SimpleEyeMetrics.objects.filter(user=self.user,session_id=self.session_id,video_id=self.video_id)            
+            # if prev frames exist
+            total_blinks = 0
+            if this_video:
+                video_blinks = list(this_video.values_list('blink_count', flat=True))
+                # sum blinks so far
+                for i in range (1,len(video_blinks)):
+                    if video_blinks[i] == 1 and video_blinks[i-1] == 0:
+                        total_blinks+=1 #  only count blink for first frame with eye closed
+                
+
+            #print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Current blink: {blink}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {self.session_id}, Video ID: {eye_metrics.video_id}")
+            print(f"Total Blinks: {total_blinks}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
