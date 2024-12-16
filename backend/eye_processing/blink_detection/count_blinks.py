@@ -79,7 +79,8 @@ def process_blink(frame):
             #if ratioAvg < 30:# and counter == 0:
             if ratioAvg < 28.5:
                 TOTAL += 1
-            
+    else:
+        ratioAvg = None
         #ear = ratioAvg
     '''
     cv2.imshow("Image",img)
