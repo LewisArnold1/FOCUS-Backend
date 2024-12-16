@@ -64,6 +64,8 @@ class VideoFrameConsumer(WebsocketConsumer):
         x_coordinate_px = data_json.get('xCoordinatePx', None)
         y_coordinate_px = data_json.get('yCoordinatePx', None)
 
+        print(f"Received frame_data: {frame_data}, timestamp: {timestamp}, x: {x_coordinate_px}, y: {y_coordinate_px}")
+        
         if frame_data:
             # Process the frame and get the blink count
             self.process_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
@@ -98,6 +100,6 @@ class VideoFrameConsumer(WebsocketConsumer):
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_rate}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
+            print(f"Saving SimpleEyeMetrics: user={self.user}, session_id={eye_metrics.session_id}, video_id={eye_metrics.video_id}, timestamp={timestamp_dt}, blink_rate={blink_rate}, ear={ear}, x_coordinate_px={x_coordinate_px}, y_coordinate_px={y_coordinate_px}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
