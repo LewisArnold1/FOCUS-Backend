@@ -41,24 +41,21 @@ def process_blink(frame, user, session_id, video_id):
         
         # Smoothing Filter - average with prev 2 ratios
         from eye_processing.models import SimpleEyeMetrics
-        this_video = SimpleEyeMetrics.objects.filter(user=user,session_id=session_id,video_id=video_id)   
-        if this_video: # if there are prev frames
-            video_ratios = list(this_video.values_list('eye_aspect_ratio', flat=True))
-            if len(video_ratios)>=2: # if there are at least two prev frames
-                ratio_list = [video_ratios[-2], video_ratios[-1], ratio]
-                if any(r is None for r in ratio_list): # check for NaNs
-                    ratioAvg = None
-                    blink = 0
-                else: # Calculate average
-                    ratioAvg = sum(ratio_list) / len(ratio_list)
-                    if ratioAvg < 28.5: # check against threshold
-                        blink = 1
-                    else:
-                        blink = 0
-            else:
+
+        this_video = SimpleEyeMetrics.objects.filter(user=user, session_id=session_id, video_id=video_id)
+        video_ratios = list(this_video.values_list('eye_aspect_ratio', flat=True)) if this_video else []
+
+        if len(video_ratios) >= 2:  # Ensure there are at least two previous frames
+            ratio_list = [video_ratios[-2], video_ratios[-1], ratio]
+            if any(r is None for r in ratio_list):  # Check for None values
+                ratioAvg = None
                 blink = 0
+            else:  # Calculate average
+                ratioAvg = sum(ratio_list) / len(ratio_list)
+                blink = 1 if ratioAvg < 28.5 else 0
         else:
-            blink = 0        
+            blink = 0
+        
     else:
         ratio = None
         blink = 0
