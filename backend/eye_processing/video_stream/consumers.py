@@ -44,7 +44,7 @@ class VideoFrameConsumer(WebsocketConsumer):
             # filter by user & session
             max_video_id = SimpleEyeMetrics.objects.filter(user=self.user,session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']).aggregate(Max('video_id'))['video_id__max'] or 0
             self.video_id = max_video_id + 1
-
+            self.session_id = UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']
             self.accept()
         except IndexError:
             print("Invalid query string format:", query_string)
@@ -88,8 +88,8 @@ class VideoFrameConsumer(WebsocketConsumer):
             from eye_processing.models import UserSession
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
-                session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max'],
-                video_id=self.video_id, # Associate current videoID
+                session_id=self.session_id, # Associate current session ID
+                video_id=self.video_id, # Associate current video ID
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
                 eye_aspect_ratio=ear,
@@ -98,6 +98,6 @@ class VideoFrameConsumer(WebsocketConsumer):
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {self.session_id}, Video ID: {eye_metrics.video_id}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
