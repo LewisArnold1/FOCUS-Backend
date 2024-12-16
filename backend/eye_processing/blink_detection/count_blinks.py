@@ -14,7 +14,6 @@ TOTAL = 0
 
 #from new threshold video
 idList = [22, 23, 24, 26, 110, 157, 158, 159, 160, 161, 130, 243]
-#idList = [23, 159]
 ratioList = []
 color = (255, 0, 255)
 detector = FaceMeshDetector(maxFaces=1)
@@ -46,17 +45,17 @@ def process_blink(frame):
         cv2.line(img, leftUp, leftDown, (0, 200, 0), 3)
         cv2.line(img, leftLeft, leftRight, (0, 200, 0), 3)
 
-        ratio = int((lengthVer / lenghtHor) * 100)
-        ratioList.append(ratio)
+        ear = int((lengthVer / lenghtHor) * 100)
+        ratioList.append(ear)
         if len(ratioList) > 3:
             ratioList.pop(0)
         if np.isnan(sum(ratioList) / len(ratioList)):
-            ratioAvg = None
+            earAvg = None
         else:
-            ratioAvg = sum(ratioList) / len(ratioList)
-            if ratioAvg < 28.5:
+            earAvg = sum(ratioList) / len(ratioList)
+            if earAvg < 28.5:
                 TOTAL += 1
     else:
-        ratioAvg = None
-    #return TOTAL, ear
-    return TOTAL, ratioAvg
+        earAvg = None
+        
+    return TOTAL, earAvg
