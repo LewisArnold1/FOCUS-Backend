@@ -13,8 +13,9 @@ pupil_processor = PupilProcessor()
 def process_eye(frame):
     # Extract left and right eye landmarks
     left_eye, right_eye = face_processor.process_face(frame)
-    # if left_eye is None or right_eye is None:
-    #     return None, None, None
+    if left_eye is None or right_eye is None:
+        print("No eye")
+        return 0, None, None
 
     # Process blink detection
     total_blinks, ear = blink_processor.process_blink(left_eye, right_eye)

@@ -9,6 +9,7 @@ class FaceProcessor:
         self.predictor = dlib.shape_predictor(predictor_path)
 
     def extract_main_face(self, rects):
+        print(f"Number of faces detected: {len(rects)}")
         if not rects:
             return None
         return max(rects, key=lambda rect: rect.width() * rect.height())
