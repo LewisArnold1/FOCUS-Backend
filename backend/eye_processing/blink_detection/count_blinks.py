@@ -6,7 +6,6 @@ idList = [22, 23, 24, 26, 110, 157, 158, 159, 160, 161, 130, 243]
 detector = FaceMeshDetector(maxFaces=1)
 
 def process_blink(frame, user, session_id, video_id):
-    threshold = 28.5 # change manually for now
 
     img = cv2.resize(frame, (640,360))
     img, faces = detector.findFaceMesh(img, draw=False)
@@ -14,6 +13,7 @@ def process_blink(frame, user, session_id, video_id):
     blink = 0       # Iniitialise as zero
     ratioAvg = None # Initialise as None
     ratio = None    # Initialise as None
+    threshold = None# Initialise as None
     if faces:
         face = faces[0]
         for id in idList:
@@ -36,11 +36,22 @@ def process_blink(frame, user, session_id, video_id):
         this_video = SimpleEyeMetrics.objects.filter(user=user, session_id=session_id, video_id=video_id)
         video_ratios = list(this_video.values_list('eye_aspect_ratio', flat=True)) if this_video else []
 
+        clean_frames = [x for x in video_ratios if x is not None]
+        filteredList = []
+        if len(clean_frames) >= 30: # Ensure there are at least 30 previous frames with ear values
+            for i in range(2,30):
+                clean_list = [clean_frames[i-2], clean_frames[i-1], clean_frames[i]] # average EAR over 3 frames
+                filteredList.append(sum(clean_list) / len(clean_list)) # append filtered average to list
+            top_10_values = sorted(filteredList, reverse=True)[:10] # Largest 10 filtered values
+            threshold = sum(top_10_values) / len(top_10_values) / 1.22
+        
         if len(video_ratios) >= 2:  # Ensure there are at least two previous frames
             ratio_list = [video_ratios[-2], video_ratios[-1], ratio]
             if any(r is None for r in ratio_list):  # Check for None values
                 ratioAvg = None
             else:  # Calculate average
                 ratioAvg = sum(ratio_list) / len(ratio_list)
-                blink = 1 if ratioAvg < threshold else 0
+                if threshold is not None:
+                    blink = 1 if ratioAvg < threshold else 0
+                    print(f"Threshold: {threshold}") # for now print threshold
     return blink, ratio, ratioAvg
