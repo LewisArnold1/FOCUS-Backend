@@ -54,8 +54,22 @@ class VideoFrameConsumer(WebsocketConsumer):
             print("Authentication failed:", e)
             self.close()
             
-    def disconnect(self, close_code):
-        pass 
+    def disconnect(self, close_code): # save data to csv
+        import csv # to save & plot blink testing data
+        from eye_processing.models import SimpleEyeMetrics
+        dataset = SimpleEyeMetrics.objects.filter(user=self.user,session_id=self.session_id,video_id=self.video_id)
+        file_path = r"C:\Users\User\Local Documents\Coding\test2.csv" # change file name for each video
+        # Open the file in write mode
+        with open(file_path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            # Write the header row (for selected columns)
+            selected_fields = ['blink_count', 'eye_aspect_ratio', 'timestamp']
+            writer.writerow(selected_fields)
+            # Write the data rows
+            for obj in dataset:
+                writer.writerow([getattr(obj, field) for field in selected_fields])
+        print(f"CSV file has been saved to {file_path}")
+        #pass 
 
     def receive(self, text_data):
         # Parse the received JSON message
@@ -106,9 +120,8 @@ class VideoFrameConsumer(WebsocketConsumer):
                 for i in range (1,len(video_blinks)): # sum blinks so far
                     if video_blinks[i] == 1 and video_blinks[i-1] == 0:
                         total_blinks+=1 #  only count blink for first frame with eye closed
-                
-
             #print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Current blink: {blink}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {self.session_id}, Video ID: {eye_metrics.video_id}")
-            print(f"Timestamp: {timestamp_dt}, Blink this frame: {blink}, Total Blinks: {total_blinks}, EAR: {earAvg}") # show smoothed EAR
+            #print(f"Timestamp: {timestamp_dt}, Blink this frame: {blink}, Total Blinks: {total_blinks}, EAR: {earAvg}") # show smoothed EAR
+            print(f"ear: {earAvg}, Timestamp: {timestamp_dt}, Total blinks: {total_blinks}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
