@@ -45,7 +45,7 @@ def process_blink(frame, user, session_id, video_id):
                 filteredList.append(sum(clean_list) / len(clean_list)) # append filtered average to list
             top_10_values = sorted(filteredList, reverse=True)[:10] # Largest 10 filtered values
             threshold = sum(top_10_values) / len(top_10_values) / 1.12 # find mean and multiply by factor for threshold
-            #threshold = sum(top_10_values) / len(top_10_values) - 3.50 # subtract instead
+            #threshold = sum(top_10_values) / len(top_10_values) - 3.50 # subtract instead r
         
         if len(video_ratios) >= 2:  # Ensure there are at least two previous frames
             ratio_list = [video_ratios[-2], video_ratios[-1], ratio]
