@@ -58,9 +58,9 @@ class VideoFrameConsumer(WebsocketConsumer):
         import csv # to save & plot blink testing data
         from eye_processing.models import SimpleEyeMetrics
         dataset = SimpleEyeMetrics.objects.filter(user=self.user,session_id=self.session_id,video_id=self.video_id)
-        file_path = r"C:\Users\User\Local Documents\Coding\test2.csv" # change file name for each video
+        file_path = r"C:\Users\User\Local Documents\Coding\test6.csv" # change file name for each video
         # Open the file in write mode
-        with open(file_path, mode='a', newline='') as file:
+        with open(file_path, mode='w', newline='') as file:
             writer = csv.writer(file)
             # Write the header row (for selected columns)
             selected_fields = ['blink_count', 'eye_aspect_ratio', 'timestamp']
