@@ -20,11 +20,13 @@ def eye_aspect_ratio(eye):
 
 def process_blink(frame, user, session_id, video_id):
     threshold = 28.5
-    
+
     img = cv2.resize(frame, (640,360))
     img, faces = detector.findFaceMesh(img, draw=False)
-
     color = (255,0, 255)
+    blink = 0       # Iniitialise as zero
+    ratioAvg = None # Initialise as None
+    ratio = None    # Initialise as None
     if faces:
         face = faces[0]
         for id in idList:
@@ -51,14 +53,7 @@ def process_blink(frame, user, session_id, video_id):
             ratio_list = [video_ratios[-2], video_ratios[-1], ratio]
             if any(r is None for r in ratio_list):  # Check for None values
                 ratioAvg = None
-                blink = 0
             else:  # Calculate average
                 ratioAvg = sum(ratio_list) / len(ratio_list)
                 blink = 1 if ratioAvg < threshold else 0
-        else:
-            blink = 0
-        
-    else:
-        ratio = None
-        blink = 0
-    return blink, ratio
+    return blink, ratio, ratioAvg

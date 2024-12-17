@@ -78,20 +78,14 @@ class VideoFrameConsumer(WebsocketConsumer):
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
             # Call the blink detection function with the frame current user, session & video
-            #blink, ear = process_blink(frame)
-            blink, ear = process_blink(frame, self.user, self.session_id, self.video_id)
+            blink, ear, earAvg = process_blink(frame, self.user, self.session_id, self.video_id)
 
             # Print or send the results (e.g., to the frontend or console)
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
-             # Save the metrics for this frame in the database with the user
-
-            #remove?
-            from eye_processing.models import UserSession 
-            #remove?
-
+            # Save the metrics for this frame in the database with the user
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
                 session_id=self.session_id, # Associate current session ID
@@ -106,17 +100,15 @@ class VideoFrameConsumer(WebsocketConsumer):
 
             # sum blinks in this video
             this_video = SimpleEyeMetrics.objects.filter(user=self.user,session_id=self.session_id,video_id=self.video_id)            
-            # if prev frames exist
             total_blinks = 0
-            if this_video:
+            if this_video:  # if prev frames exist
                 video_blinks = list(this_video.values_list('blink_count', flat=True))
-                # sum blinks so far
-                for i in range (1,len(video_blinks)):
+                for i in range (1,len(video_blinks)): # sum blinks so far
                     if video_blinks[i] == 1 and video_blinks[i-1] == 0:
                         total_blinks+=1 #  only count blink for first frame with eye closed
                 
 
             #print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Current blink: {blink}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {self.session_id}, Video ID: {eye_metrics.video_id}")
-            print(f"Timestamp: {timestamp_dt}, Blink this frame: {blink}, Total Blinks: {total_blinks}, EAR: {ear}")
+            print(f"Timestamp: {timestamp_dt}, Blink this frame: {blink}, Total Blinks: {total_blinks}, EAR: {earAvg}") # show smoothed EAR
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
