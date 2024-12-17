@@ -1,25 +1,12 @@
-from scipy.spatial import distance as dist
-from imutils import face_utils
-import dlib
 import cv2
-import numpy as np
-import os
 import cvzone
 from cvzone.FaceMeshModule import FaceMeshDetector
-from cvzone.PlotModule import LivePlot
 
 idList = [22, 23, 24, 26, 110, 157, 158, 159, 160, 161, 130, 243]
 detector = FaceMeshDetector(maxFaces=1)
 
-def eye_aspect_ratio(eye):
-    A = dist.euclidean(eye[1], eye[5])
-    B = dist.euclidean(eye[2], eye[4])
-    C = dist.euclidean(eye[0], eye[3])
-    ear = (A + B) / (2.0 * C)
-    return ear
-
 def process_blink(frame, user, session_id, video_id):
-    threshold = 28.5
+    threshold = 28.5 # change manually for now
 
     img = cv2.resize(frame, (640,360))
     img, faces = detector.findFaceMesh(img, draw=False)
