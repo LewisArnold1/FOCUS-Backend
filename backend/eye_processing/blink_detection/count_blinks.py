@@ -43,7 +43,7 @@ def process_blink(frame, user, session_id, video_id):
                 clean_list = [clean_frames[i-2], clean_frames[i-1], clean_frames[i]] # average EAR over 3 frames
                 filteredList.append(sum(clean_list) / len(clean_list)) # append filtered average to list
             top_10_values = sorted(filteredList, reverse=True)[:10] # Largest 10 filtered values
-            threshold = sum(top_10_values) / len(top_10_values) / 1.22
+            threshold = sum(top_10_values) / len(top_10_values) / 1.15
         
         if len(video_ratios) >= 2:  # Ensure there are at least two previous frames
             ratio_list = [video_ratios[-2], video_ratios[-1], ratio]
