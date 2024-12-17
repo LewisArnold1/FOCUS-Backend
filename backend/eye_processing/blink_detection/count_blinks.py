@@ -38,8 +38,9 @@ def process_blink(frame, user, session_id, video_id):
 
         clean_frames = [x for x in video_ratios if x is not None]
         filteredList = []
+        # calculate threshold from previous 30 frames
         if len(clean_frames) >= 30: # Ensure there are at least 30 previous frames with ear values
-            for i in range(2,30):
+            for i in range(len(clean_frames)-28,len(clean_frames)):
                 clean_list = [clean_frames[i-2], clean_frames[i-1], clean_frames[i]] # average EAR over 3 frames
                 filteredList.append(sum(clean_list) / len(clean_list)) # append filtered average to list
             top_10_values = sorted(filteredList, reverse=True)[:10] # Largest 10 filtered values
