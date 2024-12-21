@@ -17,7 +17,8 @@ class PupilProcessor:
         # self.method_4_contrast_enhancement()
         # self.method_5_contour_largest_area()
         # self.method_6_convex_hull()
-        self.method_7_super_resolution()
+        # self.method_7_super_resolution()
+        self.method_8_longest_convex_arc()
         
         return None
     
@@ -51,7 +52,7 @@ class PupilProcessor:
         cropped = self.crop_eyes(self.eye_points)
         grey = self.convert_to_greyscale(cropped)
         binary = self.convert_to_binary(grey)
-        contours = self.find_largest_contour(binary, grey)
+        contours = self.draw_largest_contour(binary, grey)
         self.display_images_in_grid(self.frame, cropped, grey, contours)
 
     def method_6_convex_hull(self):
@@ -65,9 +66,16 @@ class PupilProcessor:
         super_resolved = self.enhance_image_with_super_resolution(cropped)
         grey = self.convert_to_greyscale(super_resolved)
         self.display_images_in_grid(self.frame, cropped, super_resolved, grey)
+
+    def method_8_longest_convex_arc(self):
+        cropped = self.crop_eyes(self.eye_points, padding=5)
+        grey = self.convert_to_greyscale(cropped)
+        binary = self.convert_to_binary(grey)
+        contours = self.process_convex_arc(binary, grey)
+        self.display_images_in_grid(self.frame, cropped, grey, contours)
     
-    def crop_eyes(self, left_eye):
-        x_min, y_min, x_max, y_max = self.find_bounding_box(left_eye)
+    def crop_eyes(self, left_eye, padding=0):
+        x_min, y_min, x_max, y_max = self.find_bounding_box(left_eye, padding=padding)
 
         # Crop the region of interest
         left = self.frame[y_min:y_max, x_min:x_max]
@@ -169,28 +177,33 @@ class PupilProcessor:
         clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
         return clahe.apply(image)
     
-    def find_largest_contour(self, binary_image, grey_image):
+    def draw_largest_contour(self, binary_image, grey_image):
         # Find contours in the binary image
         contours, _ = cv2.findContours(binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Check if contours were found
-        if len(contours) <= 1:
-            print("No contours found")
-            return binary_image  # Return the original image if no contours are detected
-
+  
         # Sort contours by area in descending order
-        contours = sorted(contours, key=lambda x: cv2.contourArea(x), reverse=True)
+        largest_contour = self.find_largest_contour(contours)
+
+        if largest_contour is None:
+            print("No contours found")
+            return grey_image  # Return the original image if no contours are detected
 
         # Create a mask for the largest contour (black on white background)
         largest_contour_mask = np.ones_like(binary_image) * 255  # Start with a white mask
 
-        if len(contours) > 1:
-            cv2.drawContours(grey_image, [contours[1]], -1, (0, 0, 255), 1) # Draw the second largest contour on the grey image
-            cv2.drawContours(largest_contour_mask, [contours[1]], -1, 0, thickness=cv2.FILLED)  # Draw largest contour in black
-        else:
-            print("Only one contour found; cannot draw second largest.")
+        cv2.drawContours(grey_image, [largest_contour], -1, (0, 0, 255), 1) # Draw the second largest contour on the grey image
+        cv2.drawContours(largest_contour_mask, [largest_contour], -1, 0, thickness=cv2.FILLED)  # Draw largest contour in black
 
         return largest_contour_mask
+    
+    def find_largest_contour(self, contours):
+        # Sort contours by area in descending order
+        contours = sorted(contours, key=lambda x: cv2.contourArea(x), reverse=True)
+        
+        if len(contours) <= 1:
+            return None
+        
+        return contours[1]
         
     def enhance_image_with_super_resolution(self, image):
         
@@ -214,6 +227,104 @@ class PupilProcessor:
         enhanced_image = cv2.resize(upscaled_image, original_size, interpolation=cv2.INTER_CUBIC)
 
         return enhanced_image
+    
+    def calculate_curvature(self, contour_points):
+        """
+        Calculate the curvature at each point of the contour using neighboring points.
+        """
+        curvatures = []
+        for i in range(1, len(contour_points) - 1):
+            # Previous, current, and next points
+            prev_point = contour_points[i - 1]
+            current_point = contour_points[i]
+            next_point = contour_points[i + 1]
+
+            # Calculate vectors
+            vec1 = current_point - prev_point
+            vec2 = next_point - current_point
+
+            # Calculate angle between vectors
+            norm1 = np.linalg.norm(vec1)
+            norm2 = np.linalg.norm(vec2)
+            if norm1 == 0 or norm2 == 0:  # Avoid division by zero
+                curvatures.append(0)
+                continue
+
+            cos_theta = np.dot(vec1, vec2) / (norm1 * norm2)
+            cos_theta = np.clip(cos_theta, -1, 1)  # Numerical stability
+
+            angle = np.arccos(cos_theta)  # Angle in radians
+            curvature = angle / norm1  # Curvature is proportional to angle divided by arc length
+            curvatures.append(curvature)
+
+        # Add 0 curvature for first and last points (can't calculate curvature there)
+        curvatures = [0] + curvatures + [0]
+        return np.array(curvatures)
+
+    def extract_longest_convex_arc(self, contour_points, curvatures):
+        """
+        Extract the longest arc with continuous positive curvature (convex region).
+        """
+        longest_arc = []
+        current_arc = []
+
+        for i in range(len(curvatures)):
+            if curvatures[i] > 0:  # Convex region
+                current_arc.append(contour_points[i])
+            else:
+                if len(current_arc) > len(longest_arc):  # Check if current arc is longer
+                    longest_arc = current_arc
+                current_arc = []  # Reset for the next arc
+
+        # Check the last arc
+        if len(current_arc) > len(longest_arc):
+            longest_arc = current_arc
+
+        return np.array(longest_arc)
+
+    def fit_circle_to_arc(self, arc_points, grey_image):
+        """
+        Fit a circle to the arc points and draw it on the image.
+        """
+        if len(arc_points) < 3:
+            print("Not enough points to fit a circle.")
+            return grey_image, None, None
+
+        # Fit a circle using cv2.minEnclosingCircle
+        (x, y), radius = cv2.minEnclosingCircle(arc_points)
+        center = (int(x), int(y))
+        radius = int(radius)
+
+        # Draw the fitted circle
+        cv2.circle(grey_image, center, radius, (0, 255, 0), 1)  # Green circle
+
+        return grey_image, center, radius
+
+    def process_convex_arc(self, binary_image, grey_image):
+        """
+        Detect the contour, calculate curvature, and fit a circle to the longest convex arc.
+        """
+        # Find contours
+        contours, _ = cv2.findContours(binary_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        largest_contour = self.find_largest_contour(contours)
+
+        if largest_contour is None:
+            print("No contours found")
+            return grey_image
+        
+        # Flatten the contour and calculate curvature
+        contour_points = largest_contour[:, 0, :]  # Reshape to (N, 2)
+        curvatures = self.calculate_curvature(contour_points)
+
+        # Extract the longest convex arc
+        longest_arc = self.extract_longest_convex_arc(contour_points, curvatures)
+
+        # Fit a circle to the longest arc and draw only the final circle
+        result_image, center, radius = self.fit_circle_to_arc(longest_arc, grey_image)
+
+        print(f"Fitted Circle - Center: {center}, Radius: {radius}")
+        return result_image
 
     def resize_with_aspect_ratio(self, image, target_size):
         # Convert grayscale/binary images to BGR for consistency
