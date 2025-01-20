@@ -1,29 +1,41 @@
-from scipy.spatial import distance as dist
+import cv2
+import cvzone
+from cvzone.FaceMeshModule import FaceMeshDetector
+
+idList = [22, 23, 24, 26, 110, 157, 158, 159, 160, 161, 130, 243]
+detector = FaceMeshDetector(maxFaces=1)
 
 class BlinkProcessor:
-    def __init__(self, eye_ar_thresh=0.24, eye_ar_consec_frames=4):
+    def __init__(self, eye_ar_thresh=28.5, eye_ar_consec_frames=4):
         self.eye_ar_thresh = eye_ar_thresh
         self.eye_ar_consec_frames = eye_ar_consec_frames
-        self.counter = 0
+        self.counter = 0 # used for smoothing filter previously
         self.total = 0
 
-    @staticmethod
-    def eye_aspect_ratio(eye):
-        A = dist.euclidean(eye[1], eye[5])
-        B = dist.euclidean(eye[2], eye[4])
-        C = dist.euclidean(eye[0], eye[3])
-        return (A + B) / (2.0 * C)
+    def process_blink(self, frame):
+        img = cv2.resize(frame, (640,360))
+        img, faces = detector.findFaceMesh(img, draw=False)
+        color = (255,0, 255)
 
-    def process_blink(self, left_eye, right_eye):
-        left_ear = self.eye_aspect_ratio(left_eye)
-        right_ear = self.eye_aspect_ratio(right_eye)
-        ear = (left_ear + right_ear) / 2.0
+        if faces:
+            face = faces[0]
+        for id in idList:
+            cv2.circle(img, face[id], 5,color, cv2.FILLED)
 
-        if ear < self.eye_ar_thresh:
-            self.counter += 1
-        else:
-            if self.counter >= self.eye_ar_consec_frames:
-                self.total += 1
-            self.counter = 0
+        leftUp = face[159]
+        leftDown = face[23]
+        leftLeft = face[130]
+        leftRight = face[243]
+        lengthVer, _ = detector.findDistance(leftUp, leftDown)
+        lenghtHor, _ = detector.findDistance(leftLeft, leftRight)
+        cv2.line(img, leftUp, leftDown, (0, 200, 0), 3)
+        cv2.line(img, leftLeft, leftRight, (0, 200, 0), 3)
+        # Calculate eye-aspect ratio
+        ear = int((lengthVer / lenghtHor) * 100)
+
+        # inclue smoothing filter later
+
+        if ear <= self.eye_ar_thresh:
+            self.total += 1
 
         return self.total, ear
