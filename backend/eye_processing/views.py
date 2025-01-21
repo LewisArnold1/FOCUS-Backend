@@ -4,6 +4,9 @@ from rest_framework.permissions import IsAuthenticated
 from .models import SimpleEyeMetrics, UserSession
 from django.db.models import Max, Sum, Min
 from datetime import timedelta
+from datetime import timedelta
+from sklearn.linear_model import LinearRegression  # Using linear regression for prediction
+from eye_processing.eye_metrics.predict_blink_count import predict_blink_count
 
 class RetrieveLastBlinkCountView(APIView):
 
@@ -15,20 +18,31 @@ class RetrieveLastBlinkCountView(APIView):
         current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
         latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
         
-        # Retrieve the last metric entry for the user, session, and video
-        last_metric = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id, video_id=latest_video_id).last()
-
-        # Check if there is any data for this user
-        if last_metric:
-            data = {
-                "blink_count": last_metric.blink_count
-            }
-        else:
-            data = {
-                "blink_count": 0  # Default value if no data exists for the user
-            }
-        # Send the blink count as a response
-        return Response(data, status=200)
+        predicted_blink_count = predict_blink_count(request.user)
+        
+         # Retrieve all blink counts for this session and video to use for prediction
+        metrics = SimpleEyeMetrics.objects.filter(
+            user=request.user,
+            session_id=current_session_id,
+            video_id=latest_video_id
+        ).order_by('timestamp')  # Ensure data is sorted by timestamp
+        
+        if not metrics.exists():
+            return Response({"error": "No blink data available for prediction."}, status=404)
+        # Return the latest blink data and predicted blink count
+        return Response({
+            "predicted_blink_count": predicted_blink_count,
+            "metrics": [
+                {
+                    "timestamp": metric.timestamp,
+                    "blink_count": metric.blink_count,
+                    "eye_aspect_ratio": metric.eye_aspect_ratio,
+                    "x_coordinate": metric.x_coordinate_px,
+                    "y_coordinate": metric.y_coordinate_px
+                }
+                for metric in metrics
+            ]
+        }, status=200)
 
 
 class RetrieveAllUserSessionsView(APIView):
