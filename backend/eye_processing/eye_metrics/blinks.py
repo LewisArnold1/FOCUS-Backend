@@ -48,9 +48,10 @@ class BlinkProcessor:
         # declare list for threshold calculation
         filteredList = []
 
-        # calculate threshold from previous 30 frames
-        if len(clean_frames) >= 30: # Ensure there are at least 30 previous frames with ear values
-            for i in range(len(clean_frames)-30,len(clean_frames)):
+        # calculate threshold from previous n frames
+        n = 30
+        if len(clean_frames) >= n: # Ensure there are at least n previous frames with ear values
+            for i in range(len(clean_frames)-n,len(clean_frames)):
                 clean_list = [clean_frames[i-2], clean_frames[i-1], clean_frames[i]] # average EAR over prev 3 frames
                 filteredList.append(sum(clean_list) / len(clean_list)) # append filtered average to list
             top_10_values = sorted(filteredList, reverse=True)[:10] # Largest 10 filtered values
