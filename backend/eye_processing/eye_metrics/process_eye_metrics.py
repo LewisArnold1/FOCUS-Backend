@@ -10,17 +10,19 @@ face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
 pupil_processor = PupilProcessor()
 
-def process_eye(frame):
-    # Extract left and right eye landmarks
-    left_eye, right_eye = face_processor.process_face(frame)
-    if left_eye is None or right_eye is None:
-        print("No eye")
-        return 0, None, None
+def process_eye(frame, prev_ears):
+
+    # # Extract left and right eye landmarks
+    # left_eye, right_eye = face_processor.process_face(frame)
+    # if left_eye is None or right_eye is None:
+    #     print("No eye")
+    #     return 0, None, None
 
     # Process blink detection
-    total_blinks, ear = blink_processor.process_blink(frame)
+    total_blinks, ears = blink_processor.process_blink(frame, prev_ears)
 
     # Process pupil coordinates
-    pupil = pupil_processor.process_pupil(left_eye, right_eye)
+    # pupil = pupil_processor.process_pupil(left_eye, right_eye)
 
-    return total_blinks, ear, pupil
+    # return total_blinks, ears, pupil
+    return total_blinks, ears, None
