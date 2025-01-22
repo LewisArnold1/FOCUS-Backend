@@ -18,6 +18,7 @@ class SimpleEyeMetrics(models.Model):
     video_id = models.IntegerField(default=0)  # Track video session
     timestamp = models.DateTimeField()  # Store the timestamp for each frame
     blink_count = models.IntegerField(null=True, blank=True)  # Store the blink count
+    eye_aspect_ratio = models.FloatField(null=True, blank=True)  # Store the eye aspect ratio
     ear_list = ArrayField(models.FloatField(), default=default_ear_list, blank=True, null=True)  # Store current & prev 2 EARs
     x_coordinate_px = models.FloatField(null=True, blank=True)
     y_coordinate_px = models.FloatField(null=True, blank=True)

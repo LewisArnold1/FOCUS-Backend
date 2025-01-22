@@ -37,33 +37,19 @@ class BlinkProcessor:
             current_ear = None
 
         # smoothing filter
-        if -1 in ears: # applies for first three frames
+        if -1 in ears:                          # applies for first three frames
             for i in range(3):
                 if ears[i] == -1:
                     ears[i] = current_ear
                     break
+        if -1 in ears:                          # applies for first two frames
+            smooth_ear=None
         else:
             ears[0] = ears[1]
             ears[1] = ears[2]
             ears[2] = current_ear
             smooth_ear = np.mean(np.array(ears))
-            print(smooth_ear)
             if smooth_ear <= self.eye_ar_thresh:
                 self.total += 1
 
-
-
-        # if -1 in ears: # applies for first two frames
-        #     # smooth_ear = -1
-        #     # # later data processing may require removing any -1 values
-        #     pass
-        # else:
-        #     ears[0] = ears[1]
-        #     ears[1] = ears[2]
-        #     ears[1] = current_ear
-        #     smooth_ear = np.mean(np.array(ears))
-        #     if smooth_ear <= self.eye_ar_thresh:
-        #         self.total += 1
-        # print(smooth_ear)
-
-        return self.total, ears # change to self.ears
+        return self.total, ears, smooth_ear

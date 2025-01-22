@@ -91,7 +91,7 @@ class VideoFrameConsumer(WebsocketConsumer):
                 prev_ears = [-1, -1, -1]
             else:
                 prev_ears = prev_ears['ear_list'] # extract values from dict
-            total_blinks, ears, pupil = process_eye(frame, prev_ears)
+            total_blinks, ear_list, ear, pupil = process_eye(frame, prev_ears)
 
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
@@ -106,21 +106,15 @@ class VideoFrameConsumer(WebsocketConsumer):
                 video_id=self.video_id,     # Associate current videoID
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
-                ear_list=ears,
+                eye_aspect_ratio=ear,
+                ear_list=ear_list,                
                 x_coordinate_px = x_coordinate_px,
                 y_coordinate_px = y_coordinate_px,
             )
             eye_metrics.save()
 
-            # below for testing
-            # if -1 in np.array(ears):
-            #     ear = -1
-            # else:
-            #     ear  = np.mean(np.array(ears))
-            # above for testing
-
             #print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR_list: {ears}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR_list: {ear_list}, ear: {ear}")
 
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
