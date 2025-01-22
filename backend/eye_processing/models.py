@@ -19,7 +19,7 @@ class SimpleEyeMetrics(models.Model):
     timestamp = models.DateTimeField()  # Store the timestamp for each frame
     blink_count = models.IntegerField(null=True, blank=True)  # Store the blink count
     eye_aspect_ratio = models.FloatField(null=True, blank=True)  # Store the eye aspect ratio
-    ear_list = ArrayField(models.FloatField(), default=default_ear_list, blank=True, null=True)  # Store current & prev 2 EARs
+    eyes_closed = models.BooleanField(default=False) # store if eyes are open in current frame
     x_coordinate_px = models.FloatField(null=True, blank=True)
     y_coordinate_px = models.FloatField(null=True, blank=True)
 
