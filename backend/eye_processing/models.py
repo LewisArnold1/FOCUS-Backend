@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.postgres.fields import ArrayField
 
 class UserSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  # Track the logged-in user
@@ -8,6 +9,8 @@ class UserSession(models.Model):
     def __str__(self):
         return f"User: {self.user.username} - Session ID: {self.session_id}"
 
+def default_ear_list():
+    return [-1, -1, -1]  # Return the list of default values
 
 class SimpleEyeMetrics(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  # Track the logged-in user
@@ -15,7 +18,7 @@ class SimpleEyeMetrics(models.Model):
     video_id = models.IntegerField(default=0)  # Track video session
     timestamp = models.DateTimeField()  # Store the timestamp for each frame
     blink_count = models.IntegerField(null=True, blank=True)  # Store the blink count
-    eye_aspect_ratio = models.FloatField(null=True, blank=True)  # Store the eye aspect ratio
+    ear_list = ArrayField(models.FloatField(), default=default_ear_list, blank=True, null=True)  # Store current & prev 2 EARs
     x_coordinate_px = models.FloatField(null=True, blank=True)
     y_coordinate_px = models.FloatField(null=True, blank=True)
 
