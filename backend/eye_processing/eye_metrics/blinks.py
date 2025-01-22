@@ -7,7 +7,7 @@ idList = [22, 23, 24, 26, 110, 157, 158, 159, 160, 161, 130, 243]
 detector = FaceMeshDetector(maxFaces=1)
 
 class BlinkProcessor:
-    def __init__(self, eye_ar_thresh=28.5, eye_ar_consec_frames=4):
+    def __init__(self, eye_ar_thresh=27.5, eye_ar_consec_frames=4):
         self.eye_ar_thresh = eye_ar_thresh
         self.eye_ar_consec_frames = eye_ar_consec_frames # used for smoothing filter previously
         self.counter = 0 # used for smoothing filter previously
@@ -36,7 +36,11 @@ class BlinkProcessor:
         else:
             current_ear = None
 
-        # smoothing filter
+        # Calculate prev smoothed ear
+        if -1 in ears: prev_ear = None
+        else: prev_ear = np.mean(np.array(ears))
+
+        # Smoothing filter
         if -1 in ears:                          # applies for first three frames
             for i in range(3):
                 if ears[i] == -1:
@@ -49,7 +53,8 @@ class BlinkProcessor:
             ears[1] = ears[2]
             ears[2] = current_ear
             smooth_ear = np.mean(np.array(ears))
-            if smooth_ear <= self.eye_ar_thresh:
+            # Increment total if EAR below threshold (and prev EAR was not)
+            if prev_ear is not None and prev_ear>self.eye_ar_thresh and smooth_ear <= self.eye_ar_thresh:
                 self.total += 1
 
         return self.total, ears, smooth_ear

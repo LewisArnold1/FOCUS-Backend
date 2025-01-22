@@ -84,7 +84,8 @@ class VideoFrameConsumer(WebsocketConsumer):
             from eye_processing.models import UserSession
             current_session = UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']
             prev_ears = SimpleEyeMetrics.objects.filter(user=self.user,session_id=current_session,video_id=self.video_id).order_by('-timestamp').values('ear_list').first()        
-            # Set default if first frame of video
+            
+            # Set default prev_ears if first frame of video
             if prev_ears is None:
                 prev_ears = [-1, -1, -1]
             elif prev_ears['ear_list'] is None:
