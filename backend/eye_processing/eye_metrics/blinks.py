@@ -7,10 +7,8 @@ idList = [22, 23, 24, 26, 110, 157, 158, 159, 160, 161, 130, 243]
 detector = FaceMeshDetector(maxFaces=1)
 
 class BlinkProcessor:
-    def __init__(self, eye_ar_thresh=27.5, eye_ar_consec_frames=4):
+    def __init__(self, eye_ar_thresh=27.5):
         self.eye_ar_thresh = eye_ar_thresh
-        self.eye_ar_consec_frames = eye_ar_consec_frames # used for smoothing filter previously
-        self.counter = 0 # used for smoothing filter previously
         self.total = 0
 
     def process_blink(self, frame, ears):
