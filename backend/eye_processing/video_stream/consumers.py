@@ -80,8 +80,12 @@ class VideoFrameConsumer(WebsocketConsumer):
             image = Image.open(BytesIO(image_data))
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
+            from eye_processing.models import UserSession
+
             # Extract eye metrics
-            total_blinks, ear, pupil = process_eye(frame)
+            current_session = UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']
+            prev_ears = SimpleEyeMetrics.objects.filter(user=self.user,session_id=current_session,video_id=self.video_id).values()
+            total_blinks, ears, pupil = process_eye(frame, prev_ears)
 
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
@@ -90,20 +94,27 @@ class VideoFrameConsumer(WebsocketConsumer):
             print('2')
 
              # Save the metrics for this frame in the database with the user
-            from eye_processing.models import UserSession
             eye_metrics = SimpleEyeMetrics(
-                user=self.user,  # Associate the logged-in user
-                session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max'],
-                video_id=self.video_id, # Associate current videoID
+                user=self.user,             # Associate the logged-in user
+                session_id=current_session, # Associate current sessionID
+                video_id=self.video_id,     # Associate current videoID
                 timestamp=timestamp_dt,
                 blink_count=total_blinks,
-                eye_aspect_ratio=ear,
+                ear_list=ears,
                 x_coordinate_px = x_coordinate_px,
                 y_coordinate_px = y_coordinate_px,
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
-            #print(f"Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, Video ID: {eye_metrics.video_id}")
+            # below for testing
+            if -1 in ears:
+                ear = -1
+            else:
+                ear  = np.mean(np.array(ears))
+            # above for testing
+
+            #print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear},")
+
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
