@@ -9,9 +9,6 @@ class UserSession(models.Model):
     def __str__(self):
         return f"User: {self.user.username} - Session ID: {self.session_id}"
 
-def default_ear_list():
-    return [-1, -1, -1]  # Return the list of default values
-
 class SimpleEyeMetrics(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)  # Track the logged-in user
     session_id = models.IntegerField(default=0)  # Track login session
