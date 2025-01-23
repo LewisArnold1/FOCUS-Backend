@@ -48,13 +48,16 @@ class BlinkProcessor:
         # declare list for threshold calculation
         filteredList = []
 
-        # calculate threshold from previous n frames
-        n = 30
+        # calculate threshold from largest m values in previous n frames
+        n = 120
+        m = 10
+        if len(video_ratios) == n:
+            print('120 frames reached')
         if len(clean_frames) >= n: # Ensure there are at least n previous frames with ear values
             for i in range(len(clean_frames)-n,len(clean_frames)):
                 clean_list = [clean_frames[i-2], clean_frames[i-1], clean_frames[i]] # average EAR over prev 3 frames
                 filteredList.append(sum(clean_list) / len(clean_list)) # append filtered average to list
-            top_10_values = sorted(filteredList, reverse=True)[:10] # Largest 10 filtered values
+            top_10_values = sorted(filteredList, reverse=True)[:m] # Largest 10 filtered values
             threshold = sum(top_10_values) / len(top_10_values) / 1.12 # find mean and multiply by factor for threshold
             #threshold = sum(top_10_values) / len(top_10_values) - 3.50 # subtract instead r
         else:
@@ -72,7 +75,8 @@ class BlinkProcessor:
                         self.blink = 1
                         if prev_blink == 0:
                             self.total +=1
+                            print(f"total {self.total}, threshold {threshold}, ear {smoothed_ear}")
                     else:
                         self.blink = 0
-            print(f"smoothed_ear: {smoothed_ear}, threshold: {threshold}")
+            #print(f"smoothed_ear: {smoothed_ear}, threshold: {threshold}")
         return self.total, self.blink, current_ear
