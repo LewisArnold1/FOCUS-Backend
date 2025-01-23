@@ -19,19 +19,19 @@ class BlinkProcessor:
 
         if faces:
             face = faces[0]
-            for id in idList:
-                cv2.circle(img, face[id], 5,color, cv2.FILLED)
 
+            # Left Eye
             leftUp = face[159]
             leftDown = face[23]
             leftLeft = face[130]
             leftRight = face[243]
-            lengthVer, _ = detector.findDistance(leftUp, leftDown)
-            lenghtHor, _ = detector.findDistance(leftLeft, leftRight)
-            cv2.line(img, leftUp, leftDown, (0, 200, 0), 3)
-            cv2.line(img, leftLeft, leftRight, (0, 200, 0), 3)
+            left_length_Ver, _ = detector.findDistance(leftUp, leftDown)
+            left_length_Hor, _ = detector.findDistance(leftLeft, leftRight)
+
+            # Right Eye
+
             # Calculate eye-aspect ratio
-            current_ear = int((lengthVer / lenghtHor) * 100)
+            current_ear = int((left_length_Hor / left_length_Ver) * 100)
         else:
             current_ear = None
 
@@ -52,7 +52,7 @@ class BlinkProcessor:
         n = 120
         m = 10
         if len(video_ratios) == n:
-            print('120 frames reached')
+            print(f'{n} frames reached')
         if len(clean_frames) >= n: # Ensure there are at least n previous frames with ear values
             for i in range(len(clean_frames)-n,len(clean_frames)):
                 clean_list = [clean_frames[i-2], clean_frames[i-1], clean_frames[i]] # average EAR over prev 3 frames
