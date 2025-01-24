@@ -10,7 +10,7 @@ face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
 pupil_processor = PupilProcessor()
 
-def process_eye(frame):
+def process_eye(frame, ear_list): # ear_list to be removed after testing
     # Extract left and right eye landmarks
     left_eye, right_eye = face_processor.process_face(frame)
     if left_eye is None or right_eye is None:
@@ -18,7 +18,7 @@ def process_eye(frame):
         return 0, None, None
 
     # Process blink detection
-    total_blinks, ear = blink_processor.process_blink(left_eye, right_eye)
+    total_blinks, ear = blink_processor.process_blink(left_eye, right_eye, ear_list) # ear_list to be removed after testing
 
     # Process pupil coordinates
     # pupil = pupil_processor.process_pupil(frame, left_eye)
