@@ -21,6 +21,7 @@ def process_eye(frame):
     total_blinks, ear = blink_processor.process_blink(left_eye, right_eye)
 
     # Process pupil coordinates
-    pupil = pupil_processor.process_pupil(frame, left_eye)
+    # pupil = pupil_processor.process_pupil(frame, left_eye)
+    pupil = None
 
     return total_blinks, ear, pupil
