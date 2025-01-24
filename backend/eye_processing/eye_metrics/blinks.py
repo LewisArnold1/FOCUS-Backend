@@ -30,7 +30,9 @@ class BlinkProcessor:
                 clean_list = [clean_frames[i-2], clean_frames[i-1], clean_frames[i]] # average EAR over 3 frames
                 filteredList.append(sum(clean_list) / len(clean_list)) # append filtered average to list
             top_m_values = sorted(filteredList, reverse=True)[:m] # Largest m filtered values
-            threshold = sum(top_m_values) / len(top_m_values) / 1.12 # find mean and multiply by factor for threshold
+            threshold = sum(top_m_values) / len(top_m_values) / 1.3 # find mean and multiply by factor for threshold
+        else:
+            threshold = None
 
         # Calculate EAR & determine if eye is closed
         eye_closed = 0
@@ -38,7 +40,8 @@ class BlinkProcessor:
         right_ear = self.eye_aspect_ratio(right_eye)
         ear = (left_ear + right_ear) / 2.0
 
-        if ear < self.eye_ar_thresh:
+        if threshold is not None and ear < threshold:
             eye_closed=1
+        print(f"Threshold: {threshold}") # print during testing
 
         return eye_closed, ear

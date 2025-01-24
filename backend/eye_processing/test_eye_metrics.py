@@ -30,14 +30,11 @@ def test_process_eye():
         eye_closed, ear, pupil = process_eye(frame, ear_list)
         eyes_closed.append(eye_closed)
         i = len(eyes_closed)-1
-        print(i)
-        print(eyes_closed[i])
         print(eyes_closed[i])
         if eyes_closed[i] == 1 and eyes_closed[i-1] == 0:
             total_blinks+=1
-        print("Results:")
         print(f"Total Blinks: {total_blinks}, Eye Closed: {eye_closed}, EAR: {ear}, Pupil: {pupil}")
-        #time.sleep(1)    # Pause 1s
+        # time.sleep(1)    # Pause 1s
 
         ear_list.append(ear)
 
