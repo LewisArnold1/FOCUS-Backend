@@ -16,7 +16,8 @@ def test_process_eye():
     if not video.isOpened():
         print("Error: Could not open video.")
         return
-    eyes_closed = [0]
+    
+    eyes_closed = [0,0]
     total_blinks = 0
     while True:
         _, frame = video.read()
@@ -27,14 +28,17 @@ def test_process_eye():
         # Call the process_eye function
         eye_closed, ear, pupil = process_eye(frame)
         eyes_closed.append(eye_closed)
-        for i in range (1,len(eyes_closed)):
-            if eyes_closed[i] == 1 and eyes_closed[i-1] == 0:
-                total_blinks+=1
+        i = len(eyes_closed)-1
+        print(i)
+        print(eyes_closed[i])
+        print(eyes_closed[i])
+        if eyes_closed[i] == 1 and eyes_closed[i-1] == 0:
+            total_blinks+=1
         # print("Results:")
-        # print(f"Total Blinks: {total_blinks}, Eye Closed: {eye_closed}, EAR: {ear}, Pupil: {pupil}")
+        print(f"Total Blinks: {total_blinks}, Eye Closed: {eye_closed}, EAR: {ear}, Pupil: {pupil}")
         print(f"EAR: {ear}")
-        # print(sum(eyes_closed))
-        time.sleep(1)    # Pause 5.5 seconds
+        #print(sum(eyes_closed))
+        #time.sleep(1)    # Pause 5.5 seconds
 
         # Press 'q' to quit the loop
         if cv2.waitKey(1) & 0xFF == ord('q'):

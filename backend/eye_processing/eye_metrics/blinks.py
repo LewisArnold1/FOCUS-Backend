@@ -1,7 +1,7 @@
 from scipy.spatial import distance as dist
 
 class BlinkProcessor:
-    def __init__(self, eye_ar_thresh=0.25, eye_ar_consec_frames=2):
+    def __init__(self, eye_ar_thresh=0.16, eye_ar_consec_frames=2):
         self.eye_ar_thresh = eye_ar_thresh
         self.eye_ar_consec_frames = eye_ar_consec_frames
         self.counter = 0
