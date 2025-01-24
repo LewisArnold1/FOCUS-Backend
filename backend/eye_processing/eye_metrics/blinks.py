@@ -21,10 +21,6 @@ class BlinkProcessor:
         ear = (left_ear + right_ear) / 2.0
 
         if ear < self.eye_ar_thresh:
-            self.counter += 1
-        else:
-            if self.counter >= self.eye_ar_consec_frames:
-                eye_closed=1
-            self.counter = 0
+            eyes_closed=1
 
         return eye_closed, ear
