@@ -21,7 +21,7 @@ imutils==0.5.4
 incremental==24.7.2
 msgpack==1.1.0
 numpy==2.1.3
-opencv-python==4.10.0.84
+opencv-contrib-python==4.10.0.84
 pillow==11.0.0
 psycopg2-binary==2.9.10
 pyasn1==0.6.1

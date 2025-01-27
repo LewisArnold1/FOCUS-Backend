@@ -1,6 +1,5 @@
 import cv2
 import dlib
-import numpy as np
 from imutils import face_utils
 
 class FaceProcessor:
@@ -12,7 +11,7 @@ class FaceProcessor:
         print(f"Number of faces detected: {len(rects)}")
         if not rects:
             return None
-        return max(rects, key=lambda rect: rect.width() * rect.height())
+        return max(rects, key=lambda rect: rect.width() * rect.height())  # return largest face in frame
 
     def extract_eye_regions(self, shape):
         (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
