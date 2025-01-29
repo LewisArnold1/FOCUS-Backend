@@ -16,13 +16,17 @@ def process_eye(frame):
 
     # If faces are not detected, return immediately
     if no_faces == 0:
-        return no_faces, None, None, None, None  
+        return no_faces, None, None, None, None, None, None
+    
+    if normalised_face_speed > 0.2:
+       return no_faces, normalised_face_speed, None, None, None, None, None 
 
     # Process blink detection
     blink_detected, avg_ear = blink_processor.process_blink(left_eye, right_eye)
 
     # Process pupil only if no blink is detected
-    pupil = None if blink_detected else pupil_processor.process_pupil(frame, left_eye)
+    left_pupil_centre, left_pupil_radius = None if blink_detected else pupil_processor.process_pupil(frame, left_eye)
+    right_pupil_centre, right_pupil_radius = None if blink_detected else pupil_processor.process_pupil(frame, right_eye)
 
-    return no_faces, blink_detected, avg_ear, pupil, normalised_face_speed
+    return no_faces, normalised_face_speed, avg_ear, blink_detected, left_pupil_centre, left_pupil_radius, right_pupil_centre, right_pupil_radius
 
