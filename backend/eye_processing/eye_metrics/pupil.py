@@ -5,7 +5,8 @@ from scipy.interpolate import splprep, splev
 
 class PupilProcessor:
     def __init__(self):
-        pass
+        self.pupil_centre = None
+        self.pupil_radius = None
 
     def _resize_with_aspect_ratio(self, image, target_size):
         # Convert grayscale/binary images to BGR for consistency
@@ -65,9 +66,9 @@ class PupilProcessor:
     def process_pupil(self, frame, eye_points):
         self.frame = frame
         self.eye_points = np.array(eye_points)
-        self.detect_pupil()
+        self.pupil_centre, self.pupil_radius = self.detect_pupil()
 
-        return None
+        return self.pupil_centre, self.pupil_radius
 
     def detect_pupil(self):
         cropped = self.crop_eyes_spline(self.eye_points)
@@ -75,8 +76,9 @@ class PupilProcessor:
         contrast = self.enhance_contrast(grey, clip_limit=8.0, tile_grid_size=(1, 1))
         no_reflection = self.remove_reflections(contrast, grey)
         binary = self.convert_to_binary(no_reflection)
-        contours = self.process_convex_arc(binary, grey)
+        contours, center, radius = self.process_convex_arc(binary, grey)
         # self._display_images_in_grid(contrast, no_reflection, binary, contours)
+        return center, radius
 
     def crop_eyes_spline(self, eye_points, smoothing_factor=5.0, shift=3):
         # Extract x and y coordinates of the points
@@ -262,5 +264,4 @@ class PupilProcessor:
         # Fit a circle to the longest arc and draw only the final circle
         result_image, center, radius = self.fit_circle_to_arc(longest_arc, grey_image)
 
-        print(f"Fitted Circle - Center: {center}, Radius: {radius}")
-        return result_image
+        return result_image, center, radius
