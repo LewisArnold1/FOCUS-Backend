@@ -11,7 +11,7 @@ class FaceProcessor:
         print(f"Number of faces detected: {len(rects)}")
         if not rects:
             return None
-        return max(rects, key=lambda rect: rect.width() * rect.height()), len(rects)
+        return max(rects, key=lambda rect: rect.width() * rect.height())  # return largest face in frame
 
     def extract_eye_regions(self, shape):
         (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
@@ -24,11 +24,11 @@ class FaceProcessor:
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         faces = self.detector(gray, 0)
-        main_face, no_faces = self.extract_main_face(faces)
-        if no_faces == 0:
-            return 0, None, None
+        main_face = self.extract_main_face(faces)
+        if main_face is None:
+            return None, None
         
         shape = self.predictor(gray, main_face)
         shape = face_utils.shape_to_np(shape)
         
-        return no_faces, self.extract_eye_regions(shape)
+        return self.extract_eye_regions(shape)
