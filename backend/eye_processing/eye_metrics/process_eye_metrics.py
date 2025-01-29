@@ -3,14 +3,12 @@ import os
 from .face import FaceProcessor
 from .blinks import BlinkProcessor
 from .pupil import PupilProcessor
-from .iris import IrisProcessor
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PREDICTOR_PATH = os.path.join(CURRENT_DIR, 'shape_predictor_68_face_landmarks.dat')
 face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
 pupil_processor = PupilProcessor()
-iris_processor = IrisProcessor()
 
 def process_eye(frame):
     # Extract left and right eye landmarks
