@@ -24,7 +24,7 @@ class FaceProcessor:
         right_eye = shape[rStart:rEnd]
         return left_eye, right_eye
     
-    def compute_face_speed(self, face_rect):
+    def compute_face_speed(self, face_rect, frame_height):
         current_time = time.time()  # Get current timestamp
 
         # Compute the center of the face bounding box
@@ -38,19 +38,20 @@ class FaceProcessor:
             return 0.0
 
         # Compute displacement and velocity
-        displacement = np.linalg.norm(face_center - self.prev_center)  # Euclidean distance
+        normalised_displacement = np.linalg.norm(face_center - self.prev_center) / frame_height  # Normalised Euclidean distance
         time_interval = current_time - self.prev_time
 
-        speed = displacement / time_interval  # Pixels per second
+        normalised_speed = normalised_displacement / time_interval  # Pixels per second
 
         # Update previous values
         self.prev_center = face_center
         self.prev_time = current_time
 
-        return speed
+        return normalised_speed
 
     def process_face(self, frame):
         grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame_height = frame.shape[0]
 
         faces = self.detector(grey, 0)
         main_face, no_faces = self.extract_main_face(faces)
@@ -60,6 +61,6 @@ class FaceProcessor:
         shape = self.predictor(grey, main_face)
         shape = face_utils.shape_to_np(shape)
 
-        face_speed = self.compute_face_speed(main_face)
+        normalised_face_speed = self.compute_face_speed(main_face, frame_height)
         
-        return no_faces, self.extract_eye_regions(shape), face_speed
+        return no_faces, self.extract_eye_regions(shape), normalised_face_speed
