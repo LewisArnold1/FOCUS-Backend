@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import os
+import time
 from scipy.interpolate import splprep, splev
 
 class PupilProcessor:
@@ -265,3 +265,79 @@ class PupilProcessor:
         result_image, center, radius = self.fit_circle_to_arc(longest_arc, grey_image)
 
         return result_image, center, radius
+
+class PupilTracker:
+    def __init__(self):
+        self.prev_left_pupil = None
+        self.prev_right_pupil = None
+        self.prev_left_radius = None
+        self.prev_right_radius = None
+        self.prev_time = None
+
+        self.kalman_left = self._initialise_kalman_filter()
+        self.kalman_right = self._initialise_kalman_filter()
+
+    def _initialise_kalman_filter(self):
+        kalman = cv2.KalmanFilter(4, 2)
+        kalman.transitionMatrix = np.array([[1, 0, 1, 0],  
+                                            [0, 1, 0, 1],  
+                                            [0, 0, 1, 0],  
+                                            [0, 0, 0, 1]], dtype=np.float32)
+        kalman.measurementMatrix = np.eye(2, 4, dtype=np.float32)
+        kalman.processNoiseCov = np.eye(4, dtype=np.float32) * 1e-2
+        kalman.measurementNoiseCov = np.eye(2, dtype=np.float32) * 1e-1
+        kalman.errorCovPost = np.eye(4, dtype=np.float32)
+        return kalman
+    
+    def update_pupil(self, left_pupil, left_radius, right_pupil, right_radius):
+        current_time = time.time()
+        if self.prev_time is None:
+            self.prev_time = current_time
+            self.prev_left_pupil, self.prev_right_pupil = left_pupil, right_pupil
+            self.prev_left_radius, self.prev_right_radius = left_radius, right_radius
+            return left_pupil, left_radius, right_pupil, right_radius
+
+        dt = current_time - self.prev_time
+        left_velocity, right_velocity = self._compute_velocity(left_pupil, right_pupil, dt)
+        measurement_noise = self._adjust_measurement_confidence(left_velocity, right_velocity)
+
+        self.kalman_left.measurementNoiseCov = np.eye(2, dtype=np.float32) * measurement_noise
+        self.kalman_right.measurementNoiseCov = np.eye(2, dtype=np.float32) * measurement_noise
+
+        left_pupil_smoothed = self._apply_kalman_filter(self.kalman_left, left_pupil)
+        right_pupil_smoothed = self._apply_kalman_filter(self.kalman_right, right_pupil)
+
+        self.prev_left_pupil, self.prev_right_pupil = left_pupil, right_pupil
+        self.prev_left_radius, self.prev_right_radius = left_radius, right_radius
+        self.prev_time = current_time
+
+        return left_pupil_smoothed, left_radius, right_pupil_smoothed, right_radius
+    
+    def _compute_velocity(self, left_pupil, right_pupil, dt):
+        if dt == 0 or self.prev_left_pupil is None or self.prev_right_pupil is None:
+            return 0, 0
+
+        left_velocity = np.linalg.norm(np.array(left_pupil) - np.array(self.prev_left_pupil)) / dt
+        right_velocity = np.linalg.norm(np.array(right_pupil) - np.array(self.prev_right_pupil)) / dt
+
+        return left_velocity, right_velocity
+
+    def _adjust_measurement_confidence(self, left_velocity, right_velocity):
+        base_noise = 0.1
+        high_speed_threshold = 0.2
+        velocity_difference_threshold = 0.1
+
+        if abs(left_velocity - right_velocity) > velocity_difference_threshold or max(left_velocity, right_velocity) > high_speed_threshold:
+            return base_noise * 5
+        return base_noise
+    
+    def _apply_kalman_filter(self, kalman, pupil_position):
+        if pupil_position is None:
+            return None
+
+        measured = np.array([[np.float32(pupil_position[0])], [np.float32(pupil_position[1])]])
+        kalman.correct(measured)
+        predicted = kalman.predict()
+        return (int(predicted[0]), int(predicted[1]))
+
+
