@@ -22,7 +22,7 @@ TIMESTAMP_FILENAME = "firstname_test_x_timestamps.t"
 VIDEO_DURATION = 5  
 
 
-def record_video(video_filename, timestamp_filename, duration):#, frame_rate, frame_size):
+def record_video(video_filename, timestamp_filename, duration):
     """
     Records a video for the specified duration and saves it to a file.
     """
@@ -74,7 +74,7 @@ def record_video(video_filename, timestamp_filename, duration):#, frame_rate, fr
 
     print(f"Video saved: {video_filename} ({timestamps[-1]:.2f} seconds, {avg_fps:.2f} FPS).")
 
-    
+
 
 def play_video(video_filename, timestamp_filename):
     video_path = timestamp_filename
