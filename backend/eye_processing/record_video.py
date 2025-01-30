@@ -77,7 +77,6 @@ def record_video(video_filename, timestamp_filename, duration):
 
 
 def play_video(video_filename, timestamp_filename):
-    video_path = timestamp_filename
     timestamp_path = timestamp_filename
 
     # Load timestamps
