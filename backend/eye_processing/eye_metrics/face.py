@@ -14,7 +14,7 @@ class FaceProcessor:
     def extract_main_face(self, rects):
         print(f"Number of faces detected: {len(rects)}")
         if not rects:
-            return None
+            return None, None
         return max(rects, key=lambda rect: rect.width() * rect.height()), len(rects)
 
     def extract_eye_regions(self, shape):
@@ -55,12 +55,14 @@ class FaceProcessor:
 
         faces = self.detector(grey, 0)
         main_face, no_faces = self.extract_main_face(faces)
-        if no_faces == 0:
+        if no_faces == 0 or main_face is None:
             return 0, None, None, 0.0
         
         shape = self.predictor(grey, main_face)
         shape = face_utils.shape_to_np(shape)
 
         normalised_face_speed = self.compute_face_speed(main_face, frame_height)
+
+        left_eye, right_eye = self.extract_eye_regions(shape)
         
-        return no_faces, self.extract_eye_regions(shape), normalised_face_speed
+        return no_faces, left_eye, right_eye, normalised_face_speed

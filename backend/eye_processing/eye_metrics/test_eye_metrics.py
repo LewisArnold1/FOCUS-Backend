@@ -4,11 +4,11 @@ import cv2
 
 # Adjust the path to ensure imports work
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, '..'))
-sys.path.append(PARENT_DIR)
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../../"))
+sys.path.append(PROJECT_ROOT)
 
 # Import the function to test
-from eye_processing.eye_metrics.process_eye_metrics import process_eye
+from process_eye_metrics import process_eye
 
 def test_process_eye():
     # Initialise the video capture
@@ -27,7 +27,7 @@ def test_process_eye():
         (no_faces, normalised_face_speed, avg_ear, blink_detected, 
          left_pupil_centre, left_pupil_radius, right_pupil_centre, right_pupil_radius) = process_eye(frame)
 
-        print(f"Faces: {no_faces}, Face Speed: {normalised_face_speed:.3f}, EAR: {avg_ear:.3f}, Blinking: {blink_detected}")
+        print(f"Faces: {no_faces}, Face Speed: {normalised_face_speed}, EAR: {avg_ear}, Blinking: {blink_detected}")
         print(f"Left Pupil: {left_pupil_centre}, Radius: {left_pupil_radius}")
         print(f"Right Pupil: {right_pupil_centre}, Radius: {right_pupil_radius}\n")
 

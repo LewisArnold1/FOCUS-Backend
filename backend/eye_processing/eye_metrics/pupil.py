@@ -42,10 +42,10 @@ class PupilProcessor:
         target_size = (self.frame.shape[1], self.frame.shape[0])
 
         # Resize images to fill their grid cells while maintaining aspect ratio
-        full_frame_resized = self.resize_with_aspect_ratio(full_frame, target_size)
-        left_cropped_resized = self.resize_with_aspect_ratio(left_cropped, target_size)
-        left_greyscale_resized = self.resize_with_aspect_ratio(left_greyscale, target_size)
-        left_binary_resized = self.resize_with_aspect_ratio(left_binary, target_size)
+        full_frame_resized = self._resize_with_aspect_ratio(full_frame, target_size)
+        left_cropped_resized = self._resize_with_aspect_ratio(left_cropped, target_size)
+        left_greyscale_resized = self._resize_with_aspect_ratio(left_greyscale, target_size)
+        left_binary_resized = self._resize_with_aspect_ratio(left_binary, target_size)
         
         # Combine images into a 2x2 grid
         top_row = np.hstack((full_frame_resized, left_cropped_resized))
@@ -66,19 +66,19 @@ class PupilProcessor:
     def process_pupil(self, frame, eye_points):
         self.frame = frame
         self.eye_points = np.array(eye_points)
-        self.pupil_centre, self.pupil_radius = self.detect_pupil()
 
-        return self.pupil_centre, self.pupil_radius
+        self.pupil_centre, self.pupil_radius, grey, binary = self.detect_pupil()
+
+        return self.pupil_centre, self.pupil_radius, grey, binary
 
     def detect_pupil(self):
-        cropped = self.crop_eyes_spline(self.eye_points)
+        cropped, _ = self.crop_eyes_spline(self.eye_points)
         grey = self.convert_to_greyscale(cropped)
         contrast = self.enhance_contrast(grey, clip_limit=8.0, tile_grid_size=(1, 1))
         no_reflection = self.remove_reflections(contrast, grey)
-        binary = self.convert_to_binary(no_reflection)
-        contours, center, radius = self.process_convex_arc(binary, grey)
-        # self._display_images_in_grid(contrast, no_reflection, binary, contours)
-        return center, radius
+        binary = self.convert_to_binary(no_reflection, threshold=15)
+        center, radius = self.process_convex_arc(binary, grey)
+        return center, radius, grey, binary
 
     def crop_eyes_spline(self, eye_points, smoothing_factor=5.0, shift=3):
         # Extract x and y coordinates of the points
@@ -229,17 +229,14 @@ class PupilProcessor:
         """
         if len(arc_points) < 3:
             print("Not enough points to fit a circle.")
-            return grey_image, None, None
+            return None, None
 
         # Fit a circle using cv2.minEnclosingCircle
         (x, y), radius = cv2.minEnclosingCircle(arc_points)
         center = (int(x), int(y))
         radius = int(radius)
 
-        # Draw the fitted circle
-        cv2.circle(grey_image, center, radius, (0, 255, 0), 1)  # Green circle
-
-        return grey_image, center, radius
+        return center, radius
 
     def process_convex_arc(self, binary_image, grey_image):
         """
@@ -252,7 +249,7 @@ class PupilProcessor:
 
         if largest_contour is None:
             print("No contours found")
-            return grey_image
+            return None, None
         
         # Flatten the contour and calculate curvature
         contour_points = largest_contour[:, 0, :]  # Reshape to (N, 2)
@@ -262,9 +259,9 @@ class PupilProcessor:
         longest_arc = self.extract_longest_convex_arc(contour_points, curvatures)
 
         # Fit a circle to the longest arc and draw only the final circle
-        result_image, center, radius = self.fit_circle_to_arc(longest_arc, grey_image)
+        center, radius = self.fit_circle_to_arc(longest_arc, grey_image)
 
-        return result_image, center, radius
+        return center, radius
 
 class PupilTracker:
     def __init__(self):
@@ -314,13 +311,32 @@ class PupilTracker:
         return left_pupil_smoothed, left_radius, right_pupil_smoothed, right_radius
     
     def _compute_velocity(self, left_pupil, right_pupil, dt):
-        if dt == 0 or self.prev_left_pupil is None or self.prev_right_pupil is None:
+        if dt == 0:
             return 0, 0
 
-        left_velocity = np.linalg.norm(np.array(left_pupil) - np.array(self.prev_left_pupil)) / dt
-        right_velocity = np.linalg.norm(np.array(right_pupil) - np.array(self.prev_right_pupil)) / dt
+        left_velocity = None
+        right_velocity = None
+
+        # Calculate left pupil velocity if possible
+        if left_pupil is not None and self.prev_left_pupil is not None:
+            left_velocity = np.linalg.norm(np.array(left_pupil) - np.array(self.prev_left_pupil)) / dt
+
+        # Calculate right pupil velocity if possible
+        if right_pupil is not None and self.prev_right_pupil is not None:
+            right_velocity = np.linalg.norm(np.array(right_pupil) - np.array(self.prev_right_pupil)) / dt
+
+        # Handle cases where one or both velocities are None
+        if left_velocity is None and right_velocity is not None:
+            left_velocity = right_velocity  # Approximate left velocity with right velocity
+        elif right_velocity is None and left_velocity is not None:
+            right_velocity = left_velocity  # Approximate right velocity with left velocity
+        elif left_velocity is None and right_velocity is None:
+            # Use previous velocities if neither can be calculated
+            left_velocity = 0
+            right_velocity = 0
 
         return left_velocity, right_velocity
+
 
     def _adjust_measurement_confidence(self, left_velocity, right_velocity):
         base_noise = 0.1
@@ -333,7 +349,8 @@ class PupilTracker:
     
     def _apply_kalman_filter(self, kalman, pupil_position):
         if pupil_position is None:
-            return None
+            predicted = kalman.predict()
+            return (int(predicted[0]), int(predicted[1]))
 
         measured = np.array([[np.float32(pupil_position[0])], [np.float32(pupil_position[1])]])
         kalman.correct(measured)
