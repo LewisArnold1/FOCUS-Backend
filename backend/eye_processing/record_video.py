@@ -19,7 +19,7 @@ VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.t"
 
 # Set to 60s for recording videos (can use 5-10s if you want to test its working)
-VIDEO_DURATION = 60  
+VIDEO_DURATION = 5  
 
 
 def record_video(video_filename, timestamp_filename, duration):#, frame_rate, frame_size):
@@ -74,6 +74,8 @@ def record_video(video_filename, timestamp_filename, duration):#, frame_rate, fr
 
     print(f"Video saved: {video_filename} ({timestamps[-1]:.2f} seconds, {avg_fps:.2f} FPS).")
 
+    
+
 def play_video(video_filename, timestamp_filename):
     video_path = timestamp_filename
     timestamp_path = timestamp_filename
@@ -114,6 +116,8 @@ def play_video(video_filename, timestamp_filename):
         # Break the loop on pressing 'q'
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
+    
+    print(f"Video playback lasted {timestamps[frame_idx-1]} seconds.")
 
     cap.release()
     cv2.destroyAllWindows()
