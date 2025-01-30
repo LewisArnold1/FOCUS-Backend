@@ -5,40 +5,67 @@ import csv
 import threading
 import os
 
-# Define constants
-VIDEO_FILENAME = "name_test_x.avi"  # change to your name + test number x
-CSV_FILENAME = "name_test_x.csv"
-VIDEO_DURATION = 10  # in seconds - change to 60!? or more
-FRAME_RATE = 30
-FRAME_SIZE = (640, 480)
+# change to your name + test number x
+VIDEO_FILENAME = "name_test_x.avi"
+TIMESTAMP_FILENAME = "name_test_x_timestamps.t"
 
+# Set to 60s for recording videos (can use 10s if you want to test its working)
+VIDEO_DURATION = 10  
 
-def record_video(video_filename, duration, frame_rate, frame_size):
+# CSV_FILENAME = "name_test_x.csv"  # csv file output in test_eye_metrics
+
+def record_video(video_filename, timestamp_filename, duration):#, frame_rate, frame_size):
     """
     Records a video for the specified duration and saves it to a file.
     """
     cap = cv2.VideoCapture(0)  # Capture from the default camera
 
-    # don't set these? - just record what they are maybe
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_size[0])
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_size[1])
-    cap.set(cv2.CAP_PROP_FPS, frame_rate) # we dont want to set the frame rate surely?
-    # we are choosing to record timestampt of each frame so frame rate is irrelevant?
-
-    fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    out = cv2.VideoWriter(video_filename, fourcc, frame_rate, frame_size)
+    if not cap.isOpened():
+        print("Error: Could not open webcam.")
+        return
+    
+    # Get frame width and height for saving video
+    frame_width = int(cap.get(3))
+    frame_height = int(cap.get(4))
 
     print("Recording video...")
+    timestamps = []
+    frames = []
     start_time = time.time()
-    while time.time() - start_time < duration:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        out.write(frame)
+   
+    # Record Video & save timestamps 
+    with open(timestamp_filename, "w") as f:
+        while time.time() - start_time < duration:
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to capture frame.")
+                break
 
+            # Save frame
+            frames.append(frame)
+
+            # Save timestamp
+            timestamp = time.time() - start_time
+            timestamps.append(timestamp)
+            f.write(f"{timestamp:.6f}\n")
     cap.release()
+
+    if len(timestamps) < 2:
+        print("Error: Not enough frames recorded.")
+        return
+
+    # Calculate fps of recorded video
+    avg_fps = len(timestamps) / (timestamps[-1] - timestamps[0])
+
+    # Save video
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    out = cv2.VideoWriter(video_filename, fourcc, avg_fps, (frame_width,frame_height))
+    for frame in frames:
+        out.write(frame)
     out.release()
-    print("Video recording complete.")
+
+    print(f"Video saved: {video_filename} ({timestamps[-1]:.2f} seconds, {avg_fps:.2f} FPS).")
+
 
 '''
 def run_eye_test(csv_filename):
@@ -64,6 +91,8 @@ def run_eye_test(csv_filename):
     print("Eye processing test complete.")
 '''
 
+
+# include below
 def play_video(video_filename):
     """
     Plays the recorded video.
@@ -86,9 +115,12 @@ def play_video(video_filename):
 
     cap.release()
     cv2.destroyAllWindows()
+'''
 
 
-def main():
+'''
+# def main():
+    
     # Record the video in a separate thread to allow real-time processing if needed
     video_thread = threading.Thread(target=record_video, args=(VIDEO_FILENAME, VIDEO_DURATION, FRAME_RATE, FRAME_SIZE))
     video_thread.start()
@@ -102,7 +134,11 @@ def main():
     play_video(VIDEO_FILENAME)
     
     eye_test_thread.join()
+    
 
+# if __name__ == "__main__":
+#     main()
 
-if __name__ == "__main__":
-    main()
+'''
+
+record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
