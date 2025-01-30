@@ -5,14 +5,22 @@ import csv
 import threading
 import os
 
-# change to your name + test number x
-VIDEO_FILENAME = "name_test_x.avi"
-TIMESTAMP_FILENAME = "name_test_x_timestamps.t"
+'''
+Set video and timestamp filenames.
+Set video duration - 60s for actual vids, do 5-10s to test it works first
 
-# Set to 60s for recording videos (can use 10s if you want to test its working)
-VIDEO_DURATION = 10  
+Run file - video will record then be played back after it is saved
+Press q during playback to stop
 
-# CSV_FILENAME = "name_test_x.csv"  # csv file output in test_eye_metrics
+'''
+
+# change to your first name + test number x
+VIDEO_FILENAME = "firstname_test_x.avi"
+TIMESTAMP_FILENAME = "firstname_test_x_timestamps.t"
+
+# Set to 60s for recording videos (can use 5-10s if you want to test its working)
+VIDEO_DURATION = 60  
+
 
 def record_video(video_filename, timestamp_filename, duration):#, frame_rate, frame_size):
     """
@@ -91,31 +99,49 @@ def run_eye_test(csv_filename):
     print("Eye processing test complete.")
 '''
 
+def play_video(video_filename, timestamp_filename):
+    video_path = timestamp_filename
+    timestamp_path = timestamp_filename
 
-# include below
-def play_video(video_filename):
-    """
-    Plays the recorded video.
-    """
+    # Load timestamps
+    with open(timestamp_path, "r") as f:
+        timestamps = [float(line.strip()) for line in f.readlines()]
+
     cap = cv2.VideoCapture(video_filename)
+    frame_idx = 0
 
     if not cap.isOpened():
         print("Error: Cannot open video file.")
         return
 
     print("Playing back video...")
+    start_time = time.time()  # Start reference time
+    
     while cap.isOpened():
         ret, frame = cap.read()
-        if not ret:
+        if not ret or frame_idx>=len(timestamps):
             break
-        cv2.imshow('Playback', frame)
+
+        # Show frame at current timestamp
+        cv2.imshow('Frame', frame)
+
+        # Wait until next timestamp
+        if frame_idx > 0:
+            wait_time = timestamps[frame_idx] - timestamps[frame_idx - 1]
+            elapsed_time = time.time() - start_time
+            sleep_time = max(0, wait_time - elapsed_time)  # Prevent negative sleep
+            time.sleep(sleep_time)
+        
+        # Reset start time and increment frame counter
+        start_time = time.time()
+        frame_idx += 1
+
         # Break the loop on pressing 'q'
-        if cv2.waitKey(int(1000 / FRAME_RATE)) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
     cap.release()
     cv2.destroyAllWindows()
-'''
 
 
 '''
@@ -142,3 +168,4 @@ def play_video(video_filename):
 '''
 
 record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
+play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
