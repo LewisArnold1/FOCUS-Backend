@@ -74,31 +74,6 @@ def record_video(video_filename, timestamp_filename, duration):#, frame_rate, fr
 
     print(f"Video saved: {video_filename} ({timestamps[-1]:.2f} seconds, {avg_fps:.2f} FPS).")
 
-
-'''
-def run_eye_test(csv_filename):
-    """
-    Runs the external eye processing script and saves the output (1s and 0s) into a CSV file.
-    """
-    command = ["python", "./eye_processing/test_eye_metrics.py", VIDEO_FILENAME]
-
-    print("Running eye processing test...")
-    with open(csv_filename, "w", newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["Eye State"])
-
-        # Execute the eye processing script and capture real-time output
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, text=True)
-        for line in process.stdout:
-            line = line.strip()
-            if line.isdigit():  # Ensure the output is either 0 or 1
-                writer.writerow([line])
-
-        process.stdout.close()
-        process.wait()
-    print("Eye processing test complete.")
-'''
-
 def play_video(video_filename, timestamp_filename):
     video_path = timestamp_filename
     timestamp_path = timestamp_filename
@@ -142,30 +117,6 @@ def play_video(video_filename, timestamp_filename):
 
     cap.release()
     cv2.destroyAllWindows()
-
-
-'''
-# def main():
-    
-    # Record the video in a separate thread to allow real-time processing if needed
-    video_thread = threading.Thread(target=record_video, args=(VIDEO_FILENAME, VIDEO_DURATION, FRAME_RATE, FRAME_SIZE))
-    video_thread.start()
-    video_thread.join()
-
-    # Run the eye processing script and store output concurrently
-    eye_test_thread = threading.Thread(target=run_eye_test, args=(CSV_FILENAME,))
-    eye_test_thread.start()
-
-    # Play the video while the eye processing test is running
-    play_video(VIDEO_FILENAME)
-    
-    eye_test_thread.join()
-    
-
-# if __name__ == "__main__":
-#     main()
-
-'''
 
 record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
 play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
