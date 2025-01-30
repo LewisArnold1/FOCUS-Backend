@@ -6,9 +6,9 @@ import threading
 import os
 
 # Define constants
-VIDEO_FILENAME = "recorded_video.avi"
-CSV_FILENAME = "eye_data.csv"
-VIDEO_DURATION = 10  # in seconds
+VIDEO_FILENAME = "name_test_x.avi"  # change to your name + test number x
+CSV_FILENAME = "name_test_x.csv"
+VIDEO_DURATION = 10  # in seconds - change to 60!? or more
 FRAME_RATE = 30
 FRAME_SIZE = (640, 480)
 
@@ -18,9 +18,12 @@ def record_video(video_filename, duration, frame_rate, frame_size):
     Records a video for the specified duration and saves it to a file.
     """
     cap = cv2.VideoCapture(0)  # Capture from the default camera
+
+    # don't set these? - just record what they are maybe
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, frame_size[0])
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, frame_size[1])
-    cap.set(cv2.CAP_PROP_FPS, frame_rate)
+    cap.set(cv2.CAP_PROP_FPS, frame_rate) # we dont want to set the frame rate surely?
+    # we are choosing to record timestampt of each frame so frame rate is irrelevant?
 
     fourcc = cv2.VideoWriter_fourcc(*'XVID')
     out = cv2.VideoWriter(video_filename, fourcc, frame_rate, frame_size)
@@ -37,7 +40,7 @@ def record_video(video_filename, duration, frame_rate, frame_size):
     out.release()
     print("Video recording complete.")
 
-
+'''
 def run_eye_test(csv_filename):
     """
     Runs the external eye processing script and saves the output (1s and 0s) into a CSV file.
@@ -59,7 +62,7 @@ def run_eye_test(csv_filename):
         process.stdout.close()
         process.wait()
     print("Eye processing test complete.")
-
+'''
 
 def play_video(video_filename):
     """
