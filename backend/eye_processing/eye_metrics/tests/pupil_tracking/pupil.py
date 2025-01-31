@@ -98,7 +98,7 @@ class PupilProcessor:
         # iris3 = self.iris3(contrast, mask)
         iris4 = self.iris4(contrast, mask)
         # iris5 = self.iris5(binary, mask)
-        self.display_images_in_grid(contrast, no_reflection, binary, iris4)
+        self.display_images_in_grid(contrast, no_reflection, binary, contours)
     
     def crop_eyes(self, left_eye, padding=0):
         x_min, y_min, x_max, y_max = self.find_bounding_box(left_eye, padding=padding)

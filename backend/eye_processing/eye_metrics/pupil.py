@@ -78,7 +78,7 @@ class PupilProcessor:
         no_reflection = self.remove_reflections(contrast, grey)
         binary = self.convert_to_binary(no_reflection, threshold=30)
         center, radius = self.process_convex_arc(binary, grey)
-        return center, radius, grey, cropped
+        return center, radius, grey, binary
 
     def crop_eyes_spline(self, eye_points, smoothing_factor=5.0, shift=3):
         # Extract x and y coordinates of the points
