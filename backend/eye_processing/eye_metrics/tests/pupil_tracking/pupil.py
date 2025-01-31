@@ -88,14 +88,17 @@ class PupilProcessor:
         self.display_images_in_grid(self.frame, binary, no_reflection, contours)
 
     def method_10_reflection_removal(self):
-        cropped, hull = self.crop_eyes_spline(self.eye_points)
+        cropped, hull, mask = self.crop_eyes_spline(self.eye_points)
         grey = self.convert_to_greyscale(cropped)
         contrast = self.enhance_contrast(grey, clip_limit=8.0, tile_grid_size=(1, 1))
         no_reflection = self.remove_reflections(contrast, grey)
         binary = self.convert_to_binary(no_reflection)
         contours = self.process_convex_arc(binary, grey)
-        iris = self.iris(contrast, binary)
-        self.display_images_in_grid(contrast, no_reflection, binary, iris)
+        # iris2 = self.iris2(contrast)
+        # iris3 = self.iris3(contrast, mask)
+        iris4 = self.iris4(contrast, mask)
+        # iris5 = self.iris5(binary, mask)
+        self.display_images_in_grid(contrast, no_reflection, binary, iris4)
     
     def crop_eyes(self, left_eye, padding=0):
         x_min, y_min, x_max, y_max = self.find_bounding_box(left_eye, padding=padding)
@@ -153,8 +156,9 @@ class PupilProcessor:
 
         # Crop the bounding rectangle and include only the masked region
         cropped_eye = masked_frame[y_min:y_min + h, x_min:x_min + w]
+        cropped_mask = mask[y_min:y_min + h, x_min:x_min + w]
 
-        return cropped_eye, smooth_curve
+        return cropped_eye, smooth_curve, cropped_mask
 
     
     def find_bounding_box(self, eye_points, padding=0):
@@ -423,7 +427,7 @@ class PupilProcessor:
         color_image = cv2.cvtColor(contrast, cv2.COLOR_GRAY2BGR)
 
         # Create a mask for values between 50 and 180
-        mask = (contrast >= 50) & (contrast < 180)
+        mask = (contrast >= 60)
 
         # Apply red color to the mask (BGR format: Blue, Green, Red)
         color_image[mask] = [0, 0, 255]  # Red
@@ -450,6 +454,249 @@ class PupilProcessor:
         inpainted_image = cv2.inpaint(image, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
 
         return inpainted_image
+    
+    
+    def iris2(self, contrast):
+        # Convert grayscale to BGR for colouring
+        colour_image = cv2.cvtColor(contrast, cv2.COLOR_GRAY2BGR)
+
+        # Mask for regions above a threshold
+        red_mask = (contrast >= 60)
+
+        # Create a binary mask for non-red regions
+        non_red_mask = ~red_mask
+        binary_non_red = (non_red_mask * 255).astype(np.uint8)
+
+        colour_image[non_red_mask] = [0, 0, 255]  # Highlight red regions
+
+        # Find contours of non-red regions
+        contours, _ = cv2.findContours(binary_non_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Initialise variables for overall centroid calculation
+        centroids = []
+        total_weight = 0
+        weighted_sum_x = 0
+        weighted_sum_y = 0
+
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 100:  # Minimum area threshold
+                M = cv2.moments(contour)
+                if M["m00"] != 0:
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
+                    centroids.append((cX, cY))
+                    # Accumulate weighted sums for overall centroid
+                    total_weight += area
+                    weighted_sum_x += cX * area
+                    weighted_sum_y += cY * area
+
+        # Calculate the overall centroid
+        if total_weight != 0:
+            overall_cX = int(weighted_sum_x / total_weight)
+            overall_cY = int(weighted_sum_y / total_weight)
+            overall_centroid = (overall_cX, overall_cY)
+            cv2.circle(colour_image, overall_centroid, 5, (255, 0, 0), -1)  # Mark the overall centroid
+        else:
+            overall_centroid = None
+
+        # Mark individual centroids
+        for (cX, cY) in centroids:
+            cv2.circle(colour_image, (cX, cY), 3, (0, 255, 0), -1)  # Mark each centroid in green
+
+        return colour_image
+
+    def iris3(self, contrast, convex_hull_mask):
+        if np.count_nonzero(convex_hull_mask) == 0:
+            raise ValueError("Convex hull mask is empty. The smooth curve might be out of bounds.")
+
+        # Ensure the mask is the same size as the contrast image
+        if contrast.shape[:2] != convex_hull_mask.shape[:2]:
+            convex_hull_mask = cv2.resize(convex_hull_mask, (contrast.shape[1], contrast.shape[0]))
+
+        # Ensure the mask is of type CV_8U
+        if convex_hull_mask.dtype != np.uint8:
+            convex_hull_mask = convex_hull_mask.astype(np.uint8)
+
+        # Ensure the mask is binary (0 or 255)
+        _, convex_hull_mask = cv2.threshold(convex_hull_mask, 1, 255, cv2.THRESH_BINARY)
+
+        # Check if the mask contains non-zero values
+        if np.count_nonzero(convex_hull_mask) == 0:
+            raise ValueError("Convex hull mask is empty or incorrectly generated.")
+
+        # Apply the convex hull mask to the contrast image
+        contrast_masked = cv2.bitwise_and(contrast, contrast, mask=convex_hull_mask)
+
+        # Debug: Show intermediate steps
+        cv2.imshow("Convex Hull Mask", convex_hull_mask)
+        cv2.imshow("Contrast Image", contrast)
+        cv2.imshow("Contrast Masked", contrast_masked)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+        # Mask for regions above a threshold (red regions)
+        red_mask = (contrast_masked >= 60)
+
+        # Convert grayscale to BGR for colouring
+        colour_image = cv2.cvtColor(contrast, cv2.COLOR_GRAY2BGR)
+
+        # Create a binary mask for non-red regions
+        non_red_mask = ~red_mask
+        binary_non_red = (non_red_mask * 255).astype(np.uint8)
+        binary_non_red = cv2.bitwise_and(binary_non_red, convex_hull_mask)  # Restrict to convex hull
+
+        # Highlight non-red regions
+        colour_image[red_mask] = [0, 255, 0]
+
+        # Find contours of non-red regions
+        contours, _ = cv2.findContours(binary_non_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Initialise variables for overall centroid calculation
+        centroids = []
+        total_weight = 0
+        weighted_sum_x = 0
+        weighted_sum_y = 0
+
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 100:  # Minimum area threshold
+                M = cv2.moments(contour)
+                if M["m00"] != 0:
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
+                    # Check if the centroid is inside the mask
+                    if convex_hull_mask[cY, cX] > 0:
+                        centroids.append((cX, cY))
+                        # Accumulate weighted sums for overall centroid
+                        total_weight += area
+                        weighted_sum_x += cX * area
+                        weighted_sum_y += cY * area
+
+        # Calculate the overall centroid
+        if total_weight != 0:
+            overall_cX = int(weighted_sum_x / total_weight)
+            overall_cY = int(weighted_sum_y / total_weight)
+            overall_centroid = (overall_cX, overall_cY)
+            cv2.circle(colour_image, overall_centroid, 5, (255, 0, 0), -1)  # Mark the overall centroid
+        else:
+            overall_centroid = None
+
+        # Mark individual centroids
+        for (cX, cY) in centroids:
+            cv2.circle(colour_image, (cX, cY), 3, (0, 255, 0), -1)  # Mark each centroid in green
+
+        return colour_image
+
+    def iris4(self, contrast, convex_hull_mask):
+        # Apply the convex hull mask to the contrast image
+        contrast_masked = cv2.bitwise_and(contrast, contrast, mask=convex_hull_mask)
+
+        # Mask for regions above a threshold (red regions)
+        red_mask = (contrast_masked >= 70)
+
+        # Convert grayscale to BGR for colouring
+        colour_image = cv2.cvtColor(contrast, cv2.COLOR_GRAY2BGR)
+
+        # Create a binary mask for non-red regions
+        non_red_mask = ~red_mask
+        binary_non_red = (non_red_mask * 255).astype(np.uint8)
+        binary_non_red = cv2.bitwise_and(binary_non_red, convex_hull_mask)  # Restrict to convex hull
+
+        # Highlight non-red regions
+        # colour_image[red_mask] = [0, 255, 0]
+
+        # Find contours of non-red regions
+        contours, _ = cv2.findContours(binary_non_red, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Initialise variables for overall centroid calculation
+        centroids = []
+        total_weight = 0
+        weighted_sum_x = 0
+        weighted_sum_y = 0
+
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 50:  # Minimum area threshold
+                M = cv2.moments(contour)
+                if M["m00"] != 0:
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
+                    # Check if the centroid is inside the mask
+                    if convex_hull_mask[cY, cX] > 0:
+                        centroids.append((cX, cY))
+                        # Accumulate weighted sums for overall centroid
+                        total_weight += area
+                        weighted_sum_x += cX * area
+                        weighted_sum_y += cY * area
+
+        # Calculate the overall centroid
+        if total_weight != 0:
+            overall_cX = int(weighted_sum_x / total_weight)
+            overall_cY = int(weighted_sum_y / total_weight)
+            overall_centroid = (overall_cX, overall_cY)
+            cv2.circle(colour_image, overall_centroid, 5, (255, 0, 0), -1)  # Mark the overall centroid
+        else:
+            overall_centroid = None
+
+        # Mark individual centroids
+        for (cX, cY) in centroids:
+            cv2.circle(colour_image, (cX, cY), 3, (0, 255, 0), -1)  # Mark each centroid in green
+
+        return colour_image
+    
+    def iris5(self, binary, convex_hull_mask):
+        # Ensure the mask is binary (0 or 255)
+        _, convex_hull_mask = cv2.threshold(convex_hull_mask, 1, 255, cv2.THRESH_BINARY)
+
+        # Restrict the binary image to the convex hull region
+        binary_masked = cv2.bitwise_and(binary, binary, mask=convex_hull_mask)
+
+        # Invert the binary image to focus on black regions (0 values become 255)
+        inverted_binary = cv2.bitwise_not(binary_masked)
+
+        # Convert grayscale to BGR for colouring
+        colour_image = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+
+        # Find contours of black regions (from the inverted binary)
+        contours, _ = cv2.findContours(inverted_binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Initialise variables for overall centroid calculation
+        centroids = []
+        total_weight = 0
+        weighted_sum_x = 0
+        weighted_sum_y = 0
+
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > 50:  # Minimum area threshold
+                M = cv2.moments(contour)
+                if M["m00"] != 0:
+                    cX = int(M["m10"] / M["m00"])
+                    cY = int(M["m01"] / M["m00"])
+                    # Check if the centroid is inside the mask
+                    if convex_hull_mask[cY, cX] > 0:
+                        centroids.append((cX, cY))
+                        # Accumulate weighted sums for overall centroid
+                        total_weight += area
+                        weighted_sum_x += cX * area
+                        weighted_sum_y += cY * area
+
+        # Calculate the overall centroid
+        if total_weight != 0:
+            overall_cX = int(weighted_sum_x / total_weight)
+            overall_cY = int(weighted_sum_y / total_weight)
+            overall_centroid = (overall_cX, overall_cY)
+            cv2.circle(colour_image, overall_centroid, 5, (255, 0, 0), -1)  # Mark the overall centroid
+        else:
+            overall_centroid = None
+
+        # Mark individual centroids
+        for (cX, cY) in centroids:
+            cv2.circle(colour_image, (cX, cY), 3, (0, 255, 0), -1)  # Mark each centroid in green
+
+        return colour_image
+
 
     def resize_with_aspect_ratio(self, image, target_size):
         # Convert grayscale/binary images to BGR for consistency

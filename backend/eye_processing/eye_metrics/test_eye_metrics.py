@@ -17,7 +17,7 @@ def test_process_eye():
     if not video.isOpened():
         print("Error: Could not open video.")
         return
-
+    counter = 0
     while True:
         _, frame = video.read()
         if frame is None:
