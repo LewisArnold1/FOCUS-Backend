@@ -87,67 +87,62 @@ def record_video(video_filename, timestamp_filename, duration):
     print(f"Video saved: {video_filename} ({elapsed_time:.2f} seconds, {avg_fps:.2f} FPS).")
 
 def play_video(video_filename, timestamp_filename):
-    video = video_filename
-    timestamp_path = timestamp_filename
 
-    '''
+    # Current directory
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Full paths
+    video_path = os.path.join(script_dir, video_filename)   
+    timestamp_path = os.path.join(script_dir, timestamp_filename)
+
     # Load timestamps
-    with open(timestamp_path, "r") as f:
-        timestamps_str = [line.strip() for line in f.readlines()]
-
-        timestamps = []
-
-        # Remove the leading and trailing quotes
-        timestamps_cleaned = [timestamp.strip('"') for timestamp in timestamps_str]
-
+    if os.path.exists(timestamp_path):  # Check if the file exists
+        with open(timestamp_path, "r") as json_file:
+            timestamps_str = json.load(json_file)  # Load JSON data
+        timestamps = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
+    else:
+        print("Timestamps file not found.")
         
-        # Optionally, convert to datetime objects for easier processing
-        from datetime import datetime
-        timestamps_dt = [datetime.strptime(ts, "%Y-%m-%d %H:%M:%S.%f") for ts in timestamps_cleaned]
-
-        # Display cleaned timestamps
-        for ts in timestamps_dt:
-            print(ts)  
-    '''
-    cap = cv2.VideoCapture(video_filename)
-    frame_idx = 0
-
+    cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("Error: Cannot open video file.")
         return
+    elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+        print("Timestamps or frames missing.")
+        return
+    else:
+        print(f"Video has {len(timestamps)} frames/timestamps")        
 
     print("Playing back video...")
-    start_time = datetime.now()  # Start reference time
-    
+    start_time = datetime.now()
+    frame_idx = 0
     while cap.isOpened():
         ret, frame = cap.read()
-        # if not ret or frame_idx>=len(timestamps):
-        #     break
+
+        # Stop at last frame
+        if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+            break
 
         # Show frame at current timestamp
         cv2.imshow('Frame', frame)
-        '''
 
-        # Wait until next timestamp
-        if frame_idx > 0:
-            wait_time = timestamps[frame_idx] - timestamps[frame_idx - 1]
-            elapsed_time = time.time() - start_time
-            sleep_time = max(0, wait_time - elapsed_time)  # Prevent negative sleep
+        # Wait until next timestamp (unless final frame)
+        if frame_idx > 0 and frame_idx < len(timestamps)-1:
+            wait_time = (timestamps[frame_idx+1]-timestamps[frame_idx]).total_seconds()
+            sleep_time = max(0, wait_time)  # Prevent negative sleep
             time.sleep(sleep_time)
         
-        # Reset start time and increment frame counter
-        start_time = time.time()
+        # Increment frame counter
         frame_idx += 1
-        '''
-        time.sleep(0.1)
+        
         # Break the loop on pressing 'q'
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
-    
-    # print(f"Video playback lasted {timestamps[frame_idx-1]} seconds.")
+    end_time = datetime.now()
+    print(f"Video playback lasted {(end_time-start_time).total_seconds()} seconds.")
 
     cap.release()
     cv2.destroyAllWindows()
 
-record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
-# play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
+# record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
+play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
