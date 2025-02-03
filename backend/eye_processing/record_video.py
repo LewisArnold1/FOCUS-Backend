@@ -136,7 +136,7 @@ def play_video(video_filename, timestamp_filename):
         # position = (10, 30)  # Text position on the frame (top-left corner)
         # font = cv2.FONT_HERSHEY_SIMPLEX
         # font_scale = 0.7
-        # font_color = (255, 0, 0)  # red
+        # font_color = (255, 0, 0)
         # thickness = 2 
 
         # # Display Text
@@ -166,5 +166,5 @@ def play_video(video_filename, timestamp_filename):
     cap.release()
     cv2.destroyAllWindows()
 
-# record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
+record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
 play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
