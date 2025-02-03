@@ -25,11 +25,10 @@ def test_process_eye():
             return
 
         (no_faces, normalised_face_speed, avg_ear, blink_detected, 
-         left_pupil_centre, left_pupil_radius, right_pupil_centre, right_pupil_radius) = process_eye(frame)
+         left_centre, right_centre) = process_eye(frame)
 
         print(f"Faces: {no_faces}, Face Speed: {normalised_face_speed}, EAR: {avg_ear}, Blinking: {blink_detected}")
-        print(f"Left Pupil: {left_pupil_centre}, Radius: {left_pupil_radius}")
-        print(f"Right Pupil: {right_pupil_centre}, Radius: {right_pupil_radius}\n")
+        print(f"Left Iris: {left_centre}, Right Iris: {right_centre}\n")
 
 
         # Press 'q' to quit the loop

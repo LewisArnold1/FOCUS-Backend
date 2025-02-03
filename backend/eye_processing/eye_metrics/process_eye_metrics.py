@@ -8,51 +8,38 @@ sys.path.append(PROJECT_ROOT)
 
 from face import FaceProcessor
 from blinks import BlinkProcessor
-from pupil import PupilProcessor
-from pupil import PupilTracker
+from iris import IrisProcessor
 
 PREDICTOR_PATH = os.path.join(CURRENT_DIR, 'shape_predictor_68_face_landmarks.dat')
 
 face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
-pupil_processor = PupilProcessor()
-pupil_tracker = PupilTracker()  
+iris_processor = IrisProcessor()
 
 def process_eye(frame):
     no_faces, left_eye, right_eye, normalised_face_speed = face_processor.process_face(frame)
 
     if no_faces == 0:
-        return no_faces, None, None, None, None, None, None, None
+        return no_faces, None, None, None, None, None
 
     blink_detected, avg_ear = blink_processor.process_blink(left_eye, right_eye)
 
     if normalised_face_speed > 0.2:
-        return no_faces, normalised_face_speed, avg_ear, blink_detected, None, None, None, None
+        return no_faces, normalised_face_speed, avg_ear, blink_detected, None, None
 
-    left_pupil_centre, left_pupil_radius = None, None
-    right_pupil_centre, right_pupil_radius = None, None
+    left_centre, right_centre = None, None
 
     if not blink_detected:
-        left_pupil_centre, left_pupil_radius, left_grey, left_binary = pupil_processor.process_pupil(frame, left_eye)
-        right_pupil_centre, right_pupil_radius, right_grey, right_binary = pupil_processor.process_pupil(frame, right_eye)
-
-        # Initialise default values for color images
-        raw_pupil_image = cv2.cvtColor(left_grey, cv2.COLOR_GRAY2RGB)
-        filtered_pupil_image = cv2.cvtColor(left_grey, cv2.COLOR_GRAY2RGB)
+        left_grey, left_colour, left_centre = iris_processor.process_iris(frame, left_eye)
+        right_grey, right_colour, right_centre = iris_processor.process_iris(frame, right_eye)
 
         # Draw the raw pupil detection (before filtering)
-        if left_pupil_centre is not None and left_pupil_radius is not None:
-            cv2.circle(raw_pupil_image, left_pupil_centre, left_pupil_radius, (0, 0, 255), 1)  # Red for raw
-
-        # Update pupil using the Kalman filter
-        left_pupil_centre, left_pupil_radius, right_pupil_centre, right_pupil_radius = pupil_tracker.update_pupil(left_pupil_centre, left_pupil_radius, right_pupil_centre, right_pupil_radius)
-
-        # Draw the Kalman-filtered pupil detection
-        if left_pupil_centre is not None and left_pupil_radius is not None:
-            cv2.circle(filtered_pupil_image, left_pupil_centre, left_pupil_radius, (0, 255, 0), 1)  # Green for filtered
+        if left_centre is not None and right_centre is not None:
+            cv2.circle(left_colour, left_centre, 5, (0, 0, 255), 1)
+            cv2.circle(right_colour, right_centre, 5, (0, 0, 255), 1)
 
         # Display the images side by side
-        pupil_processor._display_images_in_grid(left_binary, raw_pupil_image, right_binary, filtered_pupil_image)
+        iris_processor._display_images_in_grid(left_grey, left_colour, right_grey, right_colour)
 
 
-    return no_faces, normalised_face_speed, avg_ear, blink_detected, left_pupil_centre, left_pupil_radius, right_pupil_centre, right_pupil_radius
+    return no_faces, normalised_face_speed, avg_ear, blink_detected, left_centre, right_centre
