@@ -75,8 +75,28 @@ def test_saved_video(video_filename,timestamp_filename):
 
 
     ''' Manual Threshold '''
+    # # Process each frame
+    # frame_idx = 0
+    # eyes_closed_list = []
+    # while cap.isOpened():
+    #     ret, frame = cap.read()
+
+    #     # Stop at last frame
+    #     if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+    #         break
+
+    #     eye, ear, _ = process_eye(frame)
+    #     # print(ear)
+    #     eyes_closed_list.append(eye)
+
+    #     # Increment frame counter        
+    #     frame_idx += 1
+    # return eyes_closed_list
+
+    ''' Auto Threshold '''
     # Process each frame
     frame_idx = 0
+    ear_list = []
     eyes_closed_list = []
     while cap.isOpened():
         ret, frame = cap.read()
@@ -84,31 +104,14 @@ def test_saved_video(video_filename,timestamp_filename):
         # Stop at last frame
         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
             break
-
-        eye, ear, _ = process_eye(frame)
-        # print(ear)
+        
+        eye, ear, _ = process_eye(frame, ear_list)
         eyes_closed_list.append(eye)
+        ear_list.append(ear)
 
         # Increment frame counter        
         frame_idx += 1
     return eyes_closed_list
-
-    ''' Auto Threshold '''
-    # # Process each frame
-    # frame_idx = 0
-    # while cap.isOpened():
-    #     ret, frame = cap.read()
-
-    #     # Stop at last frame
-    #     if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-    #         break
-        
-    #     eye, ear, [] = process_eye(frame)
-    #     eyes_closed_list.append(eye)
-
-    #     # Increment frame counter        
-    #     frame_idx += 1
-    # return eyes_closed_list
 
 eyes_closed_list = test_saved_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
 print(eyes_closed_list)

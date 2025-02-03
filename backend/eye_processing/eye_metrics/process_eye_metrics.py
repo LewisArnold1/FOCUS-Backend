@@ -10,26 +10,43 @@ face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
 pupil_processor = PupilProcessor()
 
-def process_eye(frame):
+
+'''
+Method needs two arguments while testing auto blink threshold
+'''
+# def process_eye(frame):               # for Most
+def process_eye(frame, ear_list):       # For auto only
+
+    
     # Extract left and right eye landmarks
     left_eye, right_eye = face_processor.process_face(frame)
     if left_eye is None or right_eye is None:
         print("No eye")
         return 0, None, None
     
+    # Process pupil coordinates
+    # pupil = pupil_processor.process_pupil(frame, left_eye)
+    pupil = None
+    
     '''
     Uncomment blink test methods as required.
     Also change what is returned as required.
     '''
-    # Process blink detection
-    closed, ear = blink_processor.manual_threshold(left_eye, right_eye)
-    # all_ears, total_blinks, ear = blink_processor.auto_threshold(left_eye, right_eye)
+    
+    '''
+    Manual
+    '''
+    # closed, ear = blink_processor.manual_threshold(left_eye, right_eye)
+
+    '''
+    Auto - for now requires ear_list as argument. Unnecessary in website
+    '''
+    closed, ear = blink_processor.auto_threshold(left_eye, right_eye, ear_list)
 
 
+    '''
+    CNN
+    '''
+    # closed = blink_processor.CNN(left_eye, right_eye)
 
-    # Process pupil coordinates
-    # pupil = pupil_processor.process_pupil(frame, left_eye)
-    pupil = None
-
-    return closed, ear, pupil # for manual
-    # return total_blinks, ear, all_ears, pupil # for auto
+    return closed, ear, pupil
