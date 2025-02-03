@@ -102,7 +102,7 @@ def play_video(video_filename, timestamp_filename):
         timestamps = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
     else:
         print("Timestamps file not found.")
-        
+
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("Error: Cannot open video file.")
@@ -122,6 +122,28 @@ def play_video(video_filename, timestamp_filename):
         # Stop at last frame
         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
             break
+
+        '''
+        Do not delete below - required for testing
+        '''
+        # # Calculate relative timestamp
+        # relative_timestamp = (timestamps[frame_idx] - timestamps[0]).total_seconds()
+
+        # # Define string to display
+        # text = f"Frame: {frame_idx} | Time: {relative_timestamp:.2f}s"
+
+        # # Set text position & font
+        # position = (10, 30)  # Text position on the frame (top-left corner)
+        # font = cv2.FONT_HERSHEY_SIMPLEX
+        # font_scale = 0.7
+        # font_color = (255, 0, 0)  # red
+        # thickness = 2 
+
+        # # Display Text
+        # cv2.putText(frame, text, position, font, font_scale, font_color, thickness)
+        '''
+        Do not delete above - required for testing
+        '''
 
         # Show frame at current timestamp
         cv2.imshow('Frame', frame)
