@@ -16,12 +16,20 @@ def process_eye(frame):
     if left_eye is None or right_eye is None:
         print("No eye")
         return 0, None, None
-
+    
+    '''
+    Uncomment blink test methods as required.
+    Also change what is returned as required.
+    '''
     # Process blink detection
-    total_blinks, ear = blink_processor.process_blink(left_eye, right_eye)
+    closed, ear = blink_processor.manual_threshold(left_eye, right_eye)
+    # all_ears, total_blinks, ear = blink_processor.auto_threshold(left_eye, right_eye)
+
+
 
     # Process pupil coordinates
     # pupil = pupil_processor.process_pupil(frame, left_eye)
     pupil = None
 
-    return total_blinks, ear, pupil
+    return closed, ear, pupil # for manual
+    # return total_blinks, ear, all_ears, pupil # for auto
