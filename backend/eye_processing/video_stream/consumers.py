@@ -68,7 +68,6 @@ class VideoFrameConsumer(WebsocketConsumer):
         y_coordinate_px = data_json.get('yCoordinatePx', None)
 
         if frame_data:
-            print('1')
             # Process the frame and get the blink count
             self.process_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
 
@@ -81,13 +80,11 @@ class VideoFrameConsumer(WebsocketConsumer):
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
             # Extract eye metrics
-            total_blinks, ear, pupil = process_eye(frame)
+            no_faces, normalised_face_speed, ear, blink_detected, left_centre, right_centre = process_eye(frame)
 
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
-
-            print('2')
 
              # Save the metrics for this frame in the database with the user
             from eye_processing.models import UserSession
@@ -96,13 +93,17 @@ class VideoFrameConsumer(WebsocketConsumer):
                 session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max'],
                 video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
-                blink_count=total_blinks,
-                eye_aspect_ratio=ear,
                 x_coordinate_px = x_coordinate_px,
                 y_coordinate_px = y_coordinate_px,
+                no_faces=no_faces,
+                normalised_face_speed=normalised_face_speed,
+                eye_aspect_ratio=ear,
+                blink_count=blink_detected,
+                left_centre=left_centre, 
+                right_centre=right_centre
             )
             eye_metrics.save()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {total_blinks}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_detected}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)

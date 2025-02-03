@@ -76,7 +76,7 @@ class PupilProcessor:
         grey = self.convert_to_greyscale(cropped)
         contrast = self.enhance_contrast(grey, clip_limit=8.0, tile_grid_size=(1, 1))
         no_reflection = self.remove_reflections(contrast, grey)
-        binary = self.convert_to_binary(no_reflection, threshold=15)
+        binary = self.convert_to_binary(no_reflection, threshold=30)
         center, radius = self.process_convex_arc(binary, grey)
         return center, radius, grey, binary
 
