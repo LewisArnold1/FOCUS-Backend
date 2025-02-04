@@ -14,8 +14,8 @@ pupil_processor = PupilProcessor()
 '''
 Method needs two arguments while testing auto blink threshold
 '''
-# def process_eye(frame):               # for Most
-def process_eye(frame, ear_list):       # For auto only
+def process_eye(frame):               # for Most
+# def process_eye(frame, ear_list):       # For auto only
 
     
     # Extract left and right eye landmarks
@@ -36,12 +36,12 @@ def process_eye(frame, ear_list):       # For auto only
     '''
     Manual
     '''
-    # closed, ear = blink_processor.manual_threshold(left_eye, right_eye)
+    closed, ear = blink_processor.manual_threshold(left_eye, right_eye)
 
     '''
     Auto - for now requires ear_list as argument. Unnecessary in website
     '''
-    closed, ear = blink_processor.auto_threshold(left_eye, right_eye, ear_list)
+    # closed, ear = blink_processor.auto_threshold(left_eye, right_eye, ear_list)
 
 
     '''
