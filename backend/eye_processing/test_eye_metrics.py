@@ -6,6 +6,7 @@ from datetime import datetime
 # change to first name & test number x of each saved video
 VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
+IDEAL_FRAMES_FILENAME = "firstname_test_x_ideal.csv"
 
 # Import the function to test
 from eye_metrics.process_eye_metrics import process_eye
@@ -111,7 +112,52 @@ def test_saved_video(video_filename,timestamp_filename):
 
         # Increment frame counter        
         frame_idx += 1
+    
+    ''' CNN '''
+    # To be added
+
     return eyes_closed_list
 
+def metrics(eyes_closed_list, ideal_filename):
+    # Retrieve ideal eyes_closed_list
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    ideal_path = os.path.join(script_dir, ideal_filename)
+    with open(ideal_path, "r") as file:
+        reader = csv.reader(ideal_path)
+        ideal = [int(line.strip()) for line in file] # data in one column
+
+    # Check arrays are same length
+    if len(ideal) != len(eyes_closed_list):
+        print("error with ideal")
+        return
+    
+    print(f"Ideal {ideal}")
+    print(f"Actual {eyes_closed_list}")
+    
+    # Calculate metrics
+    true_positives = 0
+    false_positives = 0
+    true_negatives = 0
+    false_negatives = 0
+
+    for i in range(len(ideal)):
+        # Positives
+        if eyes_closed_list[i] == 1:
+            true_positives += 1 if ideal[i] == 1 else 0
+            false_positives += 1 if ideal[i] == 0 else 0
+        # Negatives
+        else:
+            true_negatives += 1 if ideal[i] == 0 else 0
+            false_negatives += 1 if ideal[i] == 1 else 0
+
+    precision = true_positives/(true_positives+false_positives)
+    recall =  true_positives/(true_positives+false_negatives)
+    F1_score = 2*precision*recall/(precision+recall)
+    overall_accuracy = (true_negatives+true_negatives)/len(ideal)
+
+    return precision, recall, F1_score, overall_accuracy
+
 eyes_closed_list = test_saved_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
-print(eyes_closed_list)
+# print(eyes_closed_list) # May want to save this to a csv for showing in appendix of paper?
+precision, recall, F1_score, overall_accuracy = metrics(eyes_closed_list, IDEAL_FRAMES_FILENAME)
+print(f"Precision: {precision},\nRecall: {recall},\n F1 Score: {F1_score},\nOverall Accuracy: {overall_accuracy}")
