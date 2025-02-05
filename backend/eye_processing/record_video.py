@@ -9,16 +9,18 @@ Set video and timestamp filenames.
 Set video duration - 60s for actual vids, do 5-10s to test it works first
 
 Run file - video will record then be played back after it is saved
-Press q during playback to stop
-
 '''
 
-# change to your first name + test number x
-VIDEO_FILENAME = "firstname_test_x.avi"
-TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
+# # change to your first name + test number x
+# VIDEO_FILENAME = "firstname_test_x.avi"
+# TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
+
+
+VIDEO_FILENAME = "zak_test_2.avi"
+TIMESTAMP_FILENAME = "zak_test_2_timestamps.txt"
 
 # Set to 60s for recording videos (can use 5-10s if you want to test its working)
-VIDEO_DURATION = 5
+VIDEO_DURATION = 60
 
 
 def record_video(video_filename, timestamp_filename, duration):
@@ -126,21 +128,21 @@ def play_video(video_filename, timestamp_filename):
         '''
         Do not delete below - required for testing
         '''
-        # # Calculate relative timestamp
-        # relative_timestamp = (timestamps[frame_idx] - timestamps[0]).total_seconds()
+        # Calculate relative timestamp
+        relative_timestamp = (timestamps[frame_idx] - timestamps[0]).total_seconds()
 
-        # # Define string to display
-        # text = f"Frame: {frame_idx} | Time: {relative_timestamp:.2f}s"
+        # Define string to display
+        text = f"Frame: {frame_idx} | Time: {relative_timestamp:.2f}s"
 
-        # # Set text position & font
-        # position = (10, 30)  # Text position on the frame (top-left corner)
-        # font = cv2.FONT_HERSHEY_SIMPLEX
-        # font_scale = 0.7
-        # font_color = (255, 0, 0)
-        # thickness = 2 
+        # Set text position & font
+        position = (10, 30)  # Text position on the frame (top-left corner)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.7
+        font_color = (255, 0, 0)
+        thickness = 2 
 
-        # # Display Text
-        # cv2.putText(frame, text, position, font, font_scale, font_color, thickness)
+        # Display Text
+        cv2.putText(frame, text, position, font, font_scale, font_color, thickness)
         '''
         Do not delete above - required for testing
         '''
@@ -152,7 +154,11 @@ def play_video(video_filename, timestamp_filename):
         if frame_idx > 0 and frame_idx < len(timestamps)-1:
             wait_time = (timestamps[frame_idx+1]-timestamps[frame_idx]).total_seconds()
             sleep_time = max(0, wait_time)  # Prevent negative sleep
-            time.sleep(sleep_time)
+            # time.sleep(sleep_time*1) # alter to find frames where blinks are
+
+        # change value here to speed up finding blinks
+        if frame_idx > 1248:
+            pass    # use breakpoint before pass
         
         # Increment frame counter
         frame_idx += 1
@@ -166,5 +172,5 @@ def play_video(video_filename, timestamp_filename):
     cap.release()
     cv2.destroyAllWindows()
 
-record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
+# record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
 play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
