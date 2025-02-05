@@ -31,9 +31,12 @@ def record_video(video_filename, timestamp_filename, duration):
     # Current directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
+    # Tests folder
+    tests_dir = os.path.join(script_dir, "blink_tests")
+
     # Full paths
-    video_path = os.path.join(script_dir, video_filename)   
-    timestamp_path = os.path.join(script_dir, timestamp_filename)
+    video_path = os.path.join(tests_dir, video_filename)   
+    timestamp_path = os.path.join(tests_dir, timestamp_filename)
     
     cap = cv2.VideoCapture(0)  # Capture from the default camera
 
@@ -93,9 +96,12 @@ def play_video(video_filename, timestamp_filename):
     # Current directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
+    # Tests folder
+    tests_dir = os.path.join(script_dir, "blink_tests")
+
     # Full paths
-    video_path = os.path.join(script_dir, video_filename)   
-    timestamp_path = os.path.join(script_dir, timestamp_filename)
+    video_path = os.path.join(tests_dir, video_filename)   
+    timestamp_path = os.path.join(tests_dir, timestamp_filename)
 
     # Load timestamps
     if os.path.exists(timestamp_path):  # Check if the file exists
