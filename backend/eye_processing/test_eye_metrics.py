@@ -152,7 +152,7 @@ def metrics(eyes_closed_list, ideal_filename):
     precision = true_positives/(true_positives+false_positives)
     recall =  true_positives/(true_positives+false_negatives)
     F1_score = 2*precision*recall/(precision+recall)
-    overall_accuracy = (true_negatives+true_negatives)/len(ideal)
+    overall_accuracy = (true_positives+true_negatives)/len(ideal)
 
     return precision, recall, F1_score, overall_accuracy
 
