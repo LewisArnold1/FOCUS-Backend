@@ -47,9 +47,12 @@ def test_saved_video(video_filename,timestamp_filename):
     # Current directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
+    # Tests folder
+    tests_dir = os.path.join(script_dir, "blink_tests")
+
     # Full paths
-    video_path = os.path.join(script_dir, video_filename)   
-    timestamp_path = os.path.join(script_dir, timestamp_filename)
+    video_path = os.path.join(tests_dir, video_filename)   
+    timestamp_path = os.path.join(tests_dir, timestamp_filename)
 
     # Load timestamps
     if os.path.exists(timestamp_path):  # Check if the file exists
@@ -121,7 +124,8 @@ def test_saved_video(video_filename,timestamp_filename):
 def metrics(eyes_closed_list, ideal_filename):
     # Retrieve ideal eyes_closed_list
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    ideal_path = os.path.join(script_dir, ideal_filename)
+    tests_dir = os.path.join(script_dir, "blink_tests")
+    ideal_path = os.path.join(tests_dir, ideal_filename)
     with open(ideal_path, "r") as file:
         ideal = [int(line.strip()) for line in file] # data in one column
 
@@ -152,7 +156,7 @@ def metrics(eyes_closed_list, ideal_filename):
     precision = true_positives/(true_positives+false_positives)
     recall =  true_positives/(true_positives+false_negatives)
     F1_score = 2*precision*recall/(precision+recall)
-    overall_accuracy = (true_negatives+true_negatives)/len(ideal)
+    overall_accuracy = (true_positives+true_negatives)/len(ideal)
 
     return precision, recall, F1_score, overall_accuracy
 
