@@ -14,7 +14,7 @@ Django==5.1.2
 django-cors-headers==4.5.0
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.3.1
-dlib==19.24.6
+dlib==19.22.99
 hyperlink==21.0.0
 idna==3.10
 imutils==0.5.4
