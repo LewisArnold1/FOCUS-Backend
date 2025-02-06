@@ -6,9 +6,14 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../../"))
 sys.path.append(PROJECT_ROOT)
 
-from face import FaceProcessor
-from blinks import BlinkProcessor
-from iris import IrisProcessor
+try:
+    from .face import FaceProcessor
+    from .blinks import BlinkProcessor
+    from .iris import IrisProcessor
+except ImportError:
+    from face import FaceProcessor
+    from blinks import BlinkProcessor
+    from iris import IrisProcessor
 
 PREDICTOR_PATH = os.path.join(CURRENT_DIR, 'shape_predictor_68_face_landmarks.dat')
 
