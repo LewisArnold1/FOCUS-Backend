@@ -21,7 +21,7 @@ face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
 iris_processor = IrisProcessor()
 
-def process_eye(frame):
+def process_eye(frame, verbose=0):
     no_faces, left_eye, right_eye, normalised_face_speed = face_processor.process_face(frame)
 
     if no_faces == 0:
@@ -43,8 +43,9 @@ def process_eye(frame):
             cv2.circle(left_colour, left_centre, 5, (0, 0, 255), 1)
             cv2.circle(right_colour, right_centre, 5, (0, 0, 255), 1)
 
-        # Display the images side by side
-        iris_processor._display_images_in_grid(left_grey, left_colour, right_grey, right_colour)
+        # Display the images side by side (if verbose is set to 1)
+        if verbose:
+            iris_processor._display_images_in_grid(left_grey, left_colour, right_grey, right_colour)
 
 
     return no_faces, normalised_face_speed, avg_ear, blink_detected, left_centre, right_centre
