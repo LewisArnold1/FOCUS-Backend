@@ -27,6 +27,7 @@ load_dotenv(dotenv_path=env_path)
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 print("SECRET_KEY:", os.getenv('SECRET_KEY'))
+print("ALLOWED_HOSTS:", os.getenv('ALLOWED_HOSTS'))
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
