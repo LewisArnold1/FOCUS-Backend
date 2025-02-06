@@ -10,6 +10,11 @@ RUN apt-get update && apt-get install -y \
 # Set the working directory
 WORKDIR /backend
 
+ARG DATABASE_URL
+ARG SECRET_KEY
+ARG DEBUG
+ARG ALLOWED_HOSTS
+
 # Copy and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
