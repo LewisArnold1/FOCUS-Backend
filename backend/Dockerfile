@@ -14,6 +14,7 @@ ARG DATABASE_URL
 ARG SECRET_KEY
 ARG DEBUG
 ARG ALLOWED_HOSTS
+ARG ENVIRONMENT
 
 # Copy and install dependencies
 COPY requirements.txt .
