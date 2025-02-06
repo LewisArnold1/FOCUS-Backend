@@ -25,6 +25,9 @@ env_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(dotenv_path=env_path)
 
 SECRET_KEY = os.getenv('SECRET_KEY')
+
+print("SECRET_KEY:", os.getenv('SECRET_KEY'))
+
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 CSRF_TRUSTED_ORIGINS= [ 'https://focus-backend-production.up.railway.app' ]
