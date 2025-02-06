@@ -1,1 +1,1 @@
-web: daphne backend.asgi:applicationgit
+web: daphne backend.asgi:application
