@@ -3,63 +3,65 @@ import json
 import urllib.parse
 from datetime import datetime
 from io import BytesIO
+import os
+import django
 
 import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
-from channels.generic.websocket import WebsocketConsumer
+from channels.generic.websocket import AsyncWebsocketConsumer
 
 from django.db.models import Max
 
 from eye_processing.eye_metrics import process_eye
 
-class VideoFrameConsumer(WebsocketConsumer):
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+django.setup()  # Ensure Django is initialized before importing Django modules
 
-    def connect(self):
+from asgiref.sync import sync_to_async
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+class VideoFrameConsumer(AsyncWebsocketConsumer):
+
+    async def connect(self):
         query_string = self.scope['query_string'].decode('utf-8')
-        print("Query string received:", query_string)  # Debugging log
+        print("Query string received:", query_string)
 
         try:
-            # Split by '=' to extract the token content
             encoded_token_data = query_string.split('=')[1]
-            
-            # Decode URL encoding (e.g., %22 -> ")
             decoded_token_data = urllib.parse.unquote(encoded_token_data)
-            print("Decoded token data:", decoded_token_data)
-
-            # Parse JSON content
             token_data = json.loads(decoded_token_data)
-            print("Parsed token data:", token_data)
 
-            # Extract the "access" token
             self.token = token_data.get("access", None)
             if not self.token:
                 raise ValueError("Access token not found in query string")
 
             print("Extracted token:", self.token)
-            from rest_framework_simplejwt.authentication import JWTAuthentication
-            validated_token = JWTAuthentication().get_validated_token(self.token)
-            self.user = JWTAuthentication().get_user(validated_token)
-            
-            # increment max video id for this user
-            from eye_processing.models import SimpleEyeMetrics
-            from eye_processing.models import UserSession
-            # filter by user & session
-            max_video_id = SimpleEyeMetrics.objects.filter(user=self.user,session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max']).aggregate(Max('video_id'))['video_id__max'] or 0
-            self.video_id = max_video_id + 1
 
-            self.accept()
+            # Run authentication in a synchronous thread
+            validated_token = await sync_to_async(JWTAuthentication().get_validated_token)(self.token)
+            self.user = await sync_to_async(JWTAuthentication().get_user)(validated_token)
+
+            # Fetch max video_id in an async-safe way
+            from eye_processing.models import SimpleEyeMetrics, UserSession
+
+            max_session_id = await sync_to_async(UserSession.objects.filter(user=self.user).aggregate)(Max('session_id'))
+            max_video_id = await sync_to_async(SimpleEyeMetrics.objects.filter(user=self.user, session_id=max_session_id['session_id__max']).aggregate)(Max('video_id'))
+
+            self.video_id = (max_video_id['video_id__max'] or 0) + 1
+
+            await self.accept()
         except IndexError:
             print("Invalid query string format:", query_string)
-            self.close()
+            await self.close()
         except Exception as e:
             print("Authentication failed:", e)
-            self.close()
+            await self.close()
             
-    def disconnect(self, close_code):
+    async def disconnect(self, close_code):
         pass 
 
-    def receive(self, text_data):
+    async def receive(self, text_data):
         # Parse the received JSON message
         data_json = json.loads(text_data)
         frame_data = data_json.get('frame', None)
@@ -68,12 +70,12 @@ class VideoFrameConsumer(WebsocketConsumer):
         y_coordinate_px = data_json.get('yCoordinatePx', None)
 
         if frame_data:
-            # Process the frame and get the blink count
-            self.process_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
+            # Process the frame and get the blink count                
+            await self.process_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
 
-    def process_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px):
+    async def process_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px):
         try:
-            from eye_processing.models import SimpleEyeMetrics
+            from eye_processing.models import SimpleEyeMetrics, UserSession
             # Decode the base64-encoded image
             image_data = base64.b64decode(frame_data.split(',')[1])
             image = Image.open(BytesIO(image_data))
@@ -86,11 +88,13 @@ class VideoFrameConsumer(WebsocketConsumer):
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
+            max_session_id = await sync_to_async(UserSession.objects.filter(user=self.user).aggregate)(Max('session_id'))
+            session_id = max_session_id['session_id__max']
+
              # Save the metrics for this frame in the database with the user
-            from eye_processing.models import UserSession
             eye_metrics = SimpleEyeMetrics(
                 user=self.user,  # Associate the logged-in user
-                session_id=UserSession.objects.filter(user=self.user).aggregate(Max('session_id'))['session_id__max'],
+                session_id=session_id,
                 video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
                 x_coordinate_px = x_coordinate_px,
@@ -102,7 +106,7 @@ class VideoFrameConsumer(WebsocketConsumer):
                 left_centre=left_centre, 
                 right_centre=right_centre
             )
-            eye_metrics.save()
+            await sync_to_async(eye_metrics.save)()
 
             print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_detected}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
