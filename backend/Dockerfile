@@ -1,6 +1,12 @@
 # Use official Python image
 FROM python:3.11
 
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    libopenblas-dev \
+    liblapack-dev \
+    && rm -rf /var/lib/apt/lists/*
 # Set the working directory
 WORKDIR /backend
 
