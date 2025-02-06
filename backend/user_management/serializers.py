@@ -12,7 +12,6 @@ class RegisterUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        # Hash the password before saving the user
         validated_data['password'] = make_password(validated_data['password'])
         return super(RegisterUserSerializer, self).create(validated_data)
 
