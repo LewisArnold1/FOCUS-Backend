@@ -12,8 +12,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from pickle import FALSE
 from dotenv import load_dotenv
 import os
+import dj_database_url
 
 # Specify the path to the .env file
 BASE_DIR = Path(__file__).resolve().parent.parent  # Adjust as needed
@@ -25,6 +27,7 @@ load_dotenv(dotenv_path=env_path)
 SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+CSRF_TRUSTED_ORIGINS= [ 'https://focus-backend-production.up.railway.app' ]
 
 
 # Application definition
@@ -153,6 +156,11 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React app
+    "https://focus-frontend-production.up.railway.app", # Production  
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+POSTGRES_LOCALLY = False
+if os.getenv('ENVIRONMENT') == 'production' or POSTGRES_LOCALLY == True:
+    DATABASES['default'] = dj_database_url.parse(os.getenv('DATABASE_URL'))
