@@ -8,11 +8,12 @@ PARENT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, '..'))
 sys.path.append(PARENT_DIR)
 
 # Import the function to test
-from eye_processing.eye_metrics.process_eye_metrics import process_eye
+from pupil_tracking.process_eye_metrics import process_eye
 
 def test_process_eye():
-    # Initialize the video capture
-    video = cv2.VideoCapture(1)
+    # Initializse the video capture
+    video = cv2.VideoCapture(0)
+    print("here")
     if not video.isOpened():
         print("Error: Could not open video.")
         return
@@ -24,9 +25,9 @@ def test_process_eye():
             return
 
         # Call the process_eye function
-        total_blinks, ear, pupil = process_eye(frame)
+        total_blinks, ear, pupil, iris = process_eye(frame)
         print("Results:")
-        print(f"Total Blinks: {total_blinks}, EAR: {ear}, Pupil: {pupil}")
+        print(f"Total Blinks: {total_blinks}, EAR: {ear}, Pupil: {pupil}, Iris: {iris}")
 
         # Press 'q' to quit the loop
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -36,4 +37,5 @@ def test_process_eye():
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
+    print('here')
     test_process_eye()

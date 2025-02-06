@@ -1,11 +1,11 @@
 from scipy.spatial import distance as dist
 
 class BlinkProcessor:
-    def __init__(self, eye_ar_thresh=0.24, eye_ar_consec_frames=0):
+    def __init__(self, eye_ar_thresh=0.24, eye_ar_consec_frames=4):
         self.eye_ar_thresh = eye_ar_thresh
         self.eye_ar_consec_frames = eye_ar_consec_frames
-        self.blink_detected = 0
-        self.total_blinks = 0
+        self.counter = 0
+        self.total = 0
 
     @staticmethod
     def eye_aspect_ratio(eye):
@@ -19,16 +19,11 @@ class BlinkProcessor:
         right_ear = self.eye_aspect_ratio(right_eye)
         ear = (left_ear + right_ear) / 2.0
 
-        """
-        For total blinks, use:
         if ear < self.eye_ar_thresh:
-            self.blink_detected += 1
+            self.counter += 1
         else:
-            if self.blink_detected >= self.eye_ar_consec_frames:
-                self.total_blinks += 1
-            self.blink_detected = 0
-        """
+            if self.counter >= self.eye_ar_consec_frames:
+                self.total += 1
+            self.counter = 0
 
-        blink_detected = 1 if ear < self.eye_ar_thresh else 0
-        
-        return blink_detected, ear
+        return self.total, ear
