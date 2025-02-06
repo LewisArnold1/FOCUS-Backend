@@ -28,7 +28,7 @@ EXPOSE 8000
 
 # Run database migrations and collect static files
 RUN python manage.py migrate
-RUN python manage.py collectstatic --noinput
+# RUN python manage.py collectstatic --noinput
 
 # Start Daphne for WebSockets
 CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]
