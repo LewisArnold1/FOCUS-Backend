@@ -137,9 +137,9 @@ class DocumentSaveView(APIView):
         # Extract data from the request
         file_name = request.data.get('file_name')
         file_object = request.FILES.get('file_object')
-        line_number = request.data.get('line_number')
-        page_number = request.data.get('page_number')
-        timestamp = request.data.get('timestamp')
+        line_number = int(request.data.get('line_number'))
+        page_number = int(request.data.get('page_number'))
+        timestamp = int(request.data.get('timestamp'))
 
         required_fields = {
         "file_name": file_name,
