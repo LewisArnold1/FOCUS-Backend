@@ -12,7 +12,7 @@ class FaceProcessor:
         self.prev_time = None  
 
     def extract_main_face(self, rects):
-        print(f"Number of faces detected: {len(rects)}")
+        # print(f"Number of faces detected: {len(rects)}")
         if not rects:
             return None, None
         return max(rects, key=lambda rect: rect.width() * rect.height()), len(rects)
