@@ -1,11 +1,4 @@
-import os
-import sys
 import cv2
-
-# Adjust the path to ensure imports work
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../../"))
-sys.path.append(PROJECT_ROOT)
 
 # Import the function to test
 from process_eye_metrics import process_eye
@@ -13,7 +6,6 @@ from process_eye_metrics import process_eye
 def test_process_eye():
     # Initialise the video capture
     video = cv2.VideoCapture(0)
-    print("here")
     if not video.isOpened():
         print("Error: Could not open video.")
         return
@@ -39,5 +31,4 @@ def test_process_eye():
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-    print('here')
     test_process_eye()
