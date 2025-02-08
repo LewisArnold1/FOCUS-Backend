@@ -1,5 +1,4 @@
 import cv2
-import time
 import json
 from datetime import datetime
 import os
@@ -12,9 +11,8 @@ Run file - video will record then be played back after it is saved
 '''
 
 # # change to your first name + test number x
-# VIDEO_FILENAME = "firstname_test_x.avi"
-# TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
-
+VIDEO_FILENAME = "firstname_test_x.avi"
+TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
 
 VIDEO_FILENAME = "zak_test_2.avi"
 TIMESTAMP_FILENAME = "zak_test_2_timestamps.txt"
