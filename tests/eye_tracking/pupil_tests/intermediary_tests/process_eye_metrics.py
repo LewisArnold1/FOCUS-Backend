@@ -1,14 +1,14 @@
 import os
 
-from .face import FaceProcessor
-from .blinks import BlinkProcessor
-from .pupil import PupilProcessor
-from .iris import IrisProcessor
+from face import FaceProcessor
+from blinks import BlinkProcessor
+from pupil import PupilProcessor
+from iris import IrisProcessor
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, '../..'))
-print(PARENT_DIR)
+PARENT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, '../../../'))
 PREDICTOR_PATH = os.path.join(PARENT_DIR, 'shape_predictor_68_face_landmarks.dat')
+
 face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
 pupil_processor = PupilProcessor()
