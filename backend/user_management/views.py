@@ -1,5 +1,4 @@
 from datetime import datetime
-import mimetypes
 import magic
 
 from rest_framework import generics, status
