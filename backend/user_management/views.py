@@ -1,4 +1,6 @@
 from datetime import datetime
+import mimetypes
+import magic
 
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -118,7 +120,7 @@ class DocumentSaveView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            document_entry = self.save_or_update_file_progress_data()
+            document_entry = self.save_or_update_document_drive()
             return Response(
                 {"message": "File progress data saved successfully."},
                 status=status.HTTP_201_CREATED,
@@ -133,7 +135,7 @@ class DocumentSaveView(APIView):
         
         # Extract data from the request
         file_name = request.data.get('file_name')
-        file_object = request.data.get('file_object')
+        file_object = request.FILES.get('file_object')
         line_number = request.data.get('line_number')
         page_number = request.data.get('page_number')
         timestamp = request.data.get('timestamp')
@@ -164,11 +166,14 @@ class DocumentSaveView(APIView):
         if not isinstance(timestamp, (int, float)):
             raise ValueError("Invalid timestamp: must be a numeric value (int or float).")
 
-        # Validate file object format (check file extensions for simplicity)
-        valid_file_extensions = ('.pdf', '.doc', '.docx')
-        if not (isinstance(file_object, str) and file_object.lower().endswith(valid_file_extensions)):
-            raise ValueError("Invalid file object: must be a string with one of the following extensions: .pdf, .doc, .docx.")
+        valid_mime_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 
+        mime = magic.Magic(mime=True)
+        mime_type = mime.from_buffer(file_object.read(2048))  # Read the first 2KB to determine file type
+        file_object.seek(0)  # Reset file pointer after reading
+        if mime_type not in valid_mime_types:
+            raise ValueError("Invalid file type. Only .pdf, .doc, and .docx are allowed.")
+       
         # Convert timestamp
         timestamp_s = timestamp / 1000
         timestamp_dt = datetime.fromtimestamp(timestamp_s)
