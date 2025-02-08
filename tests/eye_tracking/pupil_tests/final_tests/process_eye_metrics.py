@@ -1,24 +1,18 @@
 import os
 import cv2
-import sys
+
+from face import FaceProcessor
+from blinks import BlinkProcessor
+from pupil import PupilProcessor
+from iris import IrisProcessor
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../../"))
-sys.path.append(PROJECT_ROOT)
-
-try:
-    from .face import FaceProcessor
-    from .blinks import BlinkProcessor
-    from .iris import IrisProcessor
-except ImportError:
-    from face import FaceProcessor
-    from blinks import BlinkProcessor
-    from iris import IrisProcessor
-
-PREDICTOR_PATH = os.path.join(CURRENT_DIR, 'shape_predictor_68_face_landmarks.dat')
+PARENT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, '../../../'))
+PREDICTOR_PATH = os.path.join(PARENT_DIR, 'shape_predictor_68_face_landmarks.dat')
 
 face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
+pupil_processor = PupilProcessor()
 iris_processor = IrisProcessor()
 
 def process_eye(frame, verbose=0):

@@ -139,6 +139,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (Uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -164,7 +168,3 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
-
-POSTGRES_LOCALLY = False
-if os.getenv('ENVIRONMENT') == 'production' or POSTGRES_LOCALLY == False:
-    DATABASES['default'] = dj_database_url.parse(os.getenv('DATABASE_URL'))
