@@ -90,9 +90,12 @@ def test_saved_video(video_filename,timestamp_filename):
             break
 
         eye, ear, _ = process_eye(frame)
-        ear_list.append(ear)
-        eyes_closed_list.append(eye)
-
+        if ear is None:
+            print(frame_idx)
+        else:
+            ear_list.append(ear)
+            eyes_closed_list.append(eye)
+            
         # Increment frame counter        
         frame_idx += 1
     return eyes_closed_list, ear_list
@@ -153,6 +156,7 @@ def metrics(eyes_closed_list, ideal_filename):
             true_negatives += 1 if ideal[i] == 0 else 0
             false_negatives += 1 if ideal[i] == 1 else 0
 
+    print(f"TP: {true_positives}, FP: {false_positives}, TN: {true_negatives}, FN: {false_negatives}")
     precision = true_positives/(true_positives+false_positives)
     recall =  true_positives/(true_positives+false_negatives)
     F1_score = 2*precision*recall/(precision+recall)
@@ -165,20 +169,21 @@ eyes_closed_list, ear_list = test_saved_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
 '''If outputs are 'no eye', please re-record video with better lighting!!'''
 
 '''If testing manual method use below to calculate the threshold to be used in blink.py''' # Comment all of this out during auto testing
-# Get average of largest and smallest 10 EAR values
-ear_max = sum(sorted(ear_list, reverse=True)[:10])/10
-ear_min = sum(sorted(ear_list)[:10])/10
-# Threshold sweep
-threshold_25 = 0.25*(ear_max-ear_min)+ear_min
-threshold_50 = 0.5*(ear_max-ear_min)+ear_min
-threshold_75 = 0.75*(ear_max-ear_min)+ear_min
-print(f"The 25% threshold is {threshold_25:.3f}")
-print(f"The 50% threshold is {threshold_50:.3f}")
-print(f"The 75% threshold is {threshold_75:.3f}")
+# # Get average of largest and smallest 10 EAR values
+# ear_max = sum(sorted(ear_list, reverse=True)[:10])/10
+# ear_min = sum(sorted(ear_list)[:10])/10
+# print(f"max = {ear_max:.3f}")
+# print(f"min = {ear_min:.3f}")
+# # Threshold sweep
+# threshold_25 = 0.25*(ear_max-ear_min)+ear_min
+# threshold_50 = 0.5*(ear_max-ear_min)+ear_min
+# threshold_75 = 0.75*(ear_max-ear_min)+ear_min
+# print(f"The 25% threshold is {threshold_25:.3f}")
+# print(f"The 50% threshold is {threshold_50:.3f}")
+# print(f"The 75% threshold is {threshold_75:.3f}")
 
 '''Now sweep videos with each of the three thresholds'''
-# precision, recall, F1_score, overall_accuracy = metrics(eyes_closed_list, IDEAL_FRAMES_FILENAME)
-
+precision, recall, F1_score, overall_accuracy = metrics(eyes_closed_list, IDEAL_FRAMES_FILENAME)
 
 # May want to save eyes_closed_list to a csv for showing in appendix of paper?
-# print(f"Precision: {precision},\nRecall: {recall},\n F1 Score: {F1_score},\nOverall Accuracy: {overall_accuracy}")
+print(f"Precision: {precision:.3f},\nRecall: {recall:.3f},\n F1 Score: {F1_score:.3f},\nOverall Accuracy: {overall_accuracy:.3f}")
