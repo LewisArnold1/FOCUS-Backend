@@ -56,7 +56,6 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
 
     # Process each frame
     frame_idx = 0
-    eyes_closed_list = []
     ear_list = []
     while cap.isOpened():
         ret, frame = cap.read()
@@ -84,196 +83,11 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
 
     return ear_list
 
-
-
-# def test_manual(video_filename,timestamp_filename,output_filename):
-#     # Current directory
-#     script_dir = os.path.dirname(os.path.abspath(__file__))
-
-#     # Tests folder
-#     tests_dir = os.path.join(script_dir, "..", "blink_test_files")
-
-#     # Full paths
-#     video_path = os.path.join(tests_dir, video_filename)   
-#     timestamp_path = os.path.join(tests_dir, timestamp_filename)
-#     output_path = os.path.join(tests_dir, output_filename)
-
-#     # Load timestamps
-#     if os.path.exists(timestamp_path):  # Check if the file exists
-#         with open(timestamp_path, "r") as json_file:
-#             timestamps_str = json.load(json_file)  # Load JSON data
-#         timestamps = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
-#     else:
-#         print("Timestamps file not found.")
-
-#     # Load test video
-#     cap = cv2.VideoCapture(video_path)
-#     if not cap.isOpened():
-#         print("Error: Cannot open video file.")
-#         return
-#     elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#         print("Timestamps or frames missing.")
-#         return
-#     else:
-#         print(f"Video has {len(timestamps)} frames/timestamps")
-
-#     ''' Manual Threshold '''
-#     # Process each frame
-#     frame_idx = 0
-#     eyes_closed_list = []
-#     ear_list = []
-#     while cap.isOpened():
-#         ret, frame = cap.read()
-
-#         # Stop at last frame
-#         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#             break
-
-#         eye, ear, _ = process_eye_manual(frame)
-#         if ear is None:
-#             print(frame_idx)
-#         else:
-#             ear_list.append(ear)
-#             eyes_closed_list.append(eye)
-            
-#         # Increment frame counter        
-#         frame_idx += 1
-    
-#     # Save output to CSV
-#     data = zip(ear_list, eyes_closed_list)
-#     with open(output_path, 'w', newline='') as file:
-#         writer = csv.writer(file)
-#         writer.writerows(data)
-
-#     print('Done')
-
-#     return eyes_closed_list, ear_list
-
-# def test_auto(video_filename,timestamp_filename,output_filename):
-#     # Current directory
-#     script_dir = os.path.dirname(os.path.abspath(__file__))
-
-#     # Tests folder
-#     tests_dir = os.path.join(script_dir, "..", "blink_test_files")
-
-#     # Full paths
-#     video_path = os.path.join(tests_dir, video_filename)   
-#     timestamp_path = os.path.join(tests_dir, timestamp_filename)
-#     output_path = os.path.join(tests_dir, output_filename)
-
-#     # Load timestamps
-#     if os.path.exists(timestamp_path):  # Check if the file exists
-#         with open(timestamp_path, "r") as json_file:
-#             timestamps_str = json.load(json_file)  # Load JSON data
-#         timestamps = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
-#     else:
-#         print("Timestamps file not found.")
-
-#     # Load test video
-#     cap = cv2.VideoCapture(video_path)
-#     if not cap.isOpened():
-#         print("Error: Cannot open video file.")
-#         return
-#     elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#         print("Timestamps or frames missing.")
-#         return
-#     else:
-#         print(f"Video has {len(timestamps)} frames/timestamps")
-
-#     ''' Auto Threshold '''
-#     # Process each frame
-#     frame_idx = 0
-#     ear_list = []
-#     eyes_closed_list = []
-#     while cap.isOpened():
-#         ret, frame = cap.read()
-
-#         # Stop at last frame
-#         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#             break
-        
-#         eye, ear, _ = process_eye_auto(frame, ear_list)
-#         eyes_closed_list.append(eye)
-#         ear_list.append(ear)
-
-#         # Increment frame counter        
-#         frame_idx += 1
-
-#      # Save output to CSV
-#     data = zip(ear_list, eyes_closed_list)
-#     with open(output_path, 'w', newline='') as file:
-#         writer = csv.writer(file)
-#         writer.writerows(data)
-
-#     print('Done')
-
-#     return eyes_closed_list, ear_list
-
-# def test_CNN(video_filename,timestamp_filename,output_filename):
-#     # Current directory
-#     script_dir = os.path.dirname(os.path.abspath(__file__))
-
-#     # Tests folder
-#     tests_dir = os.path.join(script_dir, "..", "blink_test_files")
-
-#     # Full paths
-#     video_path = os.path.join(tests_dir, video_filename)   
-#     timestamp_path = os.path.join(tests_dir, timestamp_filename)
-#     output_path = os.path.join(tests_dir, output_filename)
-
-#     # Load timestamps
-#     if os.path.exists(timestamp_path):  # Check if the file exists
-#         with open(timestamp_path, "r") as json_file:
-#             timestamps_str = json.load(json_file)  # Load JSON data
-#         timestamps = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
-#     else:
-#         print("Timestamps file not found.")
-
-#     # Load test video
-#     cap = cv2.VideoCapture(video_path)
-#     if not cap.isOpened():
-#         print("Error: Cannot open video file.")
-#         return
-#     elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#         print("Timestamps or frames missing.")
-#         return
-#     else:
-#         print(f"Video has {len(timestamps)} frames/timestamps")
-    
-#     ''' CNN ''' # to be changed
-
-#     # Process each frame
-#     frame_idx = 0
-#     eyes_closed_list = []
-#     while cap.isOpened():
-#         ret, frame = cap.read()
-
-#         # Stop at last frame
-#         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#             break
-        
-#         eye, _ = process_eye_CNN(frame)
-#         eyes_closed_list.append(eye)
-
-#         # Increment frame counter        
-#         frame_idx += 1
-
-#      # Save output to CSV
-#     data = zip(ear_list, eyes_closed_list)
-#     with open(output_path, 'w', newline='') as file:
-#         writer = csv.writer(file)
-#         writer.writerows(data)
-
-#     print('Done')
-
-#     return eyes_closed_list # No EAR list for CNN
-
 def test_manual(ear_filename, output_filename):
     # Paths
     script_dir = os.path.dirname(os.path.abspath(__file__))
     ear_path = os.path.join(script_dir, "..", "blink_test_files", ear_filename)
     output_path = os.path.join(script_dir, "..", "blink_test_files", output_filename)
-
     
     # Load ear_list
     ear_list = []
@@ -326,7 +140,117 @@ def test_manual(ear_filename, output_filename):
         writer.writerows(data)
     return
 
-def metrics(eyes_closed_list, ideal_filename):
+def test_auto(ear_filename,output_filename):
+    # Paths
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    ear_path = os.path.join(script_dir, "..", "blink_test_files", ear_filename)
+    output_path = os.path.join(script_dir, "..", "blink_test_files", output_filename)
+    
+    # Load ear_list
+    ear_list = []
+    with open(ear_path, 'r') as file:
+        reader = csv.reader(file)
+        for ear in reader:
+            # Convert the value from string to float and add to the array
+            ear_list.append(float(ear[0]))
+
+    ''' Auto Threshold '''
+    eyes_closed_1 = [] # change to name according to auto thresholds
+    eyes_closed_2 = []
+    eyes_closed_3 = []
+    for i in range(len(ear_list)):
+        # calculate max from last x frames
+        if len(ear_list[:i]) > 50: # change 50
+            # calculate max from last x frames
+            max = 0
+            # calculate different thresholds
+            threshold_1 = 1
+            threshold_2 = 2
+            threshold_3 = 3
+        # Compare this frame with thresholds
+        if ear_list[i] < threshold_1: # change as appropriate
+            eyes_closed_1.append(1)
+            eyes_closed_2.append(1)
+            eyes_closed_3.append(1)
+        elif ear_list[i] < threshold_2:
+            eyes_closed_1.append(0)
+            eyes_closed_2.append(1)
+            eyes_closed_3.append(1)
+        elif ear_list[i] < threshold_3:
+            eyes_closed_1.append(0)
+            eyes_closed_2.append(0)
+            eyes_closed_3.append(1)
+        else:
+            eyes_closed_1.append(0)
+            eyes_closed_2.append(0)
+            eyes_closed_3.append(0)
+
+    # Save to CSV file
+    data = zip(eyes_closed_1, eyes_closed_2, eyes_closed_3) # Three columns
+    with open(output_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(data)
+
+    print('Done')
+
+    return
+
+# def test_CNN(video_filename,timestamp_filename,output_filename):
+#     # Current directory
+#     script_dir = os.path.dirname(os.path.abspath(__file__))
+
+#     # Tests folder
+#     tests_dir = os.path.join(script_dir, "..", "blink_test_files")
+
+#     # Full paths
+#     video_path = os.path.join(tests_dir, video_filename)   
+#     timestamp_path = os.path.join(tests_dir, timestamp_filename)
+#     output_path = os.path.join(tests_dir, output_filename)
+
+#     # Load timestamps
+#     if os.path.exists(timestamp_path):  # Check if the file exists
+#         with open(timestamp_path, "r") as json_file:
+#             timestamps_str = json.load(json_file)  # Load JSON data
+#         timestamps = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
+#     else:
+#         print("Timestamps file not found.")
+
+#     # Load test video
+#     cap = cv2.VideoCapture(video_path)
+#     if not cap.isOpened():
+#         print("Error: Cannot open video file.")
+#         return
+#     elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+#         print("Timestamps or frames missing.")
+#         return
+#     else:
+#         print(f"Video has {len(timestamps)} frames/timestamps")
+    
+#     ''' CNN ''' # to be changed
+
+#     # Process each frame
+#     frame_idx = 0
+#     eyes_closed_list = []
+#     while cap.isOpened():
+#         ret, frame = cap.read()
+
+#         # Stop at last frame
+#         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+#             break
+        
+#         eye, _ = process_eye_CNN(frame)
+#         eyes_closed_list.append(eye)
+
+#         # Increment frame counter        
+#         frame_idx += 1
+
+#      # Save output to CSV
+
+#     print('Done')
+
+#     return eyes_closed_list # No EAR list for CNN
+
+def metrics(eyes_closed_list, ideal_filename): # change to use CSV and do for all manual and save. Then auto too in a single CSV
     # Retrieve ideal eyes_closed_list
     script_dir = os.path.dirname(os.path.abspath(__file__))
     tests_dir = os.path.join(script_dir, "blink_tests")
@@ -339,8 +263,8 @@ def metrics(eyes_closed_list, ideal_filename):
         print("error with ideal")
         return
     
-    print(f"Ideal {ideal}")
-    print(f"Output {eyes_closed_list}")
+    # print(f"Ideal {ideal}")
+    # print(f"Output {eyes_closed_list}")
     
     # Calculate metrics
     true_positives = 0
@@ -370,18 +294,17 @@ def metrics(eyes_closed_list, ideal_filename):
 ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
 '''If outputs are 'no eye', please re-record video with better lighting!!'''
 
-'''Calculate thresholds for sweep'''
-#calculate_manual_thresholds(ear_list)
-# equivalent calculation for auto thresholds
+'''Test manual thresholding (including threshold sweep)'''
+test_manual(EAR_FILENAME, OUTPUT_FILENAME) # could still add smoothing filter?
+
+'''Test auto thresholding'''
+# test_auto(EAR_FILENAME, OUTPUT_FILENAME)
+
+'''Test CNN'''
+# test_CNN(EAR_FILENAME, OUTPUT_FILENAME)
+
+'''Test & Save Metrics for all'''
+# precision, recall, F1_score, overall_accuracy = metrics(OUTPUT_FILENAME, IDEAL_FRAMES_FILENAME)
 
 
-
-'''Sweep videos with each of the three thresholds using test_manual'''
-test_manual(EAR_FILENAME, OUTPUT_FILENAME)
-
-
-
-# precision, recall, F1_score, overall_accuracy = metrics(eyes_closed_list, IDEAL_FRAMES_FILENAME)
-
-# # May want to save eyes_closed_list to a csv for showing in appendix of paper?
 # print(f"Precision: {precision:.3f},\nRecall: {recall:.3f},\n F1 Score: {F1_score:.3f},\nOverall Accuracy: {overall_accuracy:.3f}")
