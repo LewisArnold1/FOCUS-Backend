@@ -24,7 +24,6 @@ class DocumentData(models.Model):
     file_object = models.FileField(upload_to=get_unique_file_path)
     line_number = models.IntegerField()
     page_number = models.IntegerField()
-    timestamp = models.DateTimeField()
 
     def __str__(self):
         return f"DocumentData for {self.user} - {self.file_name} at {self.saved_at}"

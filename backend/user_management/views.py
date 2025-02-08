@@ -184,8 +184,36 @@ class DocumentSaveView(APIView):
             'file_object': self.file_object,
             'line_number': self.line_number,
             'page_number': self.page_number,
-            'timestamp': self.timestamp
+            'saved_at': self.timestamp
             }
         )
         return document_entry
-        
+
+class DocumentLoadView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get file_name from query parameters
+            file_name = request.query_params.get('file_name')
+            if not file_name:
+                return Response({"error": "Missing 'file_name' query parameter."}, status=400)
+
+            # Query the DocumentData model for the logged-in user and file_name
+            document_data = DocumentData.objects.get(user=request.user, file_name=file_name)
+
+            # If data exists, return it
+            return Response(
+                {
+                    'saved_at': document_data.saved_at,
+                    'line_number': document_data.line_number,
+                    'page_number': document_data.page_number,
+                },
+                status=200
+            )
+        except DocumentData.DoesNotExist:
+            # If no data exists for this user
+            return Response(
+                {"error": "No document data found for this user with the given file_name."},
+                status=404,
+            )
