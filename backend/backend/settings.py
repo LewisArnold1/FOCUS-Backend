@@ -33,6 +33,8 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 CSRF_TRUSTED_ORIGINS= [ 'https://focus-backend-production.up.railway.app' ]
 
+if 'focus-backend-production.up.railway.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('focus-backend-production.up.railway.app')
 
 # Application definition
 
@@ -168,3 +170,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# POSTGRES_LOCALLY = False
+if os.getenv('ENVIRONMENT') == 'production': # To setup the database in production
+    DATABASES['default'] = dj_database_url.parse(os.getenv('DATABASE_URL'))
