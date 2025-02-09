@@ -3,6 +3,8 @@ import cv2
 import json
 import csv
 from datetime import datetime
+import pandas as pd
+import numpy as np
 
 # change to first name & test number x of each saved video
 VIDEO_FILENAME = "firstname_test_x.avi"
@@ -12,11 +14,11 @@ EAR_FILENAME = "firstname_test_x_ears.csv"
 OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"
 # blinktype_threshold = manual_25 /auto_x/cnn
 
-VIDEO_FILENAME = "zak_test_2.avi"
-TIMESTAMP_FILENAME = "zak_test_2_timestamps.txt"
-IDEAL_FRAMES_FILENAME = "zak_test_2_ideal.csv"
-EAR_FILENAME = "zak_test_2_ears.csv"
-OUTPUT_FILENAME = "zak_test_2_manual.csv" # Manual: 25% | 50% | 75%
+VIDEO_FILENAME = "zak_test_3.avi"
+TIMESTAMP_FILENAME = "zak_test_3_timestamps.txt"
+IDEAL_FRAMES_FILENAME = "zak_test_3_ideal.csv"
+EAR_FILENAME = "zak_test_3_ears.csv"
+OUTPUT_FILENAME = "zak_test_3_manual.csv" # Manual: 25% | 50% | 75%
 
 # Import the function to test
 from process_eye_metrics import process_eye_manual
@@ -250,52 +252,55 @@ def test_auto(ear_filename,output_filename):
 
 #     return eyes_closed_list # No EAR list for CNN
 
-def metrics(eyes_closed_list, ideal_filename): # change to use CSV and do for all manual and save. Then auto too in a single CSV
-    # Retrieve ideal eyes_closed_list
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    tests_dir = os.path.join(script_dir, "blink_tests")
-    ideal_path = os.path.join(tests_dir, ideal_filename)
-    with open(ideal_path, "r") as file:
-        ideal = [int(line.strip()) for line in file] # data in one column
-
+def calculate_metrics(ideal, eyes_closed_output):
     # Check arrays are same length
-    if len(ideal) != len(eyes_closed_list):
-        print("error with ideal")
+    if len(ideal) != len(eyes_closed_output):
+        print("Output is wrong length")
         return
     
-    # print(f"Ideal {ideal}")
-    # print(f"Output {eyes_closed_list}")
-    
-    # Calculate metrics
-    true_positives = 0
-    false_positives = 0
-    true_negatives = 0
-    false_negatives = 0
-
-    for i in range(len(ideal)):
-        # Positives
-        if eyes_closed_list[i] == 1:
-            true_positives += 1 if ideal[i] == 1 else 0
-            false_positives += 1 if ideal[i] == 0 else 0
-        # Negatives
-        else:
-            true_negatives += 1 if ideal[i] == 0 else 0
-            false_negatives += 1 if ideal[i] == 1 else 0
-
+    # Calculate metrics using NumPy operations
+    true_positives = np.sum((eyes_closed_output == 1) & (ideal == 1))
+    false_positives = np.sum((eyes_closed_output == 1) & (ideal == 0))
+    true_negatives = np.sum((eyes_closed_output == 0) & (ideal == 0))
+    false_negatives = np.sum((eyes_closed_output == 0) & (ideal == 1))
+            
     print(f"TP: {true_positives}, FP: {false_positives}, TN: {true_negatives}, FN: {false_negatives}")
     precision = true_positives/(true_positives+false_positives)
     recall =  true_positives/(true_positives+false_negatives)
     F1_score = 2*precision*recall/(precision+recall)
     overall_accuracy = (true_positives+true_negatives)/len(ideal)
+    print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
+    return
 
-    return precision, recall, F1_score, overall_accuracy
+def manual_metrics(ideal_filename, output_filename): # change to use CSV and do for all manual and save. Then auto too in a single CSV
+    # Set Paths
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    tests_dir = os.path.join(script_dir, "..","blink_test_files")
+    ideal_path = os.path.join(tests_dir, ideal_filename)
+    output_path = os.path.join(tests_dir, output_filename)
+
+    # Retrieve ideal eyes_closed_list
+    eyes_closed_ideal = pd.read_csv(ideal_path, header=None)
+    eyes_closed_ideal = eyes_closed_ideal.iloc[:, 0].to_numpy()
+
+    # Retrieve manual output & convert to 3 numpy arrays
+    eyes_closed_output = pd.read_csv(output_path, header=None) 
+    eyes_closed_25 = eyes_closed_output.iloc[:, 0].to_numpy()
+    eyes_closed_50 = eyes_closed_output.iloc[:, 1].to_numpy()
+    eyes_closed_75 = eyes_closed_output.iloc[:, 2].to_numpy()
+
+    calculate_metrics(eyes_closed_ideal, eyes_closed_25)
+    calculate_metrics(eyes_closed_ideal, eyes_closed_50)
+    calculate_metrics(eyes_closed_ideal, eyes_closed_75)
+
+    return
 
 '''Calculate EAR at each frame, for all 9 videos'''
-ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
+# ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
 '''If outputs are 'no eye', please re-record video with better lighting!!'''
 
 '''Test manual thresholding (including threshold sweep)'''
-test_manual(EAR_FILENAME, OUTPUT_FILENAME) # could still add smoothing filter?
+# test_manual(EAR_FILENAME, OUTPUT_FILENAME) # could still add smoothing filter?
 
 '''Test auto thresholding'''
 # test_auto(EAR_FILENAME, OUTPUT_FILENAME)
@@ -304,7 +309,6 @@ test_manual(EAR_FILENAME, OUTPUT_FILENAME) # could still add smoothing filter?
 # test_CNN(EAR_FILENAME, OUTPUT_FILENAME)
 
 '''Test & Save Metrics for all'''
-# precision, recall, F1_score, overall_accuracy = metrics(OUTPUT_FILENAME, IDEAL_FRAMES_FILENAME)
-
+manual_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
 
 # print(f"Precision: {precision:.3f},\nRecall: {recall:.3f},\n F1 Score: {F1_score:.3f},\nOverall Accuracy: {overall_accuracy:.3f}")
