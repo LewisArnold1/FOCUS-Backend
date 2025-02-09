@@ -13,7 +13,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 
 from django.db.models import Max
 
-from eye_processing.eye_metrics import process_eye
+from eye_processing.eye_metrics.process_eye_metrics import process_eye
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()  # Ensure Django is initialized before importing Django modules

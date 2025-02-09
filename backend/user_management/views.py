@@ -1,11 +1,15 @@
 from datetime import datetime
 import magic
+import os
+import base64
 
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
+from django.http import FileResponse
+import os
 
 from .serializers import RegisterUserSerializer
 from .models import CalibrationData, DocumentData
@@ -133,11 +137,11 @@ class DocumentSaveView(APIView):
     def extract_data(self, request):
         
         # Extract data from the request
-        file_name = request.data.get('file_name')
+        file_name = request.POST.get('file_name')
         file_object = request.FILES.get('file_object')
-        line_number = request.data.get('line_number')
-        page_number = request.data.get('page_number')
-        timestamp = request.data.get('timestamp')
+        line_number = int(request.POST.get('line_number'))
+        page_number = int(request.POST.get('page_number'))
+        timestamp = int(request.POST.get('timestamp'))
 
         required_fields = {
         "file_name": file_name,
@@ -167,9 +171,7 @@ class DocumentSaveView(APIView):
 
         valid_mime_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 
-        mime = magic.Magic(mime=True)
-        mime_type = mime.from_buffer(file_object.read(2048))  # Read the first 2KB to determine file type
-        file_object.seek(0)  # Reset file pointer after reading
+        mime_type, _ = mimetypes.guess_type(file_object.name)
         if mime_type not in valid_mime_types:
             raise ValueError("Invalid file type. Only .pdf, .doc, and .docx are allowed.")
        
@@ -198,26 +200,82 @@ class DocumentLoadView(APIView):
 
     def get(self, request, *args, **kwargs):
         try:
-            # Get file_name from query parameters
-            file_name = request.query_params.get('file_name')
-            if not file_name:
-                return Response({"error": "Missing 'file_name' query parameter."}, status=400)
+            from user_management.models import DocumentData
+            # Retrieve the document data
+            document_data = DocumentData.objects.get(user=request.user, file_name=request.query_params.get('file_name'))
 
-            # Query the DocumentData model for the logged-in user and file_name
-            document_data = DocumentData.objects.get(user=request.user, file_name=file_name)
+            # Get the file path
+            file_path = document_data.file_object.path
 
-            # If data exists, return it
-            return Response(
-                {
-                    'saved_at': document_data.saved_at,
-                    'line_number': document_data.line_number,
-                    'page_number': document_data.page_number,
-                },
-                status=200
-            )
+            # Ensure the file exists
+            if not os.path.exists(file_path):
+                return Response({"error": "File not found on the server."}, status=404)
+
+            # Create the file response
+            response = FileResponse(open(file_path, 'rb'), as_attachment=True, filename=document_data.file_name)
+
+            # Add metadata to headers
+            response["line-number"] = document_data.line_number
+            response["page-number"] = document_data.page_number
+
+            return response
+
         except DocumentData.DoesNotExist:
-            # If no data exists for this user
-            return Response(
-                {"error": "No document data found for this user with the given file_name."},
-                status=404,
-            )
+            return Response({"error": "No document data found for this user."}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+        
+class FileListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            documents = DocumentData.objects.filter(user=request.user)
+
+            files = []
+            for document in documents:
+                # Generate preview if needed
+                preview_path = document.generate_preview()
+                # Read the preview file as Base64 (if it exists)
+                preview_base64 = None
+                if preview_path and os.path.exists(preview_path):
+                    with open(preview_path, "rb") as preview_file:
+                        preview_base64 = base64.b64encode(preview_file.read()).decode('utf-8')
+
+                files.append({
+                    'file_name': document.file_name,
+                    'favorite': document.favorite,
+                    'saved_at': document.saved_at.isoformat(),
+                    'preview': preview_base64,  # Base64 encoded image content
+                })
+
+            return Response(files, status=200)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+        
+class FileDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            file_name = request.query_params.get('file_name')
+            document = DocumentData.objects.get(user=request.user, file_name=file_name)
+
+            # Delete the actual file
+            document.file_object.delete()
+
+            # Optionally delete the preview file if it exists
+            preview_path = f"{os.path.splitext(document.file_object.name)[0]}_preview.png"
+            if os.path.exists(preview_path):
+                os.remove(preview_path)
+
+            # Delete the database entry
+            document.delete()
+            return Response({"message": "File deleted successfully."}, status=200)
+
+        except DocumentData.DoesNotExist:
+            return Response({"error": "File not found."}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+          
