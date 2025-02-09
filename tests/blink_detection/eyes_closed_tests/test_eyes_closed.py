@@ -14,11 +14,11 @@ EAR_FILENAME = "firstname_test_x_ears.csv"
 OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"
 # blinktype_threshold = manual_25 /auto_x/cnn
 
-VIDEO_FILENAME = "zak_test_3.avi"
-TIMESTAMP_FILENAME = "zak_test_3_timestamps.txt"
-IDEAL_FRAMES_FILENAME = "zak_test_3_ideal.csv"
-EAR_FILENAME = "zak_test_3_ears.csv"
-OUTPUT_FILENAME = "zak_test_3_manual.csv" # Manual: 25% | 50% | 75%
+VIDEO_FILENAME = "zak_test_1.avi"
+TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
+IDEAL_FRAMES_FILENAME = "zak_test_1_ideal.csv"
+EAR_FILENAME = "zak_test_1_ears.csv"
+OUTPUT_FILENAME = "zak_test_1_manual.csv" # Manual: 25% | 50% | 75%
 
 # Import the function to test
 from process_eye_metrics import process_eye_manual
@@ -272,7 +272,7 @@ def calculate_metrics(ideal, eyes_closed_output):
     print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
     return
 
-def manual_metrics(ideal_filename, output_filename): # change to use CSV and do for all manual and save. Then auto too in a single CSV
+def manual_metrics(ideal_filename, output_filename):
     # Set Paths
     script_dir = os.path.dirname(os.path.abspath(__file__))
     tests_dir = os.path.join(script_dir, "..","blink_test_files")
@@ -295,6 +295,81 @@ def manual_metrics(ideal_filename, output_filename): # change to use CSV and do 
 
     return
 
+def calculate_metrics_segmented(ideal, eyes_closed_output):
+
+    '''Below prints ideal & output for segment 3'''
+    # for i in range(149,298):
+    #     print(f"ideal: {ideal[i]}, output:{eyes_closed_output[i]}")
+
+    '''Below calculates metrics for each segment'''
+    # Check arrays are same length
+    if len(ideal) != len(eyes_closed_output):
+        print("Output is wrong length")
+        return
+    num_segments = 12 # 30s each
+    segment_sizes = np.linspace(0, len(ideal), num_segments + 1, dtype=int)
+
+    for i in range(num_segments):
+        start, end = segment_sizes[i], segment_sizes[i + 1]
+        segment_ideal = ideal[start:end]
+        segment_output = eyes_closed_output[start:end]
+
+        # Compute metrics for this segment
+        true_positives = np.sum((segment_output == 1) & (segment_ideal == 1))
+        false_positives = np.sum((segment_output == 1) & (segment_ideal == 0))
+        true_negatives = np.sum((segment_output == 0) & (segment_ideal == 0))
+        false_negatives = np.sum((segment_output == 0) & (segment_ideal == 1))
+        precision = true_positives/(true_positives+false_positives)
+        recall =  true_positives/(true_positives+false_negatives)
+        # F1_score = 2*precision*recall/(precision+recall)
+        # overall_accuracy = (true_positives+true_negatives)/len(segment_ideal)
+        print(f"\nSegment no. {i+1}:")
+        print(f"TP: {true_positives}, FP: {false_positives}, TN: {true_negatives}, FN: {false_negatives}")
+        # print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
+        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}")
+    
+    return
+
+def manual_metrics_segmented(ideal_filename, output_filename):
+    # Set Paths
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    tests_dir = os.path.join(script_dir, "..","blink_test_files")
+    ideal_path = os.path.join(tests_dir, ideal_filename)
+    output_path = os.path.join(tests_dir, output_filename)
+
+    # Retrieve ideal eyes_closed_list
+    eyes_closed_ideal = pd.read_csv(ideal_path, header=None)
+    eyes_closed_ideal = eyes_closed_ideal.iloc[:, 0].to_numpy()
+
+    # Retrieve manual output & convert to 3 numpy arrays
+    eyes_closed_output = pd.read_csv(output_path, header=None) 
+    eyes_closed_25 = eyes_closed_output.iloc[:, 0].to_numpy()
+    eyes_closed_50 = eyes_closed_output.iloc[:, 1].to_numpy()
+    eyes_closed_75 = eyes_closed_output.iloc[:, 2].to_numpy()
+
+    calculate_metrics_segmented(eyes_closed_ideal, eyes_closed_25)
+    calculate_metrics_segmented(eyes_closed_ideal, eyes_closed_50)
+    # calculate_metrics_segmented(eyes_closed_ideal, eyes_closed_75)
+
+    return
+
+def auto_metrics(ideal_filename, output_filename):
+    # Set Paths
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    tests_dir = os.path.join(script_dir, "..","blink_test_files")
+    ideal_path = os.path.join(tests_dir, ideal_filename)
+    output_path = os.path.join(tests_dir, output_filename)
+
+    # Retrieve ideal eyes_closed_list
+    eyes_closed_ideal = pd.read_csv(ideal_path, header=None)
+    eyes_closed_ideal = eyes_closed_ideal.iloc[:, 0].to_numpy()
+
+    # Retrieve auto output & convert to __ numpy arrays
+    eyes_closed_output = pd.read_csv(output_path, header=None) 
+    # however many are here
+
+    return
+
 '''Calculate EAR at each frame, for all 9 videos'''
 # ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
 '''If outputs are 'no eye', please re-record video with better lighting!!'''
@@ -309,6 +384,8 @@ def manual_metrics(ideal_filename, output_filename): # change to use CSV and do 
 # test_CNN(EAR_FILENAME, OUTPUT_FILENAME)
 
 '''Test & Save Metrics for all'''
-manual_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
+# manual_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
+manual_metrics_segmented(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
+# auto_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
 
 # print(f"Precision: {precision:.3f},\nRecall: {recall:.3f},\n F1 Score: {F1_score:.3f},\nOverall Accuracy: {overall_accuracy:.3f}")
