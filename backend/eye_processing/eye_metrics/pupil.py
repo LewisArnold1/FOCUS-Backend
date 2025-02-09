@@ -1,121 +1,115 @@
 import cv2
 import numpy as np
-import os
+import time
+from scipy.interpolate import splprep, splev
 
 class PupilProcessor:
     def __init__(self):
-        pass
+        self.pupil_centre = None
+        self.pupil_radius = None
+
+    def _resize_with_aspect_ratio(self, image, target_size):
+        # Convert grayscale/binary images to BGR for consistency
+        if len(image.shape) == 2:  # Check if single-channel image
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+        # Extract original and target dimensions
+        h, w = image.shape[:2]
+        target_w, target_h = target_size
+
+        # Calculate scaling factor to fit the image in the target size
+        scale = min(target_w / w, target_h / h)
+        new_w = int(w * scale)
+        new_h = int(h * scale)
+
+        # Resize the image while maintaining aspect ratio
+        resized = cv2.resize(image, (new_w, new_h))
+
+        # Create a blank canvas (black background) with the target size
+        canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+
+        # Calculate padding to center the image
+        x_offset = (target_w - new_w) // 2
+        y_offset = (target_h - new_h) // 2
+
+        # Place the resized image in the center of the canvas
+        canvas[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
+
+        return canvas
+
+    def _display_images_in_grid(self, full_frame, left_cropped, left_greyscale, left_binary):
+        # Define target size based on the full frame dimensions
+        target_size = (self.frame.shape[1], self.frame.shape[0])
+
+        # Resize images to fill their grid cells while maintaining aspect ratio
+        full_frame_resized = self._resize_with_aspect_ratio(full_frame, target_size)
+        left_cropped_resized = self._resize_with_aspect_ratio(left_cropped, target_size)
+        left_greyscale_resized = self._resize_with_aspect_ratio(left_greyscale, target_size)
+        left_binary_resized = self._resize_with_aspect_ratio(left_binary, target_size)
+        
+        # Combine images into a 2x2 grid
+        top_row = np.hstack((full_frame_resized, left_cropped_resized))
+        bottom_row = np.hstack((left_greyscale_resized, left_binary_resized))
+        grid = np.vstack((top_row, bottom_row))
+
+        # Display the combined grid
+        cv2.imshow("Pupil Processor Output", grid)
+
+        # # Wait for 'q' to close the window
+        # print("Press 'q' to exit...")
+        # while True:
+        #     if cv2.waitKey(1) & 0xFF == ord('q'):
+        #         break
+
+        # cv2.destroyAllWindows()
 
     def process_pupil(self, frame, eye_points):
         self.frame = frame
         self.eye_points = np.array(eye_points)
-        
-        # Apply method
-        # self.method_1_basic_thresholding()
-        # self.method_2_reflection_removal()
-        # self.method_3_hough_transform()
-        # self.method_4_contrast_enhancement()
-        # self.method_5_contour_largest_area()
-        # self.method_6_convex_hull()
-        # self.method_7_super_resolution()
-        self.method_8_longest_convex_arc()
-        
-        return None
-    
-    def method_1_basic_thresholding(self):
-        cropped = self.crop_eyes(self.eye_points)
-        grey = self.convert_to_greyscale(cropped)
-        binary = self.convert_to_binary(grey)
-        self.display_images_in_grid(self.frame, cropped, grey, binary)
 
-    def method_2_reflection_removal(self):
-        cropped = self.crop_eyes(self.eye_points)
-        grey = self.convert_to_greyscale(cropped)
-        no_reflection = self.remove_reflections(grey)
-        binary = self.convert_to_binary(no_reflection)
-        self.display_images_in_grid(cropped, grey, no_reflection, binary)
+        self.pupil_centre, self.pupil_radius, grey, binary = self.detect_pupil()
 
-    def method_3_hough_transform(self):
-        cropped = self.crop_eyes(self.eye_points)
-        grey = self.convert_to_greyscale(cropped)
-        circles = self.create_hough_circles(grey)
-        self.display_images_in_grid(self.frame, cropped, grey, circles)
+        return self.pupil_centre, self.pupil_radius, grey, binary
 
-    def method_4_contrast_enhancement(self):
-        cropped = self.crop_eyes(self.eye_points)
+    def detect_pupil(self):
+        cropped, _ = self.crop_eyes_spline(self.eye_points)
         grey = self.convert_to_greyscale(cropped)
         contrast = self.enhance_contrast(grey, clip_limit=8.0, tile_grid_size=(1, 1))
-        binary = self.convert_to_binary(contrast, threshold=10)
-        self.display_images_in_grid(self.frame, cropped, grey, binary)
+        no_reflection = self.remove_reflections(contrast, grey)
+        binary = self.convert_to_binary(no_reflection, threshold=30)
+        center, radius = self.process_convex_arc(binary, grey)
+        return center, radius, grey, binary
 
-    def method_5_contour_largest_area(self):
-        cropped = self.crop_eyes(self.eye_points)
-        grey = self.convert_to_greyscale(cropped)
-        binary = self.convert_to_binary(grey)
-        contours = self.draw_largest_contour(binary, grey)
-        self.display_images_in_grid(self.frame, cropped, grey, contours)
+    def crop_eyes_spline(self, eye_points, smoothing_factor=5.0, shift=3):
+        # Extract x and y coordinates of the points
+        points = np.squeeze(eye_points)
+        x = points[:, 0]
+        y = points[:, 1] - shift
 
-    def method_6_convex_hull(self):
-        cropped = self.crop_eyes_hull(self.eye_points)
-        grey = self.convert_to_greyscale(cropped)
-        binary = self.convert_to_binary(grey)
-        self.display_images_in_grid(self.frame, cropped, grey, binary)
+        # Fit a closed B-spline through the points with a smoothing factor
+        tck, _ = splprep([x, y], s=smoothing_factor, per=True)  # `smoothing_factor` controls tightness
+        u_fine = np.linspace(0, 1, 100)  # Generate finer points for smoothness
+        x_smooth, y_smooth = splev(u_fine, tck)
 
-    def method_7_super_resolution(self):
-        cropped = self.crop_eyes(self.eye_points)
-        super_resolved = self.enhance_image_with_super_resolution(cropped)
-        grey = self.convert_to_greyscale(super_resolved)
-        self.display_images_in_grid(self.frame, cropped, super_resolved, grey)
-
-    def method_8_longest_convex_arc(self):
-        cropped = self.crop_eyes(self.eye_points, padding=5)
-        grey = self.convert_to_greyscale(cropped)
-        binary = self.convert_to_binary(grey)
-        contours = self.process_convex_arc(binary, grey)
-        self.display_images_in_grid(self.frame, cropped, grey, contours)
-    
-    def crop_eyes(self, left_eye, padding=0):
-        x_min, y_min, x_max, y_max = self.find_bounding_box(left_eye, padding=padding)
-
-        # Crop the region of interest
-        left = self.frame[y_min:y_max, x_min:x_max]
-        return left
-
-    def crop_eyes_hull(self, left_eye):
-        # Create the convex hull of the eye points
-        hull = cv2.convexHull(left_eye)
+        # Convert the smooth curve back to integer coordinates
+        smooth_curve = np.array([np.round(x_smooth).astype(int), np.round(y_smooth).astype(int)]).T
 
         # Create a blank mask the same size as the frame
         mask = np.zeros_like(self.frame[:, :, 0])  # Single-channel mask (grayscale)
 
-        # Fill the convex hull on the mask
-        cv2.fillConvexPoly(mask, hull, 255)
+        # Fill the smooth curve on the mask
+        cv2.fillPoly(mask, [smooth_curve], 255)
 
         # Apply the mask to the frame
         masked_frame = cv2.bitwise_and(self.frame, self.frame, mask=mask)
 
-        # Extract the bounding rectangle of the convex hull
-        x, y, w, h = cv2.boundingRect(hull)
+        # Extract the bounding rectangle of the smooth curve
+        x_min, y_min, w, h = cv2.boundingRect(smooth_curve)
 
         # Crop the bounding rectangle and include only the masked region
-        cropped_eye = masked_frame[y:y + h, x:x + w]
+        cropped_eye = masked_frame[y_min:y_min + h, x_min:x_min + w]
 
-        return cropped_eye 
-
-    def find_bounding_box(self, eye_points, padding=0):
-        # Get min and max x and y values
-        x_min = np.min(eye_points[:, 0])
-        x_max = np.max(eye_points[:, 0])
-        y_min = np.min(eye_points[:, 1])
-        y_max = np.max(eye_points[:, 1])
-        
-        # Add padding
-        x_min = max(x_min - padding, 0)  # Ensure x_min doesn't go below 0
-        x_max = min(x_max + padding, self.frame.shape[1])  # Ensure x_max doesn't exceed image width
-        y_min = max(y_min - padding, 0)  # Ensure y_min doesn't go below 0
-        y_max = min(y_max + padding, self.frame.shape[0]) # Ensure y_max doesn't exceed image height
-        
-        return (x_min, y_min, x_max, y_max)
+        return cropped_eye, smooth_curve
 
     def convert_to_greyscale(self, image):
         return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -124,14 +118,10 @@ class PupilProcessor:
         _, binary_image = cv2.threshold(image, threshold, 255, cv2.THRESH_BINARY)
         return binary_image
     
-    def remove_reflections(self, image):
-
-        # Apply CLAHE for better contrast
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        enhanced = clahe.apply(image)
+    def remove_reflections(self, contrast, image):
 
         # Threshold to find bright areas
-        _, bright_regions = cv2.threshold(enhanced, 180, 255, cv2.THRESH_BINARY)
+        _, bright_regions = cv2.threshold(contrast, 180, 255, cv2.THRESH_BINARY)
 
         # Filter bright regions based on contour size
         contours, _ = cv2.findContours(bright_regions, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -139,39 +129,13 @@ class PupilProcessor:
 
         for contour in contours:
             area = cv2.contourArea(contour)
-            if area < 1000:  # Filter reflections: small bright spots only
+            if area < 100:  # Filter reflections: small bright spots only
                 cv2.drawContours(mask, [contour], -1, 255, thickness=cv2.FILLED)
 
         # Inpaint the small reflections using the mask
         inpainted_image = cv2.inpaint(image, mask, inpaintRadius=3, flags=cv2.INPAINT_TELEA)
 
-        return inpainted_image 
-
-    def create_hough_circles(self, image):
-        # c = cv2.HoughCircles(contours, cv2.HOUGH_GRADIENT, 2, image.shape[0]/2)
-
-        blurred = cv2.GaussianBlur(image, (7, 7), 1.5)
-
-        circles = cv2.HoughCircles(
-            blurred,
-            cv2.HOUGH_GRADIENT,
-            dp=1,                   # Inverse resolution ratio
-            minDist=20,              # Very small minimum distance between circles
-            param1=50,              # Upper threshold for edge detection
-            param2=20,              # Lower threshold for center detection (increase sensitivity)
-            minRadius=0,            # No lower size limit
-            maxRadius=50             # No upper size limit
-        )
-
-        circle_image = blurred
-        if circles is not None:
-            circles = np.uint16(np.around(circles))
-            for circle in circles[0, :]:
-                x, y, radius = circle
-                cv2.circle(circle_image, (x, y), radius, (0, 0, 255), 2)  # Red circle
-                cv2.circle(circle_image, (x, y), 2, (0, 255, 0), 3)  # Green center
-
-        return circle_image
+        return inpainted_image
     
     def enhance_contrast(self, image, clip_limit=2.0, tile_grid_size=(8, 8)):
         clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
@@ -204,29 +168,6 @@ class PupilProcessor:
             return None
         
         return contours[1]
-        
-    def enhance_image_with_super_resolution(self, image):
-        
-        sr = cv2.dnn_superres.DnnSuperResImpl_create()
-        
-        # Get the absolute path to the model file
-        current_dir = os.path.dirname(os.path.abspath(__file__))  # Directory of pupil.py
-        model_path = os.path.join(current_dir, "EDSR_x3.pb")
-
-        # Read the pre-trained model
-        sr.readModel(model_path)
-        sr.setModel("edsr", 3)  # Use EDSR with a scaling factor of 3
-
-        # Get the original size of the image
-        original_size = (image.shape[1], image.shape[0])  # (width, height)
-
-        # Enhance the image with super-resolution
-        upscaled_image = sr.upsample(image)
-
-        # Resize the enhanced image back to the original size
-        enhanced_image = cv2.resize(upscaled_image, original_size, interpolation=cv2.INTER_CUBIC)
-
-        return enhanced_image
     
     def calculate_curvature(self, contour_points):
         """
@@ -288,17 +229,14 @@ class PupilProcessor:
         """
         if len(arc_points) < 3:
             print("Not enough points to fit a circle.")
-            return grey_image, None, None
+            return None, None
 
         # Fit a circle using cv2.minEnclosingCircle
         (x, y), radius = cv2.minEnclosingCircle(arc_points)
         center = (int(x), int(y))
         radius = int(radius)
 
-        # Draw the fitted circle
-        cv2.circle(grey_image, center, radius, (0, 255, 0), 1)  # Green circle
-
-        return grey_image, center, radius
+        return center, radius
 
     def process_convex_arc(self, binary_image, grey_image):
         """
@@ -311,7 +249,7 @@ class PupilProcessor:
 
         if largest_contour is None:
             print("No contours found")
-            return grey_image
+            return None, None
         
         # Flatten the contour and calculate curvature
         contour_points = largest_contour[:, 0, :]  # Reshape to (N, 2)
@@ -321,62 +259,102 @@ class PupilProcessor:
         longest_arc = self.extract_longest_convex_arc(contour_points, curvatures)
 
         # Fit a circle to the longest arc and draw only the final circle
-        result_image, center, radius = self.fit_circle_to_arc(longest_arc, grey_image)
+        center, radius = self.fit_circle_to_arc(longest_arc, grey_image)
 
-        print(f"Fitted Circle - Center: {center}, Radius: {radius}")
-        return result_image
+        return center, radius
 
-    def resize_with_aspect_ratio(self, image, target_size):
-        # Convert grayscale/binary images to BGR for consistency
-        if len(image.shape) == 2:  # Check if single-channel image
-            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+class PupilTracker:
+    def __init__(self):
+        self.prev_left_pupil = None
+        self.prev_right_pupil = None
+        self.prev_left_radius = None
+        self.prev_right_radius = None
+        self.prev_time = None
 
-        # Extract original and target dimensions
-        h, w = image.shape[:2]
-        target_w, target_h = target_size
+        self.kalman_left = self._initialise_kalman_filter()
+        self.kalman_right = self._initialise_kalman_filter()
 
-        # Calculate scaling factor to fit the image in the target size
-        scale = min(target_w / w, target_h / h)
-        new_w = int(w * scale)
-        new_h = int(h * scale)
+    def _initialise_kalman_filter(self):
+        kalman = cv2.KalmanFilter(4, 2)
+        kalman.transitionMatrix = np.array([[1, 0, 1, 0],  
+                                            [0, 1, 0, 1],  
+                                            [0, 0, 1, 0],  
+                                            [0, 0, 0, 1]], dtype=np.float32)
+        kalman.measurementMatrix = np.eye(2, 4, dtype=np.float32)
+        kalman.processNoiseCov = np.eye(4, dtype=np.float32) * 1e-2
+        kalman.measurementNoiseCov = np.eye(2, dtype=np.float32) * 1e-1
+        kalman.errorCovPost = np.eye(4, dtype=np.float32)
+        return kalman
+    
+    def update_pupil(self, left_pupil, left_radius, right_pupil, right_radius):
+        current_time = time.time()
+        if self.prev_time is None:
+            self.prev_time = current_time
+            self.prev_left_pupil, self.prev_right_pupil = left_pupil, right_pupil
+            self.prev_left_radius, self.prev_right_radius = left_radius, right_radius
+            return left_pupil, left_radius, right_pupil, right_radius
 
-        # Resize the image while maintaining aspect ratio
-        resized = cv2.resize(image, (new_w, new_h))
+        dt = current_time - self.prev_time
+        left_velocity, right_velocity = self._compute_velocity(left_pupil, right_pupil, dt)
+        measurement_noise = self._adjust_measurement_confidence(left_velocity, right_velocity)
 
-        # Create a blank canvas (black background) with the target size
-        canvas = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+        self.kalman_left.measurementNoiseCov = np.eye(2, dtype=np.float32) * measurement_noise
+        self.kalman_right.measurementNoiseCov = np.eye(2, dtype=np.float32) * measurement_noise
 
-        # Calculate padding to center the image
-        x_offset = (target_w - new_w) // 2
-        y_offset = (target_h - new_h) // 2
+        left_pupil_smoothed = self._apply_kalman_filter(self.kalman_left, left_pupil)
+        right_pupil_smoothed = self._apply_kalman_filter(self.kalman_right, right_pupil)
 
-        # Place the resized image in the center of the canvas
-        canvas[y_offset:y_offset + new_h, x_offset:x_offset + new_w] = resized
+        self.prev_left_pupil, self.prev_right_pupil = left_pupil, right_pupil
+        self.prev_left_radius, self.prev_right_radius = left_radius, right_radius
+        self.prev_time = current_time
 
-        return canvas
+        return left_pupil_smoothed, left_radius, right_pupil_smoothed, right_radius
+    
+    def _compute_velocity(self, left_pupil, right_pupil, dt):
+        if dt == 0:
+            return 0, 0
 
-    def display_images_in_grid(self, full_frame, left_cropped, left_greyscale, left_binary):
-        # Define target size based on the full frame dimensions
-        target_size = (self.frame.shape[1], self.frame.shape[0])
+        left_velocity = None
+        right_velocity = None
 
-        # Resize images to fill their grid cells while maintaining aspect ratio
-        full_frame_resized = self.resize_with_aspect_ratio(full_frame, target_size)
-        left_cropped_resized = self.resize_with_aspect_ratio(left_cropped, target_size)
-        left_greyscale_resized = self.resize_with_aspect_ratio(left_greyscale, target_size)
-        left_binary_resized = self.resize_with_aspect_ratio(left_binary, target_size)
-        
-        # Combine images into a 2x2 grid
-        top_row = np.hstack((full_frame_resized, left_cropped_resized))
-        bottom_row = np.hstack((left_greyscale_resized, left_binary_resized))
-        grid = np.vstack((top_row, bottom_row))
+        # Calculate left pupil velocity if possible
+        if left_pupil is not None and self.prev_left_pupil is not None:
+            left_velocity = np.linalg.norm(np.array(left_pupil) - np.array(self.prev_left_pupil)) / dt
 
-        # Display the combined grid
-        cv2.imshow("Pupil Processor Output", grid)
+        # Calculate right pupil velocity if possible
+        if right_pupil is not None and self.prev_right_pupil is not None:
+            right_velocity = np.linalg.norm(np.array(right_pupil) - np.array(self.prev_right_pupil)) / dt
 
-        # # Wait for 'q' to close the window
-        # print("Press 'q' to exit...")
-        # while True:
-        #     if cv2.waitKey(1) & 0xFF == ord('q'):
-        #         break
+        # Handle cases where one or both velocities are None
+        if left_velocity is None and right_velocity is not None:
+            left_velocity = right_velocity  # Approximate left velocity with right velocity
+        elif right_velocity is None and left_velocity is not None:
+            right_velocity = left_velocity  # Approximate right velocity with left velocity
+        elif left_velocity is None and right_velocity is None:
+            # Use previous velocities if neither can be calculated
+            left_velocity = 0
+            right_velocity = 0
 
-        # cv2.destroyAllWindows()
+        return left_velocity, right_velocity
+
+
+    def _adjust_measurement_confidence(self, left_velocity, right_velocity):
+        base_noise = 0.1
+        high_speed_threshold = 0.2
+        velocity_difference_threshold = 0.1
+
+        if abs(left_velocity - right_velocity) > velocity_difference_threshold or max(left_velocity, right_velocity) > high_speed_threshold:
+            return base_noise * 5
+        return base_noise
+    
+    def _apply_kalman_filter(self, kalman, pupil_position):
+        if pupil_position is None:
+            predicted = kalman.predict()
+            return (int(predicted[0]), int(predicted[1]))
+
+        measured = np.array([[np.float32(pupil_position[0])], [np.float32(pupil_position[1])]])
+        kalman.correct(measured)
+        predicted = kalman.predict()
+        return (int(predicted[0]), int(predicted[1]))
+
+

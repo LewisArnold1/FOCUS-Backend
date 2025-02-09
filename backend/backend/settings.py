@@ -12,8 +12,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+from pickle import FALSE
 from dotenv import load_dotenv
 import os
+import dj_database_url
 
 # Specify the path to the .env file
 BASE_DIR = Path(__file__).resolve().parent.parent  # Adjust as needed
@@ -23,9 +25,16 @@ env_path = os.path.join(BASE_DIR, '.env')
 load_dotenv(dotenv_path=env_path)
 
 SECRET_KEY = os.getenv('SECRET_KEY')
+
+print("SECRET_KEY:", os.getenv('SECRET_KEY'))
+print("ALLOWED_HOSTS:", os.getenv('ALLOWED_HOSTS'))
+
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+CSRF_TRUSTED_ORIGINS= [ 'https://focus-backend-production.up.railway.app' ]
 
+if 'focus-backend-production.up.railway.app' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('focus-backend-production.up.railway.app')
 
 # Application definition
 
@@ -132,6 +141,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (Uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -153,6 +166,16 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React app
+    "https://focus-frontend-production.up.railway.app", # Production  
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+CORS_EXPOSE_HEADERS = [
+    "line-number",
+    "page-number",
+]
+
+# POSTGRES_LOCALLY = False
+if os.getenv('ENVIRONMENT') == 'production': # To setup the database in production
+    DATABASES['default'] = dj_database_url.parse(os.getenv('DATABASE_URL'))
