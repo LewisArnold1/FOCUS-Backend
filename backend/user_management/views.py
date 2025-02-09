@@ -1,5 +1,7 @@
 from datetime import datetime
 import magic
+import os
+import base64
 
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -221,3 +223,57 @@ class DocumentLoadView(APIView):
                 {"error": "No document data found for this user with the given file_name."},
                 status=404,
             )
+        
+class FileListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            documents = DocumentData.objects.filter(user=request.user)
+
+            files = []
+            for document in documents:
+                # Generate preview if needed
+                preview_path = document.generate_preview()
+                # Read the preview file as Base64 (if it exists)
+                preview_base64 = None
+                if preview_path and os.path.exists(preview_path):
+                    with open(preview_path, "rb") as preview_file:
+                        preview_base64 = base64.b64encode(preview_file.read()).decode('utf-8')
+
+                files.append({
+                    'file_name': document.file_name,
+                    'favorite': document.favorite,
+                    'saved_at': document.saved_at.isoformat(),
+                    'preview': preview_base64,  # Base64 encoded image content
+                })
+
+            return Response(files, status=200)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+        
+class FileDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            file_name = request.query_params.get('file_name')
+            document = DocumentData.objects.get(user=request.user, file_name=file_name)
+
+            # Delete the actual file
+            document.file_object.delete()
+
+            # Optionally delete the preview file if it exists
+            preview_path = f"{os.path.splitext(document.file_object.name)[0]}_preview.png"
+            if os.path.exists(preview_path):
+                os.remove(preview_path)
+
+            # Delete the database entry
+            document.delete()
+            return Response({"message": "File deleted successfully."}, status=200)
+
+        except DocumentData.DoesNotExist:
+            return Response({"error": "File not found."}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
