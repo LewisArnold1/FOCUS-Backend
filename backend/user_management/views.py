@@ -1,5 +1,5 @@
 from datetime import datetime
-import magic
+import mimetypes
 import os
 import base64
 
