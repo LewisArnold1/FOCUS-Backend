@@ -171,6 +171,11 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+CORS_EXPOSE_HEADERS = [
+    "line-number",
+    "page-number",
+]
+
 # POSTGRES_LOCALLY = False
 if os.getenv('ENVIRONMENT') == 'production': # To setup the database in production
     DATABASES['default'] = dj_database_url.parse(os.getenv('DATABASE_URL'))

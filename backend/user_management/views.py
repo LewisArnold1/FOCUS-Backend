@@ -171,9 +171,7 @@ class DocumentSaveView(APIView):
 
         valid_mime_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 
-        mime = magic.Magic(mime=True)
-        mime_type = mime.from_buffer(file_object.read(2048))  # Read the first 2KB to determine file type
-        file_object.seek(0)  # Reset file pointer after reading
+        mime_type, _ = mimetypes.guess_type(file_object.name)
         if mime_type not in valid_mime_types:
             raise ValueError("Invalid file type. Only .pdf, .doc, and .docx are allowed.")
        
@@ -280,3 +278,4 @@ class FileDeleteView(APIView):
             return Response({"error": "File not found."}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
+          
