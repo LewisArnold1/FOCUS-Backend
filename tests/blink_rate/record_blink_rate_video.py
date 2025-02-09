@@ -3,22 +3,26 @@ import json
 from datetime import datetime
 import os
 
-'''
-Set video and timestamp filenames.
-Set video duration - 60s for actual vids, do 5-10s to test it works first
+# Import face processor to check eye is found in each frme
+try:
+    from blink_rate_tests.face import FaceProcessor
+except ImportError:
+    from blink_rate_tests.face import FaceProcessor
 
-Run file - video will record then be played back after it is saved
-'''
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PREDICTOR_PATH = os.path.join(CURRENT_DIR, 'blink_rate_tests','shape_predictor_68_face_landmarks.dat')
+face_processor = FaceProcessor(PREDICTOR_PATH)
 
-# # change to your first name + test number x
+
+# Change to your first name + test number x
 VIDEO_FILENAME = "firstname_blink_rate_x.avi"
 TIMESTAMP_FILENAME = "firstname_blink_rate_x_timestamps.txt"
 
 VIDEO_FILENAME = "zak_blink_rate_1.avi"
 TIMESTAMP_FILENAME = "zak_blink_rate_1_timestamps.txt"
 
-# Set to 60s for recording videos (can use 5-10s if you want to test its working)
-VIDEO_DURATION = 60
+# Set to 1800s for recording 30min videos (use 5-10s if you want to test its working)
+VIDEO_DURATION = 20
 
 
 def record_video(video_filename, timestamp_filename, duration):
@@ -30,7 +34,7 @@ def record_video(video_filename, timestamp_filename, duration):
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Tests folder
-    tests_dir = os.path.join(script_dir, "blink_tests")
+    tests_dir = os.path.join(script_dir, "blink_rate_tests")
 
     # Full paths
     video_path = os.path.join(tests_dir, video_filename)   
@@ -48,6 +52,7 @@ def record_video(video_filename, timestamp_filename, duration):
 
     timestamps = []
     frames = []
+    dropped_frames = 0
 
     print("Recording video...")
     start_time = datetime.now()
@@ -58,6 +63,13 @@ def record_video(video_filename, timestamp_filename, duration):
         if not ret:
             print("Failed to capture frame.")
             break
+
+        # process_face to check eye is found
+        _, left_eye, right_eye, _ = face_processor.process_face(frame)
+        if left_eye is None or right_eye is None:
+            dropped_frames+=1
+            print(f"No eye no.{dropped_frames}\nat time {datetime.now().hour}:{datetime.now().minute}:{datetime.now().second:.2f}.")
+        # Continue recording regardless
 
         # Save frame & timestamp locally
         timestamps.append(datetime.now())
@@ -86,8 +98,9 @@ def record_video(video_filename, timestamp_filename, duration):
     with open(timestamp_path, "w") as json_file:
         json.dump(timestamps_str, json_file, indent=4)
     
-    elapsed_time = (timestamps[-1] - start_time).total_seconds()
-    print(f"Video saved: {video_filename} ({elapsed_time:.2f} seconds, {avg_fps:.2f} FPS).")
+    elapsed_seconds = (timestamps[-1] - start_time).total_seconds()
+    minutes, seconds = divmod(elapsed_seconds, 60)
+    print(f"Video saved: {video_filename} ({int(minutes)} mins, {seconds:.2f} s, at {avg_fps:.2f} FPS).")
 
 def play_video(video_filename, timestamp_filename):
 
@@ -95,7 +108,7 @@ def play_video(video_filename, timestamp_filename):
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Tests folder
-    tests_dir = os.path.join(script_dir, "blink_tests")
+    tests_dir = os.path.join(script_dir, "blink_rate_tests")
 
     # Full paths
     video_path = os.path.join(tests_dir, video_filename)   
@@ -176,5 +189,5 @@ def play_video(video_filename, timestamp_filename):
     cap.release()
     cv2.destroyAllWindows()
 
-# record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
+record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
 play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
