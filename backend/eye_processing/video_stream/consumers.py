@@ -14,7 +14,6 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Max
 
 from eye_processing.eye_metrics.process_eye_metrics import process_eye
-from eye_processing.eye_metrics import process_eye
 from eye_processing.eye_metrics.predict_blink_count import predict_blink_count
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')

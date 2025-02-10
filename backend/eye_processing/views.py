@@ -4,7 +4,6 @@ from rest_framework.permissions import IsAuthenticated
 from .models import SimpleEyeMetrics, UserSession
 from django.db.models import Max, Sum, Min
 from datetime import timedelta
-from sklearn.linear_model import LinearRegression  # Using linear regression for prediction
 from eye_processing.eye_metrics.predict_blink_count import predict_blink_count
 
 class RetrieveLastBlinkCountView(APIView):
