@@ -2,18 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def generate_random_decreasing_curve(duration=10, sample_rate=10):
-    """
-    Generates a mock blink rate curve that generally decreases over time
-    but does not follow a standard function. Instead, it uses random perturbations.
-
-    Parameters:
-    - duration: Total time in minutes
-    - sample_rate: Number of samples per minute
-
-    Returns:
-    - time: Array of time values
-    - blink_rate: Array of corresponding blink rates
-    """
+  
     time = np.linspace(0, duration, duration * sample_rate)
     blink_rate = np.zeros_like(time)
 

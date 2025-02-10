@@ -110,11 +110,11 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             await sync_to_async(eye_metrics.save)()
 
             print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_detected}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
-            self.predict_blink_count()        
+            await self.predict_blink_count()        
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
             
-    def predict_blink_count(self):
-        predicted_blink_count = predict_blink_count(self.user)
+    async def predict_blink_count(self):
+        predicted_blink_count = await sync_to_async(predict_blink_count)(self.user)
         if predicted_blink_count is not None:
             print(f"Predicted blink count for next frame: {predicted_blink_count}")
