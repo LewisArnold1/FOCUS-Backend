@@ -4,7 +4,6 @@ from rest_framework.permissions import IsAuthenticated
 from .models import SimpleEyeMetrics, UserSession
 from django.db.models import Max, Sum, Min
 from datetime import timedelta
-from datetime import timedelta
 from sklearn.linear_model import LinearRegression  # Using linear regression for prediction
 from eye_processing.eye_metrics.predict_blink_count import predict_blink_count
 
@@ -29,9 +28,14 @@ class RetrieveLastBlinkCountView(APIView):
         
         if not metrics.exists():
             return Response({"error": "No blink data available for prediction."}, status=404)
+       
+        total_blinks = metrics.aggregate(Sum('blink_count'))['blink_count__sum'] or 0
+        blink_rates = self.calculate_blink_rate_per_minute(metrics)
+
         # Return the latest blink data and predicted blink count
         return Response({
             "predicted_blink_count": predicted_blink_count,
+            "blink_rate_per_minute": blink_rates,
             "metrics": [
                 {
                     "timestamp": metric.timestamp,
@@ -43,7 +47,18 @@ class RetrieveLastBlinkCountView(APIView):
                 for metric in metrics
             ]
         }, status=200)
+        
+    def calculate_blink_rate_per_minute(self, metrics):
+        total_blinks = metrics.aggregate(Sum('blink_count'))['blink_count__sum'] or 0
+        start_time = metrics.aggregate(Min('timestamp'))['timestamp__min']
+        end_time = metrics.aggregate(Max('timestamp'))['timestamp__max']
 
+        if start_time and end_time:
+            duration_seconds = (end_time - start_time).total_seconds()
+            if duration_seconds > 0:
+                return [round((total_blinks * 60) / duration_seconds, 2)] 
+        
+        return [0]  
 
 class RetrieveAllUserSessionsView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
