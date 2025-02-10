@@ -2,6 +2,7 @@ import cv2
 import json
 from datetime import datetime
 import os
+import time
 
 # Import face processor to check eye is found in each frme
 try:
@@ -190,4 +191,4 @@ def play_video(video_filename, timestamp_filename):
     cv2.destroyAllWindows()
 
 record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
-play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
+# play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
