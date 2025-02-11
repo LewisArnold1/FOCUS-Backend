@@ -241,12 +241,14 @@ class FileListView(APIView):
                 if preview_path and os.path.exists(preview_path):
                     with open(preview_path, "rb") as preview_file:
                         preview_base64 = base64.b64encode(preview_file.read()).decode('utf-8')
+                else:
+                    print("Preview file not found:", preview_path)
 
                 files.append({
-                    'file_name': document.file_name,
-                    'favorite': document.favorite,
-                    'saved_at': document.saved_at.isoformat(),
-                    'preview': preview_base64,  # Base64 encoded image content
+                    'name': document.file_name,
+                    'thumbnail': preview_base64,  # Base64 encoded image content
+                    'isStarred': document.favourite,
+                    'lastOpened': document.saved_at.strftime('%d/%m/%y'),
                 })
 
             return Response(files, status=200)
