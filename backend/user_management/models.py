@@ -70,7 +70,7 @@ class DocumentData(models.Model):
                     resized_img.save(preview_path)
                     return os.path.join("media", "documents", preview_filename).replace("\\", "/")  # Ensures correct format
 
-            elif self.file_object.name.endswith((".doc", ".docx")):
+            elif self.file_object.name.endswith(".docx"):
                 # DOCX preview generation with cropping along Y-axis and resizing (no borders)
                 document = Document(self.file_object.path)
                 text_preview = "\n".join([para.text for para in document.paragraphs])  # All paragraphs combined

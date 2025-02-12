@@ -169,11 +169,11 @@ class DocumentSaveView(APIView):
         if not isinstance(timestamp, (int, float)):
             raise ValueError("Invalid timestamp: must be a numeric value (int or float).")
 
-        valid_mime_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+        valid_mime_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
 
         mime_type, _ = mimetypes.guess_type(file_object.name)
         if mime_type not in valid_mime_types:
-            raise ValueError("Invalid file type. Only .pdf, .doc, and .docx are allowed.")
+            raise ValueError("Invalid file type. Only .pdf, .docx and .txt are allowed.")
        
         # Convert timestamp
         timestamp_s = timestamp / 1000
