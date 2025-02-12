@@ -7,8 +7,35 @@ class FaceProcessor:
     def __init__(self):
         self.mp_face_mesh = mp.solutions.face_mesh
         self.face_mesh = self.mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True)
+        self.mp_drawing = mp.solutions.drawing_utils
+        self.mp_drawing_styles = mp.solutions.drawing_styles
+        self.default_specs = self.mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1)
         self.prev_center = None  
         self.prev_time = None  
+
+    def process_face(self, frame, draw_mesh=True, draw_contours=True):
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.face_mesh.process(frame_rgb)
+
+        if not results.multi_face_landmarks:
+            return 0, None, None, 0.0
+        
+        frame_height, frame_width, _ = frame.shape
+
+        face_landmarks = results.multi_face_landmarks[0]  # Get the first (main) face
+        face_rect, no_faces = self.extract_main_face(face_landmarks, frame_width, frame_height)
+        left_eye, right_eye = self.extract_eye_regions(face_landmarks)
+        normalised_face_speed = self.compute_face_speed(face_rect, frame_height)
+
+        left_eye_pixels = np.array([(int(lm[0] * frame_width), int(lm[1] * frame_height)) for lm in left_eye])
+        right_eye_pixels = np.array([(int(lm[0] * frame_width), int(lm[1] * frame_height)) for lm in right_eye])
+
+        if draw_mesh or draw_contours:
+            self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
+        else:
+            self._draw_eye_annotations(frame, left_eye_pixels, right_eye_pixels, face_rect)
+
+        return no_faces, left_eye, right_eye, normalised_face_speed
 
     def extract_main_face(self, face_landmarks, frame_width, frame_height):
         if not face_landmarks:
@@ -26,8 +53,8 @@ class FaceProcessor:
         return ((x_min, y_min, x_max - x_min, y_max - y_min), 1)
     
     def extract_eye_regions(self, face_landmarks):
-        LEFT_EYE_IDX = [33, 133, 160, 158, 153, 144, 362, 385, 387, 263, 373, 380]  # Standard MediaPipe indices for left eye
-        RIGHT_EYE_IDX = [362, 263, 385, 387, 373, 380, 33, 133, 160, 158, 153, 144]  # Standard MediaPipe indices for right eye
+        LEFT_EYE_IDX = [33, 133, 160, 158, 153, 144]  # Left eye only
+        RIGHT_EYE_IDX = [362, 263, 385, 387, 373, 380]  # Right eye only
 
         left_eye = np.array([(face_landmarks.landmark[i].x, face_landmarks.landmark[i].y)
                          for i in LEFT_EYE_IDX], dtype=np.float32)
@@ -58,28 +85,34 @@ class FaceProcessor:
 
         return normalised_speed
     
-    def process_face(self, frame):
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = self.face_mesh.process(frame_rgb)
-
-        if not results.multi_face_landmarks:
-            return 0, None, None, 0.0
+    def _draw_eye_annotations(self, frame, left_eye_pixels, right_eye_pixels, face_rect):
+        x, y, w, h = face_rect
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Green box around face
         
-        frame_height, frame_width, _ = frame.shape
-
-        face_landmarks = results.multi_face_landmarks[0]  # Get the first (main) face
-        face_rect, no_faces = self.extract_main_face(face_landmarks, frame_width, frame_height)
-        left_eye, right_eye = self.extract_eye_regions(face_landmarks)
-        normalised_face_speed = self.compute_face_speed(face_rect, frame_height)
-
-        left_eye_pixels = np.array([(int(lm[0] * frame_width), int(lm[1] * frame_height)) for lm in left_eye])
-        right_eye_pixels = np.array([(int(lm[0] * frame_width), int(lm[1] * frame_height)) for lm in right_eye])
-
-        # 🔹 Draw face bounding box
         for (lx, ly) in left_eye_pixels:
             cv2.circle(frame, (lx, ly), 2, (0, 255, 255), -1)  # Yellow dots for left eye
         for (rx, ry) in right_eye_pixels:
             cv2.circle(frame, (rx, ry), 2, (0, 0, 255), -1)  # Red dots for right eye
-            cv2.imshow("Face Landmarks", frame)
+        
+        cv2.imshow("Face Landmarks", cv2.flip(frame, 1))
 
-        return no_faces, left_eye, right_eye, normalised_face_speed
+    def _draw_face_mesh(self, frame, face_landmarks, draw_mesh=True, draw_contours=True):
+        if draw_mesh:
+            self.mp_drawing.draw_landmarks(
+                image=frame,
+                landmark_list=face_landmarks,
+                connections=self.mp_face_mesh.FACEMESH_TESSELATION,
+                landmark_drawing_spec=None,
+                connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_tesselation_style()
+            )
+
+        if draw_contours:
+            self.mp_drawing.draw_landmarks(
+                image=frame,
+                landmark_list=face_landmarks,
+                connections=self.mp_face_mesh.FACEMESH_CONTOURS,
+                landmark_drawing_spec=None,
+                connection_drawing_spec=self.default_specs
+            )
+        
+        cv2.imshow("Face Landmarks", cv2.flip(frame, 1))
