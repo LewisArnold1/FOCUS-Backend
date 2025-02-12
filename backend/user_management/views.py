@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.http import FileResponse
+from django.conf import settings
 import os
 
 from .serializers import RegisterUserSerializer
@@ -169,11 +170,11 @@ class DocumentSaveView(APIView):
         if not isinstance(timestamp, (int, float)):
             raise ValueError("Invalid timestamp: must be a numeric value (int or float).")
 
-        valid_mime_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+        valid_mime_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
 
         mime_type, _ = mimetypes.guess_type(file_object.name)
         if mime_type not in valid_mime_types:
-            raise ValueError("Invalid file type. Only .pdf, .doc, and .docx are allowed.")
+            raise ValueError("Invalid file type. Only .pdf, .docx and .txt are allowed.")
        
         # Convert timestamp
         timestamp_s = timestamp / 1000
@@ -241,12 +242,14 @@ class FileListView(APIView):
                 if preview_path and os.path.exists(preview_path):
                     with open(preview_path, "rb") as preview_file:
                         preview_base64 = base64.b64encode(preview_file.read()).decode('utf-8')
+                else:
+                    print("Preview file not found:", preview_path)
 
                 files.append({
-                    'file_name': document.file_name,
-                    'favorite': document.favorite,
-                    'saved_at': document.saved_at.isoformat(),
-                    'preview': preview_base64,  # Base64 encoded image content
+                    'name': document.file_name,
+                    'thumbnail': preview_base64,  # Base64 encoded image content
+                    'isStarred': document.favourite,
+                    'lastOpened': document.saved_at.strftime('%d/%m/%y'),
                 })
 
             return Response(files, status=200)
@@ -262,13 +265,15 @@ class FileDeleteView(APIView):
             file_name = request.query_params.get('file_name')
             document = DocumentData.objects.get(user=request.user, file_name=file_name)
 
-            # Delete the actual file
-            document.file_object.delete()
+            preview_filename = f"{os.path.basename(os.path.splitext(document.file_object.name)[0])}_preview.jpg"
+            preview_path = os.path.join(settings.MEDIA_ROOT, "documents", preview_filename)
 
-            # Optionally delete the preview file if it exists
-            preview_path = f"{os.path.splitext(document.file_object.name)[0]}_preview.png"
+            print("Preview path:", preview_path)
             if os.path.exists(preview_path):
                 os.remove(preview_path)
+
+            # Delete the actual file
+            document.file_object.delete()
 
             # Delete the database entry
             document.delete()
