@@ -23,7 +23,7 @@ class FixationSaccadeDetector:
 
         # Calculate right iris velocity if possible
         if right_iris is not None and self.prev_right_iris is not None:
-            right_velocity = np.linalg.norm(np.array(right_iris) - np.array(self.prev_right_iris)) / (dt
+            right_velocity = (np.linalg.norm(np.array(right_iris) - np.array(self.prev_right_iris))) / (dpi*dt)
 
         # Handle cases where one or both velocities are None
         if left_velocity is None and right_velocity is not None:
