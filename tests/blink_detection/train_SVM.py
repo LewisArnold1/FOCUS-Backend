@@ -6,6 +6,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report
 
+# Set temporal window size
+WINDOW_SIZE = 10 # 10 frames before & 10 frames after
+
 # Files for training data
 TRAIN_EARS_1 = "zak_test_1_ears.csv"
 TRAIN_EARS_2 = "zak_test_2_ears.csv"
@@ -48,12 +51,20 @@ def load_data(ears_filenames, labels_filenames):
     return ear_values, labels  # Returns lists of NumPy arrays
 
 # Create feature matrix with a ±10 frame window
-def create_feature_matrices(ear_values, labels, window_size=10):
-    X, y = [], []
-    for i in range(window_size, len(ear_values) - window_size):
-        X.append(ear_values[i - window_size:i + window_size + 1])  # 21 values (±10 frames)
-        y.append(labels[i])  # Label corresponds to center frame
-    return np.array(X), np.array(y)
+def create_feature_matrices(ear_values, labels, window_size):
+    feature_matrices = []
+    label_sets = []
+
+    # Extract feature window as predictor and corresponding label for each frame
+    for ear_values, labels in zip(ear_values, labels): # runs for each video so no overlapping windows
+        X, y = [], []
+        for i in range(window_size, len(ear_values) - window_size):
+            X.append(ear_values[i - window_size:i + window_size + 1])  # 21 EARs (±10 frames)
+            y.append(labels[i])  # Label corresponds to centre frame
+        feature_matrices.append(np.array(X))
+        label_sets.append(np.array(y))
+    
+    return feature_matrices, label_sets
 
 # Train and evaluate SVM model
 def train_svm(X, y):
@@ -73,12 +84,12 @@ def train_svm(X, y):
     return svm_model, scaler
 
 # Main function
-def main(train_ears_filenames, train_labels_filenames, test_ears_filenames, test_labels_filenames):
+def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_filenames, test_labels_filenames):
     train_ear_values, train_labels = load_data(train_ears_filenames, train_labels_filenames)
     test_ear_values, test_labels = load_data(test_ears_filenames, test_labels_filenames)
 
-    # train_feature_matrices, train_label_sets = create_feature_matrices(train_ear_values, train_labels)
-    # test_feature_matrices, test_label_sets = create_feature_matrices(test_ear_values, test_labels)
+    train_feature_matrices, train_label_sets = create_feature_matrices(train_ear_values, train_labels, window_size)
+    test_feature_matrices, test_label_sets = create_feature_matrices(test_ear_values, test_labels, window_size)
     
     # models, scalers = train_svm(train_feature_matrices, train_label_sets)
     
@@ -96,4 +107,4 @@ def main(train_ears_filenames, train_labels_filenames, test_ears_filenames, test
 # Example usage
 # model, scaler = main('ear_values.csv', 'labels.csv')
 
-main(TRAIN_EARS_FILENAMES, TRAIN_LABELS_FILENAMES, TEST_EARS_FILENAMES, TEST_LABELS_FILENAMES)
+main(WINDOW_SIZE, TRAIN_EARS_FILENAMES, TRAIN_LABELS_FILENAMES, TEST_EARS_FILENAMES, TEST_LABELS_FILENAMES)
