@@ -64,5 +64,16 @@ class FaceProcessor:
         normalised_face_speed = self.compute_face_speed(main_face, frame_height)
 
         left_eye, right_eye = self.extract_eye_regions(shape)
+
+        # 🔹 Draw face bounding box
+        x, y, w, h = main_face.left(), main_face.top(), main_face.width(), main_face.height()
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Green box around face
+        for (x, y) in shape:
+            cv2.circle(frame, (x, y), 2, (255, 0, 0), -1)  # Blue dots for landmarks
+        for (x, y) in left_eye:
+            cv2.circle(frame, (x, y), 2, (0, 255, 255), -1)  # Yellow dots for left eye
+        for (x, y) in right_eye:
+            cv2.circle(frame, (x, y), 2, (0, 0, 255), -1)  # Red dots for right eye
+        cv2.imshow("Face Landmarks", frame)
         
         return no_faces, left_eye, right_eye, normalised_face_speed
