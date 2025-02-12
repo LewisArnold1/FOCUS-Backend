@@ -75,8 +75,8 @@ def train_svm(X, y):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_combined)
 
-    # Fit linear SVM model
-    svm_model = SVC(kernel='linear', C=1)
+    # Fit linear SVM model - introduce weight to prioritise closed eyes being detected
+    svm_model = SVC(kernel='linear', class_weight={0: 1, 1:1.5})
     svm_model.fit(X_scaled, y_combined)
     
     return svm_model, scaler
