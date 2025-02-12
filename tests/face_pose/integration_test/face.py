@@ -20,7 +20,7 @@ class FaceProcessor:
         results = self.face_mesh.process(frame_rgb)
 
         if not results.multi_face_landmarks:
-            return 0, None, None, 0.0
+            return 0, None, None, 0.0, None, None, None
         
         frame_height, frame_width, _ = frame.shape
 
@@ -44,7 +44,7 @@ class FaceProcessor:
         right_eye_pixels = self.convert_face_frame_to_pixels(right_eye, frame_width, frame_height)
 
         if not draw:
-            return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed
+            return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll
 
         if draw_all:
             self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
