@@ -10,7 +10,9 @@ class FaceProcessor:
         self.mp_drawing = mp.solutions.drawing_utils
         self.mp_drawing_styles = mp.solutions.drawing_styles
         self.default_specs = self.mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1)
-        self.prev_center = None  
+        
+        self.prev_eye_positions = None 
+        self.prev_rotation_matrix = None
         self.prev_time = None  
 
     def process_face(self, frame, draw_mesh=True, draw_contours=True, draw_all=True):
@@ -25,22 +27,17 @@ class FaceProcessor:
         # Get face landmarks (main face)
         face_landmarks = results.multi_face_landmarks[0]
 
-        # Step 1: Compute face reference frame (axes)
+        # Compute face reference frame (axes)
         x_axis, y_axis, z_axis = self.compute_face_axes(face_landmarks)
 
-        # Step 2: Convert main face coordinates to face frame
+        # Convert main face coordinates to face frame
         face_rect, no_faces = self.extract_main_face(face_landmarks, frame_width, frame_height)
         left_eye, right_eye = self.extract_eye_regions(face_landmarks)
 
-        # Step 3: Convert eye coordinates to the face reference frame
-        left_eye_transformed = self.transform_to_face_frame(left_eye, face_landmarks, x_axis, y_axis, z_axis)
-        right_eye_transformed = self.transform_to_face_frame(right_eye, face_landmarks, x_axis, y_axis, z_axis)
+        # Compute normalised eye velocity in camera frame
+        _, normalised_eye_speed = self.compute_velocity(left_eye, right_eye, x_axis, y_axis, z_axis)
 
-        # Step 4: Compute normalised face velocity in face frame
-        # normalised_face_speed = self.compute_face_speed(face_rect, frame_height, x_axis, y_axis, z_axis)
-        normalised_face_speed = 0.0
-
-        # Step 5: Transform coordinates to pixel coordinates for plotting
+        # Transform coordinates to pixel coordinates for plotting
         left_eye_pixels = self.convert_face_frame_to_pixels(left_eye, frame_width, frame_height)
         right_eye_pixels = self.convert_face_frame_to_pixels(right_eye, frame_width, frame_height)
 
@@ -54,10 +51,12 @@ class FaceProcessor:
 
         cv2.imshow("Face Landmarks", cv2.flip(frame, 1))
 
-        return no_faces, left_eye, right_eye, normalised_face_speed
+        print(normalised_eye_speed)
+
+        return no_faces, left_eye, right_eye, normalised_eye_speed
     
     def compute_face_axes(self, face_landmarks):
-        # Extract key landmark positions (normalized coordinates)
+        # Extract key landmark positions (normalised coordinates)
         nose_tip = np.array([face_landmarks.landmark[1].x,
                             face_landmarks.landmark[1].y,
                             face_landmarks.landmark[1].z])
@@ -115,42 +114,47 @@ class FaceProcessor:
         
         return left_eye, right_eye
     
-    def transform_to_face_frame(self, points, face_landmarks, x_axis, y_axis, z_axis):
-        nose_tip = np.array([face_landmarks.landmark[1].x,
-                            face_landmarks.landmark[1].y,
-                            face_landmarks.landmark[1].z])
-
-        # Rotation matrix
-        R = np.vstack([x_axis, y_axis, z_axis]).T
-
-        # Transform all points into the face reference frame
-        transformed_points = np.array([
-            R.T @ (np.array([p[0], p[1], p[2]]) - nose_tip) for p in points
-        ])
-
-        return transformed_points
-
-        
-    def compute_face_speed(self, face_rect, frame_height):
-        current_time = time.time()  # Get current timestamp
-        face_center = np.array([face_rect[0] + face_rect[2] // 2, face_rect[1] + face_rect[3] // 2])
-
-        # If no previous data, store current position and return 0 speed
-        if self.prev_center is None or self.prev_time is None:
-            self.prev_center = face_center
+    def compute_velocity(self, left_eye, right_eye, x_axis, y_axis, z_axis):
+        current_time = time.time()
+        if self.prev_eye_positions is None or self.prev_time is None:
+            self.prev_eye_positions = (left_eye, right_eye)
+            self.prev_rotation_matrix = np.vstack([x_axis, y_axis, z_axis]).T
             self.prev_time = current_time
-            return 0.0
+            return np.array([0.0, 0.0, 0.0]), 0.0
 
-        # Compute displacement and velocity
-        normalised_displacement = np.linalg.norm(face_center - self.prev_center) / frame_height
-        time_interval = current_time - self.prev_time
-        normalised_speed = normalised_displacement / time_interval  # Pixels per second
+        delta_t = current_time - self.prev_time
+        if delta_t == 0:
+            return np.array([0.0, 0.0, 0.0]), 0.0
 
-        # Update previous values
-        self.prev_center = face_center
+        # Compute translational velocity for each landmark and average
+        v_translational_left = np.mean((left_eye - self.prev_eye_positions[0]) / delta_t, axis=0)
+        v_translational_right = np.mean((right_eye - self.prev_eye_positions[1]) / delta_t, axis=0)
+        v_translational = (v_translational_left + v_translational_right) / 2
+
+        # Compute angular velocity using finite differences on the rotation matrix
+        R_current = np.vstack([x_axis, y_axis, z_axis]).T
+        R_diff = R_current @ self.prev_rotation_matrix.T  # Relative rotation matrix
+        angle = np.arccos((np.trace(R_diff) - 1) / 2.0)
+        omega = (angle / delta_t) * np.array([R_diff[2, 1] - R_diff[1, 2],
+                                              R_diff[0, 2] - R_diff[2, 0],
+                                              R_diff[1, 0] - R_diff[0, 1]])
+
+        # Compute rotational contribution to velocity
+        r_eye_avg = (np.mean(left_eye, axis=0) + np.mean(right_eye, axis=0)) / 2
+        v_rotational = np.cross(omega, r_eye_avg)
+
+        # Compute total velocity
+        v_total = v_translational + v_rotational
+
+        # Store previous values
+        self.prev_eye_positions = (left_eye, right_eye)
+        self.prev_rotation_matrix = R_current
         self.prev_time = current_time
-
-        return normalised_speed
+        
+        # Compute Speed 
+        speed = np.linalg.norm(v_total)
+        
+        return v_total, speed
     
     def convert_face_frame_to_pixels(self, transformed_points, frame_width, frame_height):
         pixel_points = np.array([
