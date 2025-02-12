@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 # Set temporal window size
 WINDOW_SIZE = 10 # 10 frames before & 10 frames after
@@ -75,8 +75,8 @@ def train_svm(X, y):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X_combined)
 
-    # Fit SVM model
-    svm_model = SVC(kernel='rbf', C=1.0, gamma='scale')
+    # Fit linear SVM model
+    svm_model = SVC(kernel='linear', C=1)
     svm_model.fit(X_scaled, y_combined)
     
     return svm_model, scaler
@@ -88,7 +88,18 @@ def test_svm(model, scaler, X_list, y_list):
         
         print(f"Test results for video {i+1}:")
         print("Accuracy:", accuracy_score(y, y_pred))
-        print("Classification Report:\n", classification_report(y, y_pred))
+
+        cm = confusion_matrix(y, y_pred)
+        tn, fp, fn, tp = cm.ravel()
+        print(f"True Positives: {tp}, False Positives: {fp}, True Negatives: {tn}, False Negatives: {fn}")
+        precision = tp/(tp+fp)
+        recall =  tp/(tp+fn)
+        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}\n")
+        # F1_score = 2*precision*recall/(precision+recall)
+        # overall_accuracy = (true_positives+true_negatives)/len(segment_ideal)
+        # print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
+        
+        # print("Classification Report:\n", classification_report(y, y_pred))
 
 
 def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_filenames, test_labels_filenames):
