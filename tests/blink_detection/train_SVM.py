@@ -39,72 +39,79 @@ TEST_LABELS_2 = "anaya_test_3_ideal.csv"
 TEST_LABELS_3 = "waasiq_test_3_ideal.csv"
 TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3])
 
-# Load EAR values and labels
+
 def load_data(ears_filenames, labels_filenames):
     # Folder with test files
     script_dir = os.path.dirname(os.path.abspath(__file__))
     files_dir = os.path.join(script_dir, "blink_test_files")
 
+    # Load EAR values into array of arrays, containing all vid data - same for labels
     ear_values = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in ears_filenames]
     labels = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in labels_filenames]
 
-    return ear_values, labels  # Returns lists of NumPy arrays
+    return ear_values, labels 
 
-# Create feature matrix with a ±10 frame window
-def create_feature_matrices(ear_values, labels, window_size):
-    feature_matrices = []
-    label_sets = []
-
-    # Extract feature window as predictor and corresponding label for each frame
-    for ear_values, labels in zip(ear_values, labels): # runs for each video so no overlapping windows
-        X, y = [], []
+# Extract feature window as predictor and corresponding label for each frame
+def create_feature_matrices(ear_values_lists, labels_lists, window_size):
+    X, y = [], []
+    # Runs for each video so no window contains EAR values from two videos
+    for ear_values, labels in zip(ear_values_lists, labels_lists):
+        X_video = []
+        y_video = []
+        # Create feature window for every frame in video (excluding first and last 10)
         for i in range(window_size, len(ear_values) - window_size):
-            X.append(ear_values[i - window_size:i + window_size + 1])  # 21 EARs (±10 frames)
-            y.append(labels[i])  # Label corresponds to centre frame
-        feature_matrices.append(np.array(X))
-        label_sets.append(np.array(y))
-    
-    return feature_matrices, label_sets
+            X_video.append(ear_values[i - window_size:i + window_size + 1])  # 21 EARs (±10 frames)
+            y_video.append(labels[i])  # Label corresponds to centre frame in window
+        # Append feature windows & labels for this video
+        X.append(X_video)
+        y.append(y_video)
+    return X, y
 
-# Train and evaluate SVM model
 def train_svm(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_combined = np.vstack(X) # Stack predictors
+    y_combined = np.hstack(y) # Stack labels
+    
+    # Scale Predictors
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_train)
-    X_test = scaler.transform(X_test)
-    
-    svm_model = SVC(kernel='rbf', C=1.0, gamma='scale')  # Radial Basis Function kernel
-    svm_model.fit(X_train, y_train)
-    
-    y_pred = svm_model.predict(X_test)
-    
-    print("Accuracy:", accuracy_score(y_test, y_pred))
-    print("Classification Report:\n", classification_report(y_test, y_pred))
+    X_scaled = scaler.fit_transform(X_combined)
+
+    # Fit SVM model
+    svm_model = SVC(kernel='rbf', C=1.0, gamma='scale')
+    svm_model.fit(X_scaled, y_combined)
     
     return svm_model, scaler
 
-# Main function
+def test_svm(model, scaler, X_list, y_list):
+    for i, (X, y) in enumerate(zip(X_list, y_list)):
+        X_scaled = scaler.transform(X)
+        y_pred = model.predict(X_scaled)
+        
+        print(f"Test results for video {i+1}:")
+        print("Accuracy:", accuracy_score(y, y_pred))
+        print("Classification Report:\n", classification_report(y, y_pred))
+
+
 def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_filenames, test_labels_filenames):
+    # Load data
     train_ear_values, train_labels = load_data(train_ears_filenames, train_labels_filenames)
     test_ear_values, test_labels = load_data(test_ears_filenames, test_labels_filenames)
 
-    train_feature_matrices, train_label_sets = create_feature_matrices(train_ear_values, train_labels, window_size)
-    test_feature_matrices, test_label_sets = create_feature_matrices(test_ear_values, test_labels, window_size)
+    # Create temporal window frames X and corresponding labels y
+    X_train, y_train = create_feature_matrices(train_ear_values, train_labels, window_size)
+    X_test, y_test = create_feature_matrices(test_ear_values, test_labels, window_size)
     
-    # models, scalers = train_svm(train_feature_matrices, train_label_sets)
-    
-    # for i, (model, scaler, X_test, y_test) in enumerate(zip(models, scalers, test_feature_matrices, test_label_sets)):
-    #     X_test_scaled = scaler.transform(X_test)
-    #     y_pred = model.predict(X_test_scaled)
-        
-    #     print(f"Test results for video {i+1}:")
-    #     print("Accuracy:", accuracy_score(y_test, y_pred))
-    #     print("Classification Report:\n", classification_report(y_test, y_pred))
-    
-    # return models, scalers
-    return
+    # Train model
+    svm_model_1, scaler_1 = train_svm(X_train, y_train)
 
-# Example usage
-# model, scaler = main('ear_values.csv', 'labels.csv')
+    # Test accuracy of model on training videos
+    print('Training Accuracy:\n')
+    test_svm(svm_model_1, scaler_1, X_train, y_train)
+    
+    # Test accuracy of model on test videos
+    print('Test Accuracy:\n')
+    test_svm(svm_model_1, scaler_1, X_test, y_test)
+
+    # Save model
+    return
 
 main(WINDOW_SIZE, TRAIN_EARS_FILENAMES, TRAIN_LABELS_FILENAMES, TEST_EARS_FILENAMES, TEST_LABELS_FILENAMES)
