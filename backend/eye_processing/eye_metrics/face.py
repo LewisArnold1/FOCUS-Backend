@@ -11,6 +11,23 @@ class FaceProcessor:
         self.prev_center = None  
         self.prev_time = None  
 
+    def process_face(self, frame, dpi):
+        grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        faces = self.detector(grey, 0)
+        main_face, no_faces = self.extract_main_face(faces)
+        if no_faces == 0 or main_face is None:
+            return 0, None, None, 0.0
+        
+        shape = self.predictor(grey, main_face)
+        shape = face_utils.shape_to_np(shape)
+
+        normalised_face_speed = self.compute_face_speed(main_face, dpi)
+
+        left_eye, right_eye = self.extract_eye_regions(shape)
+        
+        return no_faces, left_eye, right_eye, normalised_face_speed
+
     def extract_main_face(self, rects):
         print(f"Number of faces detected: {len(rects)}")
         if not rects:
@@ -24,7 +41,7 @@ class FaceProcessor:
         right_eye = shape[rStart:rEnd]
         return left_eye, right_eye
     
-    def compute_face_speed(self, face_rect, frame_height):
+    def compute_face_speed(self, face_rect, dpi):
         current_time = time.time()  # Get current timestamp
 
         # Compute the center of the face bounding box
@@ -38,7 +55,7 @@ class FaceProcessor:
             return 0.0
 
         # Compute displacement and velocity
-        normalised_displacement = np.linalg.norm(face_center - self.prev_center) / frame_height  # Normalised Euclidean distance
+        normalised_displacement = np.linalg.norm(face_center - self.prev_center) / dpi  # Normalised Euclidean distance
         time_interval = current_time - self.prev_time
 
         normalised_speed = normalised_displacement / time_interval  # Pixels per second
@@ -49,20 +66,4 @@ class FaceProcessor:
 
         return normalised_speed
 
-    def process_face(self, frame):
-        grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame_height = frame.shape[0]
-
-        faces = self.detector(grey, 0)
-        main_face, no_faces = self.extract_main_face(faces)
-        if no_faces == 0 or main_face is None:
-            return 0, None, None, 0.0
-        
-        shape = self.predictor(grey, main_face)
-        shape = face_utils.shape_to_np(shape)
-
-        normalised_face_speed = self.compute_face_speed(main_face, frame_height)
-
-        left_eye, right_eye = self.extract_eye_regions(shape)
-        
-        return no_faces, left_eye, right_eye, normalised_face_speed
+    
