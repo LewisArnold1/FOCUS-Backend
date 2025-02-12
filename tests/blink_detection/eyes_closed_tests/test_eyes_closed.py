@@ -14,11 +14,11 @@ EAR_FILENAME = "firstname_test_x_ears.csv"
 OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"
 # blinktype_threshold = manual_25 /auto_x/cnn
 
-VIDEO_FILENAME = "zak_test_1.avi"
-TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
-IDEAL_FRAMES_FILENAME = "zak_test_1_ideal.csv"
-EAR_FILENAME = "zak_test_1_ears.csv"
-OUTPUT_FILENAME = "zak_test_1_manual.csv" # Manual: 25% | 50% | 75%
+VIDEO_FILENAME = "anaya_test_2.avi"
+TIMESTAMP_FILENAME = "anaya_test_2_timestamps.txt"
+IDEAL_FRAMES_FILENAME = "anaya_test_2_ideal.csv"
+EAR_FILENAME = "anaya_test_2_ears.csv"
+OUTPUT_FILENAME = "anaya_test_2_manual.csv" # Manual: 25% | 50% | 75%
 
 # Import the function to test
 from process_eye_metrics import process_eye_manual
@@ -50,11 +50,11 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
     if not cap.isOpened():
         print("Error: Cannot open video file.")
         return
-    elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-        print("Timestamps or frames missing.")
-        return
-    else:
-        print(f"Video has {len(timestamps)} frames/timestamps")
+    # elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+    #     print("Timestamps or frames missing.")
+    #     return
+    # else:
+    #     print(f"Video has {len(timestamps)} frames/timestamps")
 
     # Process each frame
     frame_idx = 0
@@ -75,7 +75,7 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
         # Increment frame counter        
         frame_idx += 1
     
-    # Save output to CSV
+    # Save output to CSV     
     with open(ear_path, 'w', newline='') as file:
         writer = csv.writer(file)
         for ear in ear_list:
@@ -371,7 +371,7 @@ def auto_metrics(ideal_filename, output_filename):
     return
 
 '''Calculate EAR at each frame, for all 9 videos'''
-# ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
+ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
 '''If outputs are 'no eye', please re-record video with better lighting!!'''
 
 '''Test manual thresholding (including threshold sweep)'''
