@@ -30,7 +30,7 @@ def record_video(video_filename, timestamp_filename, duration):
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Tests folder
-    tests_dir = os.path.join(script_dir, "blink_tests")
+    tests_dir = os.path.join(script_dir, "blink_test_files")
 
     # Full paths
     video_path = os.path.join(tests_dir, video_filename)   
@@ -161,7 +161,7 @@ def play_video(video_filename, timestamp_filename):
             # time.sleep(sleep_time*1) # alter to find frames where blinks are
 
         # change value here to speed up finding blinks
-        if frame_idx > 1248:
+        if frame_idx > 1780:
             pass    # use breakpoint before pass
         
         # Increment frame counter
