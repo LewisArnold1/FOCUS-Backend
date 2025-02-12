@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.http import FileResponse
+from django.conf import settings
 import os
 
 from .serializers import RegisterUserSerializer
@@ -264,13 +265,15 @@ class FileDeleteView(APIView):
             file_name = request.query_params.get('file_name')
             document = DocumentData.objects.get(user=request.user, file_name=file_name)
 
-            # Delete the actual file
-            document.file_object.delete()
+            preview_filename = f"{os.path.basename(os.path.splitext(document.file_object.name)[0])}_preview.jpg"
+            preview_path = os.path.join(settings.MEDIA_ROOT, "documents", preview_filename)
 
-            # Optionally delete the preview file if it exists
-            preview_path = f"{os.path.splitext(document.file_object.name)[0]}_preview.png"
+            print("Preview path:", preview_path)
             if os.path.exists(preview_path):
                 os.remove(preview_path)
+
+            # Delete the actual file
+            document.file_object.delete()
 
             # Delete the database entry
             document.delete()

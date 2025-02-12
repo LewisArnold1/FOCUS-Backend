@@ -10,5 +10,5 @@ urlpatterns = [
     path('document-save', DocumentSaveView.as_view(), name='document-save'),
     path('document-load', DocumentLoadView.as_view(), name='document-load'),
     path('file-list/', FileListView.as_view(), name='file-list'),
-    path('file-delete/', FileDeleteView.as_view(), name='file-delete')
+    path('file-delete', FileDeleteView.as_view(), name='file-delete')
 ]
