@@ -9,7 +9,7 @@ blink_processor = BlinkProcessor()
 iris_processor = IrisProcessor()
 
 def process_eye(frame, verbose=1):
-    face_detected, left_eye, right_eye, normalised_face_speed, yaw, pitch, roll = face_processor.process_face(frame)
+    face_detected, left_eye, right_eye, normalised_eye_speed, yaw, pitch, roll = face_processor.process_face(frame)
     focus = False
 
     if face_detected == 0:
@@ -17,8 +17,8 @@ def process_eye(frame, verbose=1):
 
     blink_detected, avg_ear = blink_processor.process_blink(left_eye, right_eye)
 
-    if (normalised_face_speed > 0.3 or (abs(yaw) > 25 or abs(pitch) < 150)):
-        return face_detected, normalised_face_speed, yaw, pitch, roll, avg_ear, blink_detected, None, None, focus
+    if (normalised_eye_speed > 0.3 or (abs(yaw) > 25 or abs(pitch) < 150)):
+        return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, None, None, focus
     
     focus = True
     left_centre, right_centre = None, None
@@ -37,6 +37,6 @@ def process_eye(frame, verbose=1):
             iris_processor._display_images_in_grid(cv2.flip(left_grey, 1), cv2.flip(left_colour, 1), cv2.flip(right_grey, 1), cv2.flip(right_colour, 1))
         
 
-    return face_detected, normalised_face_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus
+    return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus
 
     
