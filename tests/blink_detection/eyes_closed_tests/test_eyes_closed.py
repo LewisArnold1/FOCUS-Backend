@@ -14,11 +14,11 @@ EAR_FILENAME = "firstname_test_x_ears.csv"
 OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"
 # blinktype_threshold = manual_25 /auto_x/cnn
 
-VIDEO_FILENAME = "anaya_test_2.avi"
-TIMESTAMP_FILENAME = "anaya_test_2_timestamps.txt"
-IDEAL_FRAMES_FILENAME = "anaya_test_2_ideal.csv"
-EAR_FILENAME = "anaya_test_2_ears.csv"
-OUTPUT_FILENAME = "anaya_test_2_manual.csv" # Manual: 25% | 50% | 75%
+VIDEO_FILENAME = "zak_test_1.avi"
+TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
+IDEAL_FRAMES_FILENAME = "zak_test_1_ideal.csv"
+EAR_FILENAME = "waasiq_test_3_ears.csv"
+OUTPUT_FILENAME = "waasiq_test_3_auto.csv" # Manual: 25% | 50% | 75%
 
 # Import the function to test
 from process_eye_metrics import process_eye_manual
@@ -157,38 +157,51 @@ def test_auto(ear_filename,output_filename):
             ear_list.append(float(ear[0]))
 
     ''' Auto Threshold '''
-    eyes_closed_1 = [] # change to name according to auto thresholds
+    eyes_closed_1 = []
     eyes_closed_2 = []
     eyes_closed_3 = []
+    eyes_closed_4 = []
+    eyes_closed_5 = []
     for i in range(len(ear_list)):
-        # calculate max from last x frames
-        if len(ear_list[:i]) > 50: # change 50
-            # calculate max from last x frames
-            max = 0
+        n = 30 # Require n frames to create & apply threshold
+        # calculate max from last n frames
+        if len(ear_list[:i]) >= n:
+            # calculate max from last n frames
+            max  = sum(sorted(ear_list, reverse=True)[:n])/n
             # calculate different thresholds
-            threshold_1 = 1
-            threshold_2 = 2
-            threshold_3 = 3
-        # Compare this frame with thresholds
-        if ear_list[i] < threshold_1: # change as appropriate
-            eyes_closed_1.append(1)
-            eyes_closed_2.append(1)
-            eyes_closed_3.append(1)
-        elif ear_list[i] < threshold_2:
-            eyes_closed_1.append(0)
-            eyes_closed_2.append(1)
-            eyes_closed_3.append(1)
-        elif ear_list[i] < threshold_3:
-            eyes_closed_1.append(0)
-            eyes_closed_2.append(0)
-            eyes_closed_3.append(1)
-        else:
-            eyes_closed_1.append(0)
-            eyes_closed_2.append(0)
-            eyes_closed_3.append(0)
+            threshold_1 = max*0.4
+            threshold_2 = max*0.5
+            threshold_3 = max*0.6
+            threshold_4 = max*0.7
+            threshold_5 = max*0.8
+            # Compare this frame with thresholds
+            if ear_list[i] < threshold_1: # change as appropriate
+                eyes_closed_1.append(1)
+                eyes_closed_2.append(1)
+                eyes_closed_3.append(1)
+                eyes_closed_4.append(1)
+                eyes_closed_5.append(1)
+            elif ear_list[i] < threshold_2:
+                eyes_closed_1.append(0)
+                eyes_closed_2.append(1)
+                eyes_closed_3.append(1)
+                eyes_closed_4.append(1)
+                eyes_closed_5.append(1)
+            elif ear_list[i] < threshold_3:
+                eyes_closed_1.append(0)
+                eyes_closed_2.append(0)
+                eyes_closed_3.append(1)
+                eyes_closed_4.append(1)
+                eyes_closed_5.append(1)
+            else:
+                eyes_closed_1.append(0)
+                eyes_closed_2.append(0)
+                eyes_closed_3.append(0)
+                eyes_closed_4.append(0)
+                eyes_closed_5.append(1)
 
     # Save to CSV file
-    data = zip(eyes_closed_1, eyes_closed_2, eyes_closed_3) # Three columns
+    data = zip(eyes_closed_1, eyes_closed_2, eyes_closed_3, eyes_closed_4, eyes_closed_5) # five columns
     with open(output_path, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(data)
@@ -387,19 +400,20 @@ def pop(ideal_filename):
 
     print('done')
 
+
+
+
 '''Calculate EAR at each frame, for all 9 videos'''
 # ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
 
-'''If outputs are 'no eye', please re-record video with better lighting!! - alternatively for one or two frames, data may be cleaned'''
+'''If outputs are 'no eye', please re-record video with better lighting!! - alternatively if for only few frames, data may be cleaned'''
 # pop(IDEAL_FRAMES_FILENAME)
-
-
 
 '''Test manual thresholding (including threshold sweep)'''
 # test_manual(EAR_FILENAME, OUTPUT_FILENAME) # could still add smoothing filter?
 
 '''Test auto thresholding'''
-# test_auto(EAR_FILENAME, OUTPUT_FILENAME)
+test_auto(EAR_FILENAME, OUTPUT_FILENAME)
 
 '''Test CNN'''
 # test_CNN(EAR_FILENAME, OUTPUT_FILENAME)
