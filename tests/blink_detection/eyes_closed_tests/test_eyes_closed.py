@@ -370,9 +370,30 @@ def auto_metrics(ideal_filename, output_filename):
 
     return
 
+def pop(ideal_filename):
+    # Set Paths
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    tests_dir = os.path.join(script_dir, "..","blink_test_files")
+    ideal_path = os.path.join(tests_dir, ideal_filename)
+
+    # Retrieve ideal eyes_closed_list
+    eyes_closed_ideal = pd.read_csv(ideal_path, header=None)
+
+    # Remove the first row - change as required to clean data
+    eyes_closed_ideal = eyes_closed_ideal.iloc[1:]
+
+    # Save the modified data back to the same file
+    eyes_closed_ideal.to_csv(ideal_path, header=False, index=False)
+
+    print('done')
+
 '''Calculate EAR at each frame, for all 9 videos'''
-ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
-'''If outputs are 'no eye', please re-record video with better lighting!!'''
+# ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
+
+'''If outputs are 'no eye', please re-record video with better lighting!! - alternatively for one or two frames, data may be cleaned'''
+# pop(IDEAL_FRAMES_FILENAME)
+
+
 
 '''Test manual thresholding (including threshold sweep)'''
 # test_manual(EAR_FILENAME, OUTPUT_FILENAME) # could still add smoothing filter?
@@ -385,7 +406,7 @@ ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
 
 '''Test & Save Metrics for all'''
 # manual_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
-manual_metrics_segmented(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
+# manual_metrics_segmented(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
 # auto_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
 
 # print(f"Precision: {precision:.3f},\nRecall: {recall:.3f},\n F1 Score: {F1_score:.3f},\nOverall Accuracy: {overall_accuracy:.3f}")
