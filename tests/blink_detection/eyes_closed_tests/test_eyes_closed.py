@@ -306,7 +306,7 @@ def calculate_metrics_segmented(ideal, eyes_closed_output):
     if len(ideal) != len(eyes_closed_output):
         print("Output is wrong length")
         return
-    num_segments = 12 # 30s each
+    num_segments = 12 # 5s each
     segment_sizes = np.linspace(0, len(ideal), num_segments + 1, dtype=int)
 
     for i in range(num_segments):
