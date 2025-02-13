@@ -17,6 +17,7 @@ TRAIN_EARS_4 = "anaya_test_2_ears.csv"
 TRAIN_EARS_5 = "waasiq_test_1_ears.csv"
 TRAIN_EARS_6 = "waasiq_test_2_ears.csv"
 TRAIN_EARS_FILENAMES = np.array([TRAIN_EARS_1, TRAIN_EARS_2, TRAIN_EARS_3, TRAIN_EARS_4, TRAIN_EARS_5, TRAIN_EARS_6])
+# TRAIN_EARS_FILENAMES = TRAIN_EARS_FILENAMES[:2]
 
 # Files for training labels
 TRAIN_LABELS_1 = "zak_test_1_ideal.csv"
@@ -26,19 +27,21 @@ TRAIN_LABELS_4 = "anaya_test_2_ideal.csv"
 TRAIN_LABELS_5 = "waasiq_test_1_ideal.csv"
 TRAIN_LABELS_6 = "waasiq_test_2_ideal.csv"
 TRAIN_LABELS_FILENAMES = np.array([TRAIN_LABELS_1, TRAIN_LABELS_2, TRAIN_LABELS_3, TRAIN_LABELS_4, TRAIN_LABELS_5, TRAIN_LABELS_6])
+# TRAIN_LABELS_FILENAMES = TRAIN_LABELS_FILENAMES[:2]
 
 # Files for testing data
 TEST_EARS_1 = "zak_test_3_ears.csv"
 TEST_EARS_2 = "anaya_test_3_ears.csv"
 TEST_EARS_3 = "waasiq_test_3_ears.csv"
 TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3])
+# TEST_EARS_FILENAMES = TEST_EARS_FILENAMES[:1]
 
 # Files for testing labels
 TEST_LABELS_1 = "zak_test_3_ideal.csv"
 TEST_LABELS_2 = "anaya_test_3_ideal.csv"
 TEST_LABELS_3 = "waasiq_test_3_ideal.csv"
 TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3])
-
+# TEST_LABELS_FILENAMES = TEST_LABELS_FILENAMES[:1]
 
 def load_data(ears_filenames, labels_filenames):
     # Folder with test files
@@ -76,7 +79,7 @@ def train_svm(X, y):
     X_scaled = scaler.fit_transform(X_combined)
 
     # Fit linear SVM model - introduce weight to prioritise closed eyes being detected
-    svm_model = SVC(kernel='linear', C=1.0, class_weight={0: 1, 1:1.5})
+    svm_model = SVC(kernel='linear', C=1,  class_weight={0: 1, 1:1.75})
     svm_model.fit(X_scaled, y_combined)
     
     return svm_model, scaler
@@ -101,6 +104,38 @@ def test_svm(model, scaler, X_list, y_list):
         
         # print("Classification Report:\n", classification_report(y, y_pred))
 
+def test_segments(model, scaler, X_list, y_list):
+    num_segments = 12
+    for i, (X_test, y_test) in enumerate(zip(X_list, y_list)):
+        segment_size = len(X_test) // num_segments
+        print(f"\nSegmented test results for video {i+1}:\n")
+        
+        for j in range(num_segments):
+            start = j * segment_size
+            end = (j + 1) * segment_size if j < num_segments - 1 else len(X_test)
+            
+            X_segment = X_test[start:end]
+            y_segment = y_test[start:end]
+            
+            if len(X_segment) == 0:
+                continue
+            
+            X_segment_scaled = scaler.transform(X_segment)
+            y_pred = model.predict(X_segment_scaled)
+            
+            cm = confusion_matrix(y_segment, y_pred, labels=[0, 1])
+            tn, fp, fn, tp = cm.ravel()
+            
+            print(f"Segment {j+1}:")
+            print(f"Accuracy: {accuracy_score(y_segment, y_pred)}")
+            precision = tp/(tp+fp)
+            recall =  tp/(tp+fn)
+            print(f"True Positives: {tp}, False Positives: {fp}, True Negatives: {tn}, False Negatives: {fn}. Precision: {precision:.3f}, Recall: {recall:.3f}\n")
+
+            # if i == 1 and j == 3: # check specific segment of a video 
+            #     test = np.array([y_segment,y_pred])
+            #     print(test)
+
 
 def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_filenames, test_labels_filenames):
     # Load data
@@ -122,7 +157,15 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     print('Test Accuracy:\n')
     test_svm(svm_model_1, scaler_1, X_test, y_test)
 
+    # print('Accuracy with segmented training videos:')
+    # test_segments(svm_model_1, scaler_1, X_train, y_train)
+
+    # print('Accuracy with segmented test videos:')
+    # test_segments(svm_model_1, scaler_1, X_test, y_test)
+
     # Save model
+
+    
     return
 
 main(WINDOW_SIZE, TRAIN_EARS_FILENAMES, TRAIN_LABELS_FILENAMES, TEST_EARS_FILENAMES, TEST_LABELS_FILENAMES)
