@@ -11,14 +11,13 @@ VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
 IDEAL_FRAMES_FILENAME = "firstname_test_x_ideal.csv"
 EAR_FILENAME = "firstname_test_x_ears.csv"
-OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"
-# blinktype_threshold = manual_25 /auto_x/cnn
+OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"  # blinktype =  manual / auto / cnn
 
 VIDEO_FILENAME = "zak_test_1.avi"
 TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
 IDEAL_FRAMES_FILENAME = "zak_test_1_ideal.csv"
-EAR_FILENAME = "waasiq_test_3_ears.csv"
-OUTPUT_FILENAME = "waasiq_test_3_auto.csv" # Manual: 25% | 50% | 75%
+EAR_FILENAME = "zak_test_1_ears.csv"
+OUTPUT_FILENAME = "zak_test_1_auto.csv" # Manual: 25% | 50% | 75%, Auto: 0.4 | ... | 0.8
 
 # Import the function to test
 from process_eye_metrics import process_eye_manual
@@ -191,6 +190,12 @@ def test_auto(ear_filename,output_filename):
                 eyes_closed_1.append(0)
                 eyes_closed_2.append(0)
                 eyes_closed_3.append(1)
+                eyes_closed_4.append(1)
+                eyes_closed_5.append(1)
+            elif ear_list[i] < threshold_4:
+                eyes_closed_1.append(0)
+                eyes_closed_2.append(0)
+                eyes_closed_3.append(0)
                 eyes_closed_4.append(1)
                 eyes_closed_5.append(1)
             else:
@@ -377,9 +382,23 @@ def auto_metrics(ideal_filename, output_filename):
     eyes_closed_ideal = pd.read_csv(ideal_path, header=None)
     eyes_closed_ideal = eyes_closed_ideal.iloc[:, 0].to_numpy()
 
+    # Remove first n=30 frames
+    eyes_closed_ideal = eyes_closed_ideal[30:]
+
     # Retrieve auto output & convert to __ numpy arrays
     eyes_closed_output = pd.read_csv(output_path, header=None) 
-    # however many are here
+    eyes_closed_1 = eyes_closed_output.iloc[:, 0].to_numpy() # 0.4
+    eyes_closed_2 = eyes_closed_output.iloc[:, 1].to_numpy() # 0.5
+    eyes_closed_3 = eyes_closed_output.iloc[:, 2].to_numpy() # 0.6
+    eyes_closed_4 = eyes_closed_output.iloc[:, 3].to_numpy() # 0.7
+    eyes_closed_5 = eyes_closed_output.iloc[:, 4].to_numpy() # 0.8
+
+    # Calculate metrics
+    calculate_metrics(eyes_closed_ideal, eyes_closed_1)
+    calculate_metrics(eyes_closed_ideal, eyes_closed_2)
+    calculate_metrics(eyes_closed_ideal, eyes_closed_3)
+    calculate_metrics(eyes_closed_ideal, eyes_closed_4)
+    calculate_metrics(eyes_closed_ideal, eyes_closed_5)    
 
     return
 
@@ -420,7 +439,7 @@ test_auto(EAR_FILENAME, OUTPUT_FILENAME)
 
 '''Test & Save Metrics for all'''
 # manual_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
-# manual_metrics_segmented(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
 # auto_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
 
-# print(f"Precision: {precision:.3f},\nRecall: {recall:.3f},\n F1 Score: {F1_score:.3f},\nOverall Accuracy: {overall_accuracy:.3f}")
+'''Segmented metrics - not currently included in report'''
+# manual_metrics_segmented(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
