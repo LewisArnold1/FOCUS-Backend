@@ -15,9 +15,9 @@ OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"  # blinktype =  manual / auto
 
 VIDEO_FILENAME = "zak_test_1.avi"
 TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
-IDEAL_FRAMES_FILENAME = "zak_test_1_ideal.csv"
+IDEAL_FRAMES_FILENAME = "waasiq_test_3_ideal.csv"
 EAR_FILENAME = "zak_test_1_ears.csv"
-OUTPUT_FILENAME = "zak_test_1_auto.csv" # Manual: 25% | 50% | 75%, Auto: 0.4 | ... | 0.8
+OUTPUT_FILENAME = "waasiq_test_3_auto.csv" # Manual: 25% | 50% | 75%, Auto: 0.4 | ... | 0.8
 
 # Import the function to test
 from process_eye_metrics import process_eye_manual
@@ -428,18 +428,18 @@ def pop(ideal_filename):
 '''If outputs are 'no eye', please re-record video with better lighting!! - alternatively if for only few frames, data may be cleaned'''
 # pop(IDEAL_FRAMES_FILENAME)
 
-'''Test manual thresholding (including threshold sweep)'''
+'''Run manual thresholding (including threshold sweep)'''
 # test_manual(EAR_FILENAME, OUTPUT_FILENAME) # could still add smoothing filter?
 
-'''Test auto thresholding'''
-test_auto(EAR_FILENAME, OUTPUT_FILENAME)
+'''Run auto thresholding (including threshold sweep)'''
+# test_auto(EAR_FILENAME, OUTPUT_FILENAME)
 
-'''Test CNN'''
+'''Run CNN'''
 # test_CNN(EAR_FILENAME, OUTPUT_FILENAME)
 
 '''Test & Save Metrics for all'''
 # manual_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
-# auto_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
+auto_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
 
 '''Segmented metrics - not currently included in report'''
 # manual_metrics_segmented(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
