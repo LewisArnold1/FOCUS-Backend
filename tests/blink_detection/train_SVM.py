@@ -90,17 +90,15 @@ def test_svm(model, scaler, X_list, y_list):
         y_pred = model.predict(X_scaled)
         
         print(f"Test results for video {i+1}:")
-        print("Accuracy:", accuracy_score(y, y_pred))
+        # print("Accuracy:", accuracy_score(y, y_pred))
 
         cm = confusion_matrix(y, y_pred)
         tn, fp, fn, tp = cm.ravel()
         print(f"True Positives: {tp}, False Positives: {fp}, True Negatives: {tn}, False Negatives: {fn}")
         precision = tp/(tp+fp)
         recall =  tp/(tp+fn)
-        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}\n")
-        # F1_score = 2*precision*recall/(precision+recall)
-        # overall_accuracy = (true_positives+true_negatives)/len(segment_ideal)
-        # print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
+        F1_score = 2*precision*recall/(precision+recall)
+        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy_score(y, y_pred):.3f}\n")
         
         # print("Classification Report:\n", classification_report(y, y_pred))
 
