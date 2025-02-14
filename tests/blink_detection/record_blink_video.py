@@ -13,9 +13,9 @@ Run file - video will record then be played back after it is saved
 # # change to your first name + test number x
 VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
-
-VIDEO_FILENAME = "zak_test_2.avi"
-TIMESTAMP_FILENAME = "zak_test_2_timestamps.txt"
+0
+VIDEO_FILENAME = "zak_test_1.avi"
+TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
 
 # Set to 60s for recording videos (can use 5-10s if you want to test its working)
 VIDEO_DURATION = 60
@@ -95,7 +95,7 @@ def play_video(video_filename, timestamp_filename):
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Tests folder
-    tests_dir = os.path.join(script_dir, "blink_tests")
+    tests_dir = os.path.join(script_dir, "blink_test_files")
 
     # Full paths
     video_path = os.path.join(tests_dir, video_filename)   
@@ -161,7 +161,7 @@ def play_video(video_filename, timestamp_filename):
             # time.sleep(sleep_time*1) # alter to find frames where blinks are
 
         # change value here to speed up finding blinks
-        if frame_idx > 1780:
+        if frame_idx > 38:
             pass    # use breakpoint before pass
         
         # Increment frame counter
