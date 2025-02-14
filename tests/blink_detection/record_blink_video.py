@@ -3,6 +3,16 @@ import json
 from datetime import datetime
 import os
 
+# Import face processor to check eye is found in each frme
+try:
+    from eyes_closed_tests.face import FaceProcessor
+except ImportError:
+    from eyes_closed_tests.face import FaceProcessor
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PREDICTOR_PATH = os.path.join(CURRENT_DIR, 'eyes_closed_tests','shape_predictor_68_face_landmarks.dat')
+face_processor = FaceProcessor(PREDICTOR_PATH)
+
 '''
 Set video and timestamp filenames.
 Set video duration - 60s for actual vids, do 5-10s to test it works first
@@ -13,12 +23,12 @@ Run file - video will record then be played back after it is saved
 # # change to your first name + test number x
 VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
-0
-VIDEO_FILENAME = "zak_test_1.avi"
-TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
+
+# VIDEO_FILENAME = "zak_test_1.avi"
+# TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
 
 # Set to 60s for recording videos (can use 5-10s if you want to test its working)
-VIDEO_DURATION = 60
+VIDEO_DURATION = 15
 
 
 def record_video(video_filename, timestamp_filename, duration):
@@ -48,6 +58,7 @@ def record_video(video_filename, timestamp_filename, duration):
 
     timestamps = []
     frames = []
+    dropped_frames = 0
 
     print("Recording video...")
     start_time = datetime.now()
@@ -58,6 +69,13 @@ def record_video(video_filename, timestamp_filename, duration):
         if not ret:
             print("Failed to capture frame.")
             break
+
+        # process_face to check eye is found
+        _, left_eye, right_eye, _ = face_processor.process_face(frame)
+        if left_eye is None or right_eye is None:
+            dropped_frames+=1
+            print(f"No eye no.{dropped_frames}\nat time {datetime.now().hour}:{datetime.now().minute}:{datetime.now().second:.2f}.")
+        # Continue recording regardless
 
         # Save frame & timestamp locally
         timestamps.append(datetime.now())
@@ -161,7 +179,7 @@ def play_video(video_filename, timestamp_filename):
             # time.sleep(sleep_time*1) # alter to find frames where blinks are
 
         # change value here to speed up finding blinks
-        if frame_idx > 38:
+        if frame_idx > 73:
             pass    # use breakpoint before pass
         
         # Increment frame counter
@@ -176,5 +194,5 @@ def play_video(video_filename, timestamp_filename):
     cap.release()
     cv2.destroyAllWindows()
 
-# record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
+record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
 play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
