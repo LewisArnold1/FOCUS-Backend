@@ -268,7 +268,7 @@ class FileDeleteView(APIView):
             preview_filename = f"{os.path.basename(os.path.splitext(document.file_object.name)[0])}_preview.jpg"
             preview_path = os.path.join(settings.MEDIA_ROOT, "documents", preview_filename)
 
-            print("Preview path:", preview_path)
+            # print("Preview path:", preview_path)
             if os.path.exists(preview_path):
                 os.remove(preview_path)
 
