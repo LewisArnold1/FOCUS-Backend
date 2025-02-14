@@ -17,7 +17,8 @@ TRAIN_EARS_4 = "anaya_test_2_ears.csv"
 TRAIN_EARS_5 = "waasiq_test_1_ears.csv"
 TRAIN_EARS_6 = "waasiq_test_2_ears.csv"
 TRAIN_EARS_FILENAMES = np.array([TRAIN_EARS_1, TRAIN_EARS_2, TRAIN_EARS_3, TRAIN_EARS_4, TRAIN_EARS_5, TRAIN_EARS_6])
-# TRAIN_EARS_FILENAMES = TRAIN_EARS_FILENAMES[:2]
+TRAIN_EARS_FILENAMES = TRAIN_EARS_FILENAMES[-4:]
+
 
 # Files for training labels
 TRAIN_LABELS_1 = "zak_test_1_ideal.csv"
@@ -27,21 +28,21 @@ TRAIN_LABELS_4 = "anaya_test_2_ideal.csv"
 TRAIN_LABELS_5 = "waasiq_test_1_ideal.csv"
 TRAIN_LABELS_6 = "waasiq_test_2_ideal.csv"
 TRAIN_LABELS_FILENAMES = np.array([TRAIN_LABELS_1, TRAIN_LABELS_2, TRAIN_LABELS_3, TRAIN_LABELS_4, TRAIN_LABELS_5, TRAIN_LABELS_6])
-# TRAIN_LABELS_FILENAMES = TRAIN_LABELS_FILENAMES[:2]
+TRAIN_LABELS_FILENAMES = TRAIN_LABELS_FILENAMES[-4:]
 
 # Files for testing data
 TEST_EARS_1 = "zak_test_3_ears.csv"
 TEST_EARS_2 = "anaya_test_3_ears.csv"
 TEST_EARS_3 = "waasiq_test_3_ears.csv"
 TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3])
-# TEST_EARS_FILENAMES = TEST_EARS_FILENAMES[:1]
+TEST_EARS_FILENAMES = TEST_EARS_FILENAMES[-2:]
 
 # Files for testing labels
 TEST_LABELS_1 = "zak_test_3_ideal.csv"
 TEST_LABELS_2 = "anaya_test_3_ideal.csv"
 TEST_LABELS_3 = "waasiq_test_3_ideal.csv"
 TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3])
-# TEST_LABELS_FILENAMES = TEST_LABELS_FILENAMES[:1]
+TEST_LABELS_FILENAMES = TEST_LABELS_FILENAMES[-2:]
 
 def load_data(ears_filenames, labels_filenames):
     # Folder with test files
