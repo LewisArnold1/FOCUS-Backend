@@ -196,7 +196,7 @@ class DocumentFirstSaveView(APIView):
             }
         )
         return document_entry
-    
+
 class DocumentUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -206,69 +206,95 @@ class DocumentUpdateView(APIView):
 
         # Extract and validate data from the request
         try:
-            self.file_name, self.line_number, self.page_number, self.timestamp = self.extract_data(request)
+            extracted_data = self.extract_data(request)
+            self.file_name = extracted_data.get("file_name")
+            self.new_file_name = extracted_data.get("new_file_name")
+            self.line_number = extracted_data.get("line_number")
+            self.page_number = extracted_data.get("page_number")
+            self.timestamp = extracted_data["timestamp"]  # Required field
+            self.favourite = extracted_data.get("favourite")  
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             document_entry = self.update_document_metadata()
             return Response(
-                {"message": "File progress data saved successfully."},
-                status=status.HTTP_201_CREATED,
+                {"message": "File progress data updated successfully."},
+                status=status.HTTP_200_OK,
             )
         except Exception as e:
             return Response(
-                {"error": f"Failed to save file progress data: {e}"},
+                {"error": f"Failed to update file progress data: {e}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         
     def extract_data(self, request):
-        
-        # Extract data from the request
-        file_name = request.POST.get('file_name')
+        file_name = request.POST.get('file_name') # Required
+        new_file_name = request.POST.get('new_file_name') 
         line_number = int(request.POST.get('line_number'))
         page_number = int(request.POST.get('page_number'))
-        timestamp = int(request.POST.get('timestamp'))
+        timestamp = int(request.POST.get('timestamp')) # Required
+        favourite = request.POST.get('favourite')
 
-        required_fields = {
-        "file_name": file_name,
-        "line_number": line_number,
-        "page_number": page_number,
-        "timestamp": timestamp,
-        }
+        # Ensure required fields are present
+        if file_name is None or timestamp is None:
+            raise ValueError("Missing required fields: 'file_name' and 'timestamp' are required.")
 
-        missing_fields = [field for field, value in required_fields.items() if value is None]
-
-        if missing_fields:
-            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
-
-        # Validate data types
+        # Validate data types (only if provided)
         if not isinstance(file_name, str):
             raise ValueError("Invalid file name: must be a string value.")
+        
+        if new_file_name is not None and not isinstance(new_file_name, str):
+            raise ValueError("Invalid new file name: must be a string value.")
 
-        if not isinstance(line_number, int):
-            raise ValueError("Invalid line number: must be an integer.")
+        if line_number is not None:
+            if not isinstance(line_number, int) or line_number < 0:
+                raise ValueError("Invalid line number: must be a non-negative integer.")
 
-        if not isinstance(page_number, int):
-            raise ValueError("Invalid page number: must be an integer.")
+        if page_number is not None:
+            if not isinstance(page_number, int) or page_number < 0:
+                raise ValueError("Invalid page number: must be a non-negative integer.")
 
         if not isinstance(timestamp, (int, float)):
             raise ValueError("Invalid timestamp: must be a numeric value (int or float).")
-       
+
         # Convert timestamp
         timestamp_s = timestamp / 1000
         timestamp_dt = datetime.fromtimestamp(timestamp_s)
-        
-        return file_name, line_number, page_number, timestamp_dt
+
+        # Convert `favourite` to boolean (handles string "true"/"false")
+        if favourite is not None:
+            if isinstance(favourite, str):
+                favourite = favourite.lower() in ["true", "1"]
+            elif not isinstance(favourite, bool):
+                raise ValueError("Invalid favourite value: must be a boolean (true/false).")
+
+        return {
+            "file_name": file_name,
+            "new_file_name": new_file_name,
+            "line_number": line_number,
+            "page_number": page_number,
+            "timestamp": timestamp_dt,
+            "favourite": favourite,
+        }
     
     def update_document_metadata(self):
-
-        # Ensure the document exists before updating metadata
+        """ Updates metadata fields of an existing document """
+        
+        # Ensure the document exists before updating
         document_entry = get_object_or_404(DocumentData, user=self.user, file_name=self.file_name)
 
-        # Update metadata fields only (file_object remains unchanged)
-        document_entry.line_number = self.line_number
-        document_entry.page_number = self.page_number
+        # Update only the fields that were provided
+        if self.new_file_name:
+            document_entry.file_name = self.new_file_name
+        if self.line_number is not None:
+            document_entry.line_number = self.line_number
+        if self.page_number is not None:
+            document_entry.page_number = self.page_number
+        if self.favourite is not None:
+            document_entry.favourite = self.favourite
+
+        # Always update timestamp
         document_entry.saved_at = self.timestamp
         document_entry.save()
 
