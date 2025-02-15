@@ -4,11 +4,9 @@ from PIL import Image, ImageDraw, ImageFont
 import fitz  
 from docx import Document
 
-
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
-
 
     
 def get_unique_file_path(instance, filename):
@@ -172,3 +170,13 @@ class DocumentData(models.Model):
         
     def __str__(self):
         return f"DocumentData for {self.user} - {self.file_name} at {self.saved_at} which is a favourite: {self.favourite}"
+
+class OnboardingData(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    dob = models.DateField(null=True, blank=True)
+    screen_time = models.IntegerField(null=True, blank=True)
+    sleep_time = models.IntegerField(null=True, blank=True)
+    eye_strain = models.BooleanField(null=True, blank=True)
+    glasses = models.BooleanField(null=True, blank=True)

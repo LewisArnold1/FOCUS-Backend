@@ -14,7 +14,7 @@ from django.shortcuts import get_object_or_404
 import os
 
 from .serializers import RegisterUserSerializer
-from .models import CalibrationData, DocumentData
+from .models import CalibrationData, DocumentData, OnboardingData
 
 class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.all() # Ensure user does not already exist
@@ -361,4 +361,122 @@ class FileDeleteView(APIView):
             return Response({"error": "File not found."}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
-          
+        
+class OnboardingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        # Get the authenticated user
+        self.user = request.user
+
+        # Extract and validate data from the request
+        try:
+            self.name, self.dob, self.screen_time, self.sleep_time, self.eye_strain, self.glasses, self.timestamp = self.extract_data(request)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            onboarding_entry = self.save_or_update_onboarding()
+            return Response(
+                {"message": "Onboarding data saved successfully.", "id": onboarding_entry.id},
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to save onboarding data: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def extract_data(self, request):
+        # Extract data from request
+        name = request.data.get("name")
+        dob = request.data.get("dob")  # Date of birth should be in YYYY-MM-DD format
+        screen_time = request.data.get("screen_time")
+        sleep_time = request.data.get("sleep_time")
+        eye_strain = request.data.get("eye_strain")
+        glasses = request.data.get("glasses")
+        timestamp = request.data.get("timestamp")
+
+        required_fields = {
+            "name": name,
+            "dob": dob,
+            "screen_time": screen_time,
+            "sleep_time": sleep_time,
+            "eye_strain": eye_strain,
+            "glasses": glasses,
+            "timestamp": timestamp
+        }
+
+        # Check for missing fields
+        missing_fields = [field for field, value in required_fields.items() if value is None]
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+
+        # Validate data types
+        if not isinstance(name, str):
+            raise ValueError("Invalid name: must be a string.")
+
+        try:
+            dob = datetime.strptime(dob, "%Y-%m-%d").date()  # Convert to date format
+        except ValueError:
+            raise ValueError("Invalid DOB format: must be YYYY-MM-DD.")
+
+        if not isinstance(screen_time, int) or screen_time < 0:
+            raise ValueError("Invalid screen time: must be a positive integer.")
+
+        if not isinstance(sleep_time, int) or sleep_time < 0:
+            raise ValueError("Invalid sleep time: must be a positive integer.")
+
+        if not isinstance(eye_strain, bool):
+            raise ValueError("Invalid eye strain value: must be a boolean.")
+
+        if not isinstance(glasses, bool):
+            raise ValueError("Invalid glasses value: must be a boolean.")
+
+        if not isinstance(timestamp, (int, float)):
+            raise ValueError("Invalid timestamp: must be a numeric value.")
+
+        # Convert timestamp
+        timestamp_s = timestamp / 1000
+        timestamp_dt = datetime.fromtimestamp(timestamp_s)
+
+        return name, dob, screen_time, sleep_time, eye_strain, glasses, timestamp_dt
+
+    def save_or_update_onboarding(self):
+        onboarding_entry, _ = OnboardingData.objects.update_or_create(
+            user=self.user,
+            defaults={
+                "name": self.name,
+                "dob": self.dob,
+                "screen_time": self.screen_time,
+                "sleep_time": self.sleep_time,
+                "eye_strain": self.eye_strain,
+                "glasses": self.glasses,
+                "created_at": self.timestamp,
+            }
+        )
+        return onboarding_entry
+
+
+class OnboardingRetrievalView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure user is authenticated
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get the latest onboarding data for the user
+            onboarding_data = OnboardingData.objects.get(user=request.user)
+
+            return Response(
+                {
+                    "name": onboarding_data.name,
+                    "dob": onboarding_data.dob.strftime("%Y-%m-%d") if onboarding_data.dob else None,  # Format DOB
+                    "screen_time": onboarding_data.screen_time,
+                    "sleep_time": onboarding_data.sleep_time,
+                    "eye_strain": onboarding_data.eye_strain,
+                    "glasses": onboarding_data.glasses,
+                    "created_at": onboarding_data.created_at,
+                },
+                status=200
+            )
+        except OnboardingData.DoesNotExist:
+            return Response({"error": "No onboarding data found for this user."}, status=404)
