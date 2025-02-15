@@ -25,11 +25,11 @@ Run file - video will record then be played back after it is saved
 VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
 
-VIDEO_FILENAME = "mahie_test_1_low_fps.avi"
-TIMESTAMP_FILENAME = "mahie_test_1_timestamps_low_fps.txt"
+VIDEO_FILENAME = "soniya_test_3_.avi"
+TIMESTAMP_FILENAME = "soniya_test_3_timestamps.txt"
 
 # Set to 60s for recording videos (can use 5-10s if you want to test its working)
-VIDEO_DURATION = 15
+VIDEO_DURATION = 60
 
 
 def record_video(video_filename, timestamp_filename, duration):
@@ -195,5 +195,5 @@ def play_video(video_filename, timestamp_filename):
     cap.release()
     cv2.destroyAllWindows()
 
-# record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
-play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
+record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
+#play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
