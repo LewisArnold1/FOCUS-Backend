@@ -7,49 +7,87 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
-# Set temporal window size
-WINDOW_SIZE = 10 # 10 frames before & 10 frames after
+# Files for testing data
+TEST_EARS_1 = "zak_test_3_ears.csv"
+TEST_EARS_2 = "anaya_test_3_ears.csv"
+TEST_EARS_3 = "waasiq_test_3_ears.csv"
+TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3])
+TEST_EARS_FILENAMES = TEST_EARS_FILENAMES[-2:]
 
+# Files for testing timestamps
+TEST_TIMESTAMPS_1 = "zak_test_3_timestamps.txt"
+TEST_TIMESTAMPS_2 = "anaya_test_3_timestamps.txt"
+TEST_TIMESTAMPS_3 = "waasiq_test_3_timestamps.txt"
+TEST_TIMESTAMPS_FILENAMES = np.array([TEST_TIMESTAMPS_1, TEST_TIMESTAMPS_2, TEST_TIMESTAMPS_3])
+TEST_TIMESTAMPS_FILENAMES = TEST_TIMESTAMPS_FILENAMES[-2:]
 
-# # Files for testing data
-# TEST_EARS_1 = "zak_test_3_ears.csv"
-# TEST_EARS_2 = "anaya_test_3_ears.csv"
-# TEST_EARS_3 = "waasiq_test_3_ears.csv"
-# TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3])
-# TEST_EARS_FILENAMES = TEST_EARS_FILENAMES[-2:]
-
-# # Files for testing labels
-# TEST_LABELS_1 = "zak_test_3_ideal.csv"
-# TEST_LABELS_2 = "anaya_test_3_ideal.csv"
-# TEST_LABELS_3 = "waasiq_test_3_ideal.csv"
-# TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3])
-# TEST_LABELS_FILENAMES = TEST_LABELS_FILENAMES[-2:]
+# Files for testing labels
+TEST_LABELS_1 = "zak_test_3_ideal.csv"
+TEST_LABELS_2 = "anaya_test_3_ideal.csv"
+TEST_LABELS_3 = "waasiq_test_3_ideal.csv"
+TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3])
+TEST_LABELS_FILENAMES = TEST_LABELS_FILENAMES[-2:]
 
 # Files for testing
 
-
-def load_data(ears_filenames, labels_filenames):
+def load_data(ears_filenames, timestamps_filenames, labels_filenames):
     # Folder with test files
     script_dir = os.path.dirname(os.path.abspath(__file__))
     files_dir = os.path.join(script_dir, "blink_test_files")
 
     # Load EAR values into array of arrays, containing all vid data - same for labels
     ear_values = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in ears_filenames]
+    timestamps = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in timestamps_filenames]
     labels = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in labels_filenames]
 
-    return ear_values, labels 
+    return ear_values, timestamps, labels 
 
-# Extract feature window as predictor and corresponding label for each frame
-def create_feature_matrices(ear_values_lists, labels_lists, window_size):
+# Extract feature window and corresponding labels
+def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
     X, y = [], []
+    half_window = 10
 
     # Runs for each video so no window contains EAR values from two videos
-    for ear_values, labels in zip(ear_values_lists, labels_lists):
+    for ear_values, timestamps, labels in zip(ear_values_lists, timestamp_lists, labels_lists):
         X_video = []
         y_video = []
+
         # Create feature window for every frame in video (excluding first and last 10)
-        for i in range(window_size, len(ear_values) - window_size):
-            X_video.append(ear_values[i - window_size:i + window_size + 1])  # 21 EARs (±10 frames)
+        for i in range(half_window, len(ear_values) - half_window):
+
+            # Check if 21 frame window has ~30fps: 25<fps<35 (0.65<t<0.84)
+            window = (timestamps[i+half_window] - timestamps[i-half_window]).total_seconds()
+            if 0.6 < window and window < 0.84:
+                # At ~30 FPS, use ±10 frames
+                window_features = ear_values[i - half_window:i + half_window + 1] 
+            elif window <= 0.6:
+                # larger than 35 fps, downsample
+
+                centre_time = timestamps[i]
+                start_time = centre_time - 0.35
+                end_time = centre_time + 0.35
+
+                # Frames within +-0.35s
+                before_indices = [j for j in range(i) if timestamps[j] >= start_time]
+                after_indices = [j for j in range(i + 1, len(timestamps)) if timestamps[j] <= end_time]
+
+                # Check there are at least 10 frames before and 10 after
+                if len(before_indices) < half_window or len(after_indices) < half_window:
+                    continue
+                    # need to append none here?
+                    # so that this frame is recognised as not having an output rather than thinking the next frame is this
+
+                # Sample 10 frames within 0.35s before and 0.35s after
+                before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
+                after_indices = np.linspace(after_indices[0], after_indices[-1], 10).astype(int)
+                
+                # Combine indices and get corresponding ears
+                indices = np.concatenate([before_indices, [i], after_indices])
+                window_features = [ear_values[idx] for idx in indices]
+            else: # lesser than 25 fps
+                # extend EAR values to synthesise 21 frames
+                pass
+            X_video.append(window_features)
             y_video.append(labels[i])  # Label corresponds to centre frame in window
 
         # Append feature windows & labels for this video
@@ -57,19 +95,6 @@ def create_feature_matrices(ear_values_lists, labels_lists, window_size):
         y.append(y_video)
     return X, y
 
-def train_svm(X, y):
-    X_combined = np.vstack(X) # Stack predictors
-    y_combined = np.hstack(y) # Stack labels
-    
-    # Scale Predictors
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_combined)
-
-    # Fit linear SVM model - introduce weight to prioritise closed eyes being detected
-    svm_model = SVC(kernel='linear', C=1,  class_weight={0: 1, 1:1.75})
-    svm_model.fit(X_scaled, y_combined)
-    
-    return svm_model, scaler
 
 def test_svm(model, scaler, X_list, y_list):
     for i, (X, y) in enumerate(zip(X_list, y_list)):
@@ -122,35 +147,26 @@ def test_segments(model, scaler, X_list, y_list):
             #     print(test)
 
 
-def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_filenames, test_labels_filenames):
+def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     # Load data
-    train_ear_values, train_labels = load_data(train_ears_filenames, train_labels_filenames)
-    test_ear_values, test_labels = load_data(test_ears_filenames, test_labels_filenames)
+    test_ear_values, test_timestamps, test_labels = load_data(test_ears_filenames, test_timestamp_filenames, test_labels_filenames)
 
     # Create temporal window frames X and corresponding labels y
-    X_train, y_train = create_feature_matrices(train_ear_values, train_labels, window_size)
-    X_test, y_test = create_feature_matrices(test_ear_values, test_labels, window_size)
+    X_test, y_test = create_feature_matrices(test_ear_values, test_labels)
     
     # Load model
     svm_model = joblib.load('svm_model_2.joblib')
     scaler = joblib.load('scaler_2.joblib')
     # 1 is w zak vids
     # 2 is w/o zak vids
-
-    # Test accuracy of model on training videos
-    print('Training Accuracy:\n')
-    test_svm(svm_model, scaler, X_train, y_train)
     
-    # Test accuracy of model on test videos (from ame people)
+    # Test accuracy of model on test videos
     print('Test Accuracy:\n')
     test_svm(svm_model, scaler, X_test, y_test)
-
-    # print('Accuracy with segmented training videos:')
-    # test_segments(svm_model, scaler, X_train, y_train)
 
     # print('Accuracy with segmented test videos:')
     # test_segments(svm_model, scaler, X_test, y_test)
     
     return
 
-main(WINDOW_SIZE, TRAIN_EARS_FILENAMES, TRAIN_LABELS_FILENAMES, TEST_EARS_FILENAMES, TEST_LABELS_FILENAMES)
+main(TEST_EARS_FILENAMES, TEST_LABELS_FILENAMES, TEST_LABELS_FILENAMES)
