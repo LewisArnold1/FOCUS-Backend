@@ -14,6 +14,8 @@ class SimpleEyeMetrics(models.Model):
     session_id = models.IntegerField(default=0)  # Track login session
     video_id = models.IntegerField(default=0)  # Track video session
     timestamp = models.DateTimeField()  # Store the timestamp for each frame
+    gaze_x = models.JSONField(null=True, blank=True)
+    gaze_y = models.JSONField(null=True, blank=True)
     face_detected = models.BooleanField(default=False)
     normalised_eye_speed = models.FloatField(null=True, blank=True)
     face_yaw = models.FloatField(null=True, blank=True) 

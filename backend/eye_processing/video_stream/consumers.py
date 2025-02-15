@@ -16,7 +16,7 @@ from django.db.models import Max
 from eye_processing.eye_metrics.process_eye_metrics import process_eye
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-django.setup()  # Ensure Django is initialized before importing Django modules
+django.setup()  # Ensure Django is initialised before importing Django modules
 
 from asgiref.sync import sync_to_async
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -97,6 +97,8 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 session_id=session_id,
                 video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
+                gaze_x=x_coordinate_px,
+                gaze_y=y_coordinate_px,
                 face_detected=face_detected,
                 normalised_eye_speed=normalised_eye_speed,
                 face_yaw=yaw,
@@ -110,6 +112,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             )
             await sync_to_async(eye_metrics.save)()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_detected}, EAR: {ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
+            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_detected}, EAR: {avg_ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
