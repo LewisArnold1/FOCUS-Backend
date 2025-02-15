@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.http import FileResponse
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 import os
 
 from .serializers import RegisterUserSerializer
@@ -110,7 +111,7 @@ class CalibrationRetrievalView(APIView):
                 {"error": "No calibration data found for this user."}, status=404
             )
         
-class DocumentSaveView(APIView):
+class DocumentFirstSaveView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
@@ -194,6 +195,83 @@ class DocumentSaveView(APIView):
             'saved_at': self.timestamp
             }
         )
+        return document_entry
+    
+class DocumentUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        # Get the authenticated user
+        self.user = request.user
+
+        # Extract and validate data from the request
+        try:
+            self.file_name, self.line_number, self.page_number, self.timestamp = self.extract_data(request)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            document_entry = self.update_document_metadata()
+            return Response(
+                {"message": "File progress data saved successfully."},
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to save file progress data: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
+    def extract_data(self, request):
+        
+        # Extract data from the request
+        file_name = request.POST.get('file_name')
+        line_number = int(request.POST.get('line_number'))
+        page_number = int(request.POST.get('page_number'))
+        timestamp = int(request.POST.get('timestamp'))
+
+        required_fields = {
+        "file_name": file_name,
+        "line_number": line_number,
+        "page_number": page_number,
+        "timestamp": timestamp,
+        }
+
+        missing_fields = [field for field, value in required_fields.items() if value is None]
+
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+
+        # Validate data types
+        if not isinstance(file_name, str):
+            raise ValueError("Invalid file name: must be a string value.")
+
+        if not isinstance(line_number, int):
+            raise ValueError("Invalid line number: must be an integer.")
+
+        if not isinstance(page_number, int):
+            raise ValueError("Invalid page number: must be an integer.")
+
+        if not isinstance(timestamp, (int, float)):
+            raise ValueError("Invalid timestamp: must be a numeric value (int or float).")
+       
+        # Convert timestamp
+        timestamp_s = timestamp / 1000
+        timestamp_dt = datetime.fromtimestamp(timestamp_s)
+        
+        return file_name, line_number, page_number, timestamp_dt
+    
+    def update_document_metadata(self):
+
+        # Ensure the document exists before updating metadata
+        document_entry = get_object_or_404(DocumentData, user=self.user, file_name=self.file_name)
+
+        # Update metadata fields only (file_object remains unchanged)
+        document_entry.line_number = self.line_number
+        document_entry.page_number = self.page_number
+        document_entry.saved_at = self.timestamp
+        document_entry.save()
+
         return document_entry
 
 class DocumentLoadView(APIView):
