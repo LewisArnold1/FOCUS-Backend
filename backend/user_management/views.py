@@ -353,7 +353,7 @@ class FileListView(APIView):
                     'name': document.file_name,
                     'thumbnail': preview_base64,  # Base64 encoded image content
                     'isStarred': document.favourite,
-                    'lastOpened': document.saved_at.strftime('%d/%m/%y'),
+                    'lastOpened': document.saved_at.strftime('%d/%m/%Y'),
                 })
 
             return Response(files, status=200)

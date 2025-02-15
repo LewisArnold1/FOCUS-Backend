@@ -82,7 +82,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
             # Extract eye metrics
-            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus = process_eye(frame)
+            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus = process_eye(frame, 0)
 
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
@@ -112,6 +112,9 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             )
             await sync_to_async(eye_metrics.save)()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_detected}, EAR: {avg_ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
+            # print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_detected}, EAR: {avg_ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}, Face detected: {face_detected}, Focus: {focus}")
+            # print(f"Normalised eye speed {normalised_eye_speed}, Yaw {yaw}, Pitch {pitch},  Roll {roll}, Focus: {focus}")
+            if(focus == False):
+                print(f"Timestamp: {timestamp}, Normalised eye speed {normalised_eye_speed}, Yaw {yaw}, Pitch {pitch},  Roll {roll}, Focus: {focus}")
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)

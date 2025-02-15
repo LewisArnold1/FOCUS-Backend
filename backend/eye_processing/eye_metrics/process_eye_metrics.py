@@ -17,7 +17,7 @@ def process_eye(frame, verbose=1):
     focus = False
 
     if face_detected == 0:
-        return face_detected, None, None, None, None, None, None, None, None, None, focus
+        return face_detected, None, None, None, None, None, None, None, None, focus
 
     blink_detected, avg_ear = blink_processor.process_blink(left_eye, right_eye)
 

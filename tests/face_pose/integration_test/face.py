@@ -30,7 +30,7 @@ class FaceProcessor:
         # Compute face reference frame (axes)
         x_axis, y_axis, z_axis, yaw, pitch, roll = self.compute_face_axes(face_landmarks)
 
-        print(yaw, pitch, roll)
+        print("Yaw: ", yaw, "Pitch: ", pitch, "Roll: ", roll)
 
         # Convert main face coordinates to face frame
         face_rect, face_detected = self.extract_main_face(face_landmarks, frame_width, frame_height)
@@ -92,9 +92,9 @@ class FaceProcessor:
         R_face_to_camera = np.vstack([x_axis, y_axis, z_axis]).T  # 3x3 rotation matrix
 
         # Convert to Euler angles (yaw, pitch, roll)
-        yaw = np.arctan2(R_face_to_camera[1, 0], R_face_to_camera[0, 0])  # Rotation around Z-axis
-        pitch = np.arctan2(-R_face_to_camera[2, 0], np.sqrt(R_face_to_camera[2, 1]**2 + R_face_to_camera[2, 2]**2))  # Rotation around Y-axis
-        roll = np.arctan2(R_face_to_camera[2, 1], R_face_to_camera[2, 2])  # Rotation around X-axis
+        roll = np.arctan2(R_face_to_camera[1, 0], R_face_to_camera[0, 0])  # Rotation around Z-axis
+        yaw = np.arctan2(-R_face_to_camera[2, 0], np.sqrt(R_face_to_camera[2, 1]**2 + R_face_to_camera[2, 2]**2))  # Rotation around Y-axis
+        pitch = np.arctan2(R_face_to_camera[2, 1], R_face_to_camera[2, 2])  # Rotation around X-axis
 
         yaw, pitch, roll = np.degrees([yaw, pitch, roll]) 
 
