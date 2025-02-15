@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegisterUserView, ProfileView, CalibrationView, CalibrationRetrievalView, DocumentFirstSaveView, DocumentLoadView, DocumentUpdateView, FileListView, FileDeleteView, OnboardingView, OnboardingRetrievalView,
+from .views import RegisterUserView, ProfileView, CalibrationView, CalibrationRetrievalView, DocumentFirstSaveView, DocumentLoadView, DocumentUpdateView, FileListView, FileDeleteView, OnboardingView, OnboardingRetrievalView
 
 # User-specific api end-points, so django routes request to appropriate user management views
 urlpatterns = [
