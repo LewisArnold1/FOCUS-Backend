@@ -81,12 +81,12 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             image = Image.open(BytesIO(image_data))
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
+            # Extract eye metrics
+            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus = process_eye(frame)
+
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
-
-            # Extract eye metrics
-            no_faces, normalised_face_speed, ear, blink_detected, left_centre, right_centre = process_eye(frame, timestamp_dt)
 
             max_session_id = await sync_to_async(UserSession.objects.filter(user=self.user).aggregate)(Max('session_id'))
             session_id = max_session_id['session_id__max']
@@ -97,14 +97,16 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 session_id=session_id,
                 video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
-                x_coordinate_px = x_coordinate_px,
-                y_coordinate_px = y_coordinate_px,
-                no_faces=no_faces,
-                normalised_face_speed=normalised_face_speed,
-                eye_aspect_ratio=ear,
-                blink_count=blink_detected,
+                face_detected=face_detected,
+                normalised_eye_speed=normalised_eye_speed,
+                face_yaw=yaw,
+                face_roll=roll,
+                face_pitch=pitch,
+                eye_aspect_ratio=avg_ear,
+                blink_detected=blink_detected,
                 left_centre=left_centre, 
-                right_centre=right_centre
+                right_centre=right_centre,
+                focus=focus,
             )
             await sync_to_async(eye_metrics.save)()
 
