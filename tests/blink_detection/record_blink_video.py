@@ -2,6 +2,7 @@ import cv2
 import json
 from datetime import datetime
 import os
+import time
 
 # Import face processor to check eye is found in each frme
 try:
@@ -24,8 +25,8 @@ Run file - video will record then be played back after it is saved
 VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
 
-# VIDEO_FILENAME = "zak_test_1.avi"
-# TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
+VIDEO_FILENAME = "mahie_test_1_low_fps.avi"
+TIMESTAMP_FILENAME = "mahie_test_1_timestamps_low_fps.txt"
 
 # Set to 60s for recording videos (can use 5-10s if you want to test its working)
 VIDEO_DURATION = 15
@@ -176,7 +177,7 @@ def play_video(video_filename, timestamp_filename):
         if frame_idx > 0 and frame_idx < len(timestamps)-1:
             wait_time = (timestamps[frame_idx+1]-timestamps[frame_idx]).total_seconds()
             sleep_time = max(0, wait_time)  # Prevent negative sleep
-            # time.sleep(sleep_time*1) # alter to find frames where blinks are
+            time.sleep(sleep_time*3) # alter to find frames where blinks are
 
         # change value here to speed up finding blinks
         if frame_idx > 73:
@@ -194,5 +195,5 @@ def play_video(video_filename, timestamp_filename):
     cap.release()
     cv2.destroyAllWindows()
 
-record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
+# record_video(VIDEO_FILENAME,TIMESTAMP_FILENAME,VIDEO_DURATION)
 play_video(VIDEO_FILENAME,TIMESTAMP_FILENAME)
