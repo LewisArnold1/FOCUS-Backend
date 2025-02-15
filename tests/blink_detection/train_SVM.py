@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import joblib
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -66,6 +67,7 @@ def create_feature_matrices(ear_values_lists, labels_lists, window_size):
         for i in range(window_size, len(ear_values) - window_size):
             X_video.append(ear_values[i - window_size:i + window_size + 1])  # 21 EARs (±10 frames)
             y_video.append(labels[i])  # Label corresponds to centre frame in window
+
         # Append feature windows & labels for this video
         X.append(X_video)
         y.append(y_video)
@@ -146,23 +148,28 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     X_test, y_test = create_feature_matrices(test_ear_values, test_labels, window_size)
     
     # Train model
-    svm_model_1, scaler_1 = train_svm(X_train, y_train)
+    svm_model, scaler = train_svm(X_train, y_train)
 
     # Test accuracy of model on training videos
     print('Training Accuracy:\n')
-    test_svm(svm_model_1, scaler_1, X_train, y_train)
+    test_svm(svm_model, scaler, X_train, y_train)
     
-    # Test accuracy of model on test videos
+    # Test accuracy of model on test videos (from ame people)
     print('Test Accuracy:\n')
-    test_svm(svm_model_1, scaler_1, X_test, y_test)
+    test_svm(svm_model, scaler, X_test, y_test)
 
     # print('Accuracy with segmented training videos:')
-    # test_segments(svm_model_1, scaler_1, X_train, y_train)
+    # test_segments(svm_model, scaler, X_train, y_train)
 
     # print('Accuracy with segmented test videos:')
-    # test_segments(svm_model_1, scaler_1, X_test, y_test)
+    # test_segments(svm_model, scaler, X_test, y_test)
 
     # Save model
+    joblib.dump(svm_model, 'svm_model_2.joblib')
+    joblib.dump(scaler, 'scaler_2.joblib')
+
+    # 1 is w zak vids
+    # 2 is w/o zak vids
 
     
     return
