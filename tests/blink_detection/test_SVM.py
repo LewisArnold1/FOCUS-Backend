@@ -2,6 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 import joblib
+import json
+from datetime import datetime, timedelta
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -34,11 +36,20 @@ def load_data(ears_filenames, timestamps_filenames, labels_filenames):
     # Folder with test files
     script_dir = os.path.dirname(os.path.abspath(__file__))
     files_dir = os.path.join(script_dir, "blink_test_files")
+    print(timestamps_filenames)
 
     # Load EAR values into array of arrays, containing all vid data - same for labels
     ear_values = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in ears_filenames]
-    timestamps = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in timestamps_filenames]
     labels = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in labels_filenames]
+    
+    # Load timestamps and convert to datetime
+    timestamps = []
+    for file in timestamps_filenames:
+        timestamp_path = os.path.join(files_dir, file)
+        with open(timestamp_path, "r") as json_file:
+            timestamps_str = json.load(json_file)  # Load JSON data (assuming it's JSON formatted)
+        timestamps_file = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
+        timestamps.append(timestamps_file)
 
     return ear_values, timestamps, labels 
 
@@ -63,8 +74,8 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
             else:
                 # Get frames within 0.7s
                 centre_time = timestamps[i]
-                start_time = centre_time - 0.35
-                end_time = centre_time + 0.35
+                start_time = centre_time - timedelta(seconds=0.35)
+                end_time = centre_time + timedelta(seconds=0.35)
 
                 # Frames within +-0.35s
                 before_indices = [j for j in range(i) if timestamps[j] >= start_time]
@@ -75,8 +86,7 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
 
                     # Check there are at least 10 frames before and 10 after
                     if len(before_indices) < half_window or len(after_indices) < half_window:
-                        # need to append none here? - shouldnt ever happen?
-                        # so that this frame is recognised as not having an output rather than thinking the next frame is this
+                        # need to append none here? - only happens at start or end of vid so can be ignored
                         continue
 
                     # Sample 10 frames within 0.35s before and 0.35s after
@@ -89,8 +99,9 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
                 else:
                     # If less than 10 fps (actually 11.4)
                     if len(before_indices) < 4 or len(after_indices) < 4:
-                        # change to output none or smth with less than __ fps (currently will fail with <1 fps)
-                        pass
+                        # window_features = [None]*21
+                        continue
+                        # not decided on if i should append None or ignore
                 # less than 25 fps
                     # extend EAR values to synthesise 21 frames from less than 21
                     before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
@@ -164,7 +175,7 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     test_ear_values, test_timestamps, test_labels = load_data(test_ears_filenames, test_timestamp_filenames, test_labels_filenames)
 
     # Create temporal window frames X and corresponding labels y
-    X_test, y_test = create_feature_matrices(test_ear_values, test_labels)
+    X_test, y_test = create_feature_matrices(test_ear_values, test_timestamps,test_labels)
     
     # Load model
     svm_model = joblib.load('svm_model_2.joblib')
@@ -181,4 +192,4 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     
     return
 
-main(TEST_EARS_FILENAMES, TEST_LABELS_FILENAMES, TEST_LABELS_FILENAMES)
+main(TEST_EARS_FILENAMES, TEST_TIMESTAMPS_FILENAMES, TEST_LABELS_FILENAMES)
