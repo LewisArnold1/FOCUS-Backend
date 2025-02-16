@@ -13,22 +13,31 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 TEST_EARS_1 = "zak_test_3_ears.csv"
 TEST_EARS_2 = "anaya_test_3_ears.csv"
 TEST_EARS_3 = "waasiq_test_3_ears.csv"
-TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3])
-TEST_EARS_FILENAMES = TEST_EARS_FILENAMES[-2:]
+TEST_EARS_4 = "mahie_test_1_low_fps_ears.csv"
+TEST_EARS_5 = "mahie_test_2_low_fps_ears.csv"
+TEST_EARS_6 = "mahie_test_3_low_fps_ears.csv"
+TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3, TEST_EARS_4, TEST_EARS_5, TEST_EARS_6])
+TEST_EARS_FILENAMES = TEST_EARS_FILENAMES[-3:]
 
 # Files for testing timestamps
 TEST_TIMESTAMPS_1 = "zak_test_3_timestamps.txt"
 TEST_TIMESTAMPS_2 = "anaya_test_3_timestamps.txt"
 TEST_TIMESTAMPS_3 = "waasiq_test_3_timestamps.txt"
-TEST_TIMESTAMPS_FILENAMES = np.array([TEST_TIMESTAMPS_1, TEST_TIMESTAMPS_2, TEST_TIMESTAMPS_3])
-TEST_TIMESTAMPS_FILENAMES = TEST_TIMESTAMPS_FILENAMES[-2:]
+TEST_TIMESTAMPS_4 = "mahie_test_1_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_5 = "mahie_test_2_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_6 = "mahie_test_3_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_FILENAMES = np.array([TEST_TIMESTAMPS_1, TEST_TIMESTAMPS_2, TEST_TIMESTAMPS_3, TEST_TIMESTAMPS_4, TEST_TIMESTAMPS_5, TEST_TIMESTAMPS_6])
+TEST_TIMESTAMPS_FILENAMES = TEST_TIMESTAMPS_FILENAMES[-3:]
 
 # Files for testing labels
 TEST_LABELS_1 = "zak_test_3_ideal.csv"
 TEST_LABELS_2 = "anaya_test_3_ideal.csv"
 TEST_LABELS_3 = "waasiq_test_3_ideal.csv"
-TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3])
-TEST_LABELS_FILENAMES = TEST_LABELS_FILENAMES[-2:]
+TEST_LABELS_4 = "mahie_test_1_low_fps_ideal.csv"
+TEST_LABELS_5 = "mahie_test_2_low_fps_ideal.csv"
+TEST_LABELS_6 = "mahie_test_3_low_fps_ideal.csv"
+TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3, TEST_LABELS_4, TEST_LABELS_5, TEST_LABELS_6])
+TEST_LABELS_FILENAMES = TEST_LABELS_FILENAMES[-3:]
 
 # Files for testing
 
@@ -36,7 +45,7 @@ def load_data(ears_filenames, timestamps_filenames, labels_filenames):
     # Folder with test files
     script_dir = os.path.dirname(os.path.abspath(__file__))
     files_dir = os.path.join(script_dir, "blink_test_files")
-    print(timestamps_filenames)
+    print(ears_filenames)
 
     # Load EAR values into array of arrays, containing all vid data - same for labels
     ear_values = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in ears_filenames]
@@ -184,7 +193,6 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     # 2 is w/o zak vids
     
     # Test accuracy of model on test videos
-    print('Test Accuracy:\n')
     test_svm(svm_model, scaler, X_test, y_test)
 
     # print('Accuracy with segmented test videos:')
