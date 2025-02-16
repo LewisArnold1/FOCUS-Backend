@@ -60,9 +60,8 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
             if 0.6 < window and window < 0.84:
                 # At ~30 FPS, use ±10 frames
                 window_features = ear_values[i - half_window:i + half_window + 1] 
-            elif window <= 0.6:
-                # larger than 35 fps, downsample
-
+            else:
+                # Get frames within 0.7s
                 centre_time = timestamps[i]
                 start_time = centre_time - 0.35
                 end_time = centre_time + 0.35
@@ -71,22 +70,35 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
                 before_indices = [j for j in range(i) if timestamps[j] >= start_time]
                 after_indices = [j for j in range(i + 1, len(timestamps)) if timestamps[j] <= end_time]
 
-                # Check there are at least 10 frames before and 10 after
-                if len(before_indices) < half_window or len(after_indices) < half_window:
-                    continue
-                    # need to append none here?
-                    # so that this frame is recognised as not having an output rather than thinking the next frame is this
+                if window <= 0.6:
+                # larger than 35 fps, downsample
 
-                # Sample 10 frames within 0.35s before and 0.35s after
-                before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
-                after_indices = np.linspace(after_indices[0], after_indices[-1], 10).astype(int)
-                
-                # Combine indices and get corresponding ears
-                indices = np.concatenate([before_indices, [i], after_indices])
-                window_features = [ear_values[idx] for idx in indices]
-            else: # lesser than 25 fps
-                # extend EAR values to synthesise 21 frames
-                pass
+                    # Check there are at least 10 frames before and 10 after
+                    if len(before_indices) < half_window or len(after_indices) < half_window:
+                        # need to append none here? - shouldnt ever happen?
+                        # so that this frame is recognised as not having an output rather than thinking the next frame is this
+                        continue
+
+                    # Sample 10 frames within 0.35s before and 0.35s after
+                    before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
+                    after_indices = np.linspace(after_indices[0], after_indices[-1], 10).astype(int)
+                    
+                    # Combine indices and get corresponding ears
+                    indices = np.concatenate([before_indices, [i], after_indices])
+                    window_features = [ear_values[idx] for idx in indices]
+                else:
+                    # If less than 10 fps (actually 11.4)
+                    if len(before_indices) < 4 or len(after_indices) < 4:
+                        # change to output none or smth with less than __ fps (currently will fail with <1 fps)
+                        pass
+                # less than 25 fps
+                    # extend EAR values to synthesise 21 frames from less than 21
+                    before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
+                    after_indices = np.linspace(after_indices[0], after_indices[-1], 10).astype(int)
+                    indices = np.concatenate((before_indices, [i], after_indices))
+                    window_features = window_features = [ear_values[idx] for idx in indices]
+
+            # Append feature window and label for this frame
             X_video.append(window_features)
             y_video.append(labels[i])  # Label corresponds to centre frame in window
 
