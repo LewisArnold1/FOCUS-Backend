@@ -176,29 +176,13 @@ class FaceProcessor:
         if delta_t == 0:
             return np.array([0.0, 0.0, 0.0]), 0.0
 
-        # Compute translational velocity for each landmark and average
-        v_translational_left = np.mean((left_eye - self.prev_eye_positions[0]) / delta_t, axis=0)
-        v_translational_right = np.mean((right_eye - self.prev_eye_positions[1]) / delta_t, axis=0)
-        v_translational = (v_translational_left + v_translational_right) / 2
-
-        # Compute angular velocity using finite differences on the rotation matrix
-        R_current = np.vstack([x_axis, y_axis, z_axis]).T
-        R_diff = R_current @ self.prev_rotation_matrix.T  # Relative rotation matrix
-        angle = np.arccos((np.trace(R_diff) - 1) / 2.0)
-        omega = (angle / delta_t) * np.array([R_diff[2, 1] - R_diff[1, 2],
-                                              R_diff[0, 2] - R_diff[2, 0],
-                                              R_diff[1, 0] - R_diff[0, 1]])
-
-        # Compute rotational contribution to velocity
-        r_eye_avg = (np.mean(left_eye, axis=0) + np.mean(right_eye, axis=0)) / 2
-        v_rotational = np.cross(omega, r_eye_avg)
-
-        # Compute total velocity
-        v_total = v_translational + v_rotational
+        # Compute velocity for each landmark and average
+        v_left = np.mean((left_eye - self.prev_eye_positions[0]) / delta_t, axis=0)
+        v_right = np.mean((right_eye - self.prev_eye_positions[1]) / delta_t, axis=0)
+        v_total = (v_left + v_right) / 2
 
         # Store previous values
         self.prev_eye_positions = (left_eye, right_eye)
-        self.prev_rotation_matrix = R_current
         self.prev_time = current_time
         
         # Compute Speed 
