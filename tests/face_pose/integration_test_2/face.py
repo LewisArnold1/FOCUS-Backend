@@ -17,7 +17,7 @@ class FaceProcessor:
         self.prev_rotation_matrix = None
         self.prev_time = None  
 
-    def process_face(self, frame, draw=True, draw_mesh=True, draw_contours=False, draw_all=False):
+    def process_face(self, frame, draw_mesh=False, draw_contours=False, show_axis=True, draw_eye=False):
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.face_mesh.process(frame_rgb)
 
@@ -43,32 +43,16 @@ class FaceProcessor:
         left_eye_pixels = self.convert_face_frame_to_pixels(left_eye, frame_width, frame_height)
         right_eye_pixels = self.convert_face_frame_to_pixels(right_eye, frame_width, frame_height)
 
-        if not draw:
+        if not (draw_mesh or draw_contours or show_axis or draw_eye):
             return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll
-        
-        # Get the nose tip as the origin of the axes
-        nose_tip = np.array([face_landmarks.landmark[1].x * frame_width, 
-                          face_landmarks.landmark[1].y * frame_height]).astype(int)
 
-        # Define scale for axis visualisation
-        axis_length = 50  # Length of the axis lines
-
-        # Compute the end points of the axes
-        x_end = (nose_tip + (x_axis[:2] * axis_length)).astype(int)  # X-axis (Red)
-        y_end = (nose_tip + (y_axis[:2] * axis_length)).astype(int)  # Y-axis (Green)
-        z_end = (nose_tip + (z_axis[:2] * axis_length)).astype(int)  # Z-axis (Blue)
-
-        # Draw axes on the image using cv2
-        cv2.line(frame, tuple(nose_tip), tuple(x_end), (0, 0, 255), 2)  # X-axis in Red
-        cv2.line(frame, tuple(nose_tip), tuple(y_end), (0, 255, 0), 2)  # Y-axis in Green
-        cv2.line(frame, tuple(nose_tip), tuple(z_end), (255, 0, 0), 2)  # Z-axis in Blue
-            
-        if draw_all:
+        if draw_mesh or draw_contours:
             self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
-            self._draw_eye_annotations(frame, left_eye_pixels, right_eye_pixels, face_rect)
-        elif draw_mesh or draw_contours:
-            self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
-        else:
+
+        if show_axis:
+            self._show_axis(frame, face_landmarks, x_axis, y_axis, z_axis, frame_width, frame_height)
+
+        if draw_eye:
             self._draw_eye_annotations(frame, left_eye_pixels, right_eye_pixels, face_rect)
 
         cv2.imshow("Face Landmarks", frame)
@@ -224,3 +208,26 @@ class FaceProcessor:
                 landmark_drawing_spec=None,
                 connection_drawing_spec=self.default_specs
             )
+
+    def _show_axis(self, frame, face_landmarks, x_axis, y_axis, z_axis, frame_width, frame_height):
+        # Get the nose tip as the origin of the axes
+        nose_tip = np.array([face_landmarks.landmark[1].x * frame_width, 
+                          face_landmarks.landmark[1].y * frame_height]).astype(int)
+
+        # Define scale for axis visualisation
+        axis_length = 50  # Length of the axis lines
+
+        # Compute the end points of the axes
+        x_end = (nose_tip + (x_axis[:2] * axis_length)).astype(int)  # X-axis (Red)
+        y_end = (nose_tip + (y_axis[:2] * axis_length)).astype(int)  # Y-axis (Green)
+        z_end = (nose_tip + (z_axis[:2] * axis_length)).astype(int)  # Z-axis (Blue)
+
+        # Draw axes
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(x_end), (0, 0, 255), 2, tipLength=0.3)  # X-axis (Red)
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(y_end), (0, 255, 0), 2, tipLength=0.3)  # Y-axis (Green)
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(z_end), (255, 0, 0), 2, tipLength=0.3)  # Z-axis (Blue)
+
+        # Add text labels for the axes
+        cv2.putText(frame, "X", tuple(x_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, "Y", tuple(y_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
+        cv2.putText(frame, "Z", tuple(z_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 1, cv2.LINE_AA)
