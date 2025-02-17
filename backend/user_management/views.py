@@ -9,10 +9,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.http import FileResponse
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 import os
 
 from .serializers import RegisterUserSerializer
-from .models import CalibrationData, DocumentData
+from .models import CalibrationData, DocumentData, OnboardingData
 
 class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.all() # Ensure user does not already exist
@@ -109,7 +111,7 @@ class CalibrationRetrievalView(APIView):
                 {"error": "No calibration data found for this user."}, status=404
             )
         
-class DocumentSaveView(APIView):
+class DocumentFirstSaveView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
@@ -169,11 +171,11 @@ class DocumentSaveView(APIView):
         if not isinstance(timestamp, (int, float)):
             raise ValueError("Invalid timestamp: must be a numeric value (int or float).")
 
-        valid_mime_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+        valid_mime_types = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
 
         mime_type, _ = mimetypes.guess_type(file_object.name)
         if mime_type not in valid_mime_types:
-            raise ValueError("Invalid file type. Only .pdf, .doc, and .docx are allowed.")
+            raise ValueError("Invalid file type. Only .pdf, .docx and .txt are allowed.")
        
         # Convert timestamp
         timestamp_s = timestamp / 1000
@@ -193,6 +195,109 @@ class DocumentSaveView(APIView):
             'saved_at': self.timestamp
             }
         )
+        return document_entry
+
+class DocumentUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        # Get the authenticated user
+        self.user = request.user
+
+        # Extract and validate data from the request
+        try:
+            extracted_data = self.extract_data(request)
+            self.file_name = extracted_data.get("file_name")
+            self.new_file_name = extracted_data.get("new_file_name")
+            self.line_number = extracted_data.get("line_number")
+            self.page_number = extracted_data.get("page_number")
+            self.timestamp = extracted_data["timestamp"]  # Required field
+            self.favourite = extracted_data.get("favourite")  
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            document_entry = self.update_document_metadata()
+            return Response(
+                {"message": "File progress data updated successfully."},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to update file progress data: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        
+    def extract_data(self, request):
+        file_name = request.POST.get('file_name') # Required
+        new_file_name = request.POST.get('new_file_name') 
+        line_number = int(request.POST.get('line_number'))
+        page_number = int(request.POST.get('page_number'))
+        timestamp = int(request.POST.get('timestamp')) # Required
+        favourite = request.POST.get('favourite')
+
+        # Ensure required fields are present
+        if file_name is None or timestamp is None:
+            raise ValueError("Missing required fields: 'file_name' and 'timestamp' are required.")
+
+        # Validate data types (only if provided)
+        if not isinstance(file_name, str):
+            raise ValueError("Invalid file name: must be a string value.")
+        
+        if new_file_name is not None and not isinstance(new_file_name, str):
+            raise ValueError("Invalid new file name: must be a string value.")
+
+        if line_number is not None:
+            if not isinstance(line_number, int) or line_number < 0:
+                raise ValueError("Invalid line number: must be a non-negative integer.")
+
+        if page_number is not None:
+            if not isinstance(page_number, int) or page_number < 0:
+                raise ValueError("Invalid page number: must be a non-negative integer.")
+
+        if not isinstance(timestamp, (int, float)):
+            raise ValueError("Invalid timestamp: must be a numeric value (int or float).")
+
+        # Convert timestamp
+        timestamp_s = timestamp / 1000
+        timestamp_dt = datetime.fromtimestamp(timestamp_s)
+
+        # Convert `favourite` to boolean (handles string "true"/"false")
+        if favourite is not None:
+            if isinstance(favourite, str):
+                favourite = favourite.lower() in ["true", "1"]
+            elif not isinstance(favourite, bool):
+                raise ValueError("Invalid favourite value: must be a boolean (true/false).")
+
+        return {
+            "file_name": file_name,
+            "new_file_name": new_file_name,
+            "line_number": line_number,
+            "page_number": page_number,
+            "timestamp": timestamp_dt,
+            "favourite": favourite,
+        }
+    
+    def update_document_metadata(self):
+        """ Updates metadata fields of an existing document """
+        
+        # Ensure the document exists before updating
+        document_entry = get_object_or_404(DocumentData, user=self.user, file_name=self.file_name)
+
+        # Update only the fields that were provided
+        if self.new_file_name:
+            document_entry.file_name = self.new_file_name
+        if self.line_number is not None:
+            document_entry.line_number = self.line_number
+        if self.page_number is not None:
+            document_entry.page_number = self.page_number
+        if self.favourite is not None:
+            document_entry.favourite = self.favourite
+
+        # Always update timestamp
+        document_entry.saved_at = self.timestamp
+        document_entry.save()
+
         return document_entry
 
 class DocumentLoadView(APIView):
@@ -241,12 +346,14 @@ class FileListView(APIView):
                 if preview_path and os.path.exists(preview_path):
                     with open(preview_path, "rb") as preview_file:
                         preview_base64 = base64.b64encode(preview_file.read()).decode('utf-8')
+                else:
+                    print("Preview file not found:", preview_path)
 
                 files.append({
-                    'file_name': document.file_name,
-                    'favorite': document.favorite,
-                    'saved_at': document.saved_at.isoformat(),
-                    'preview': preview_base64,  # Base64 encoded image content
+                    'name': document.file_name,
+                    'thumbnail': preview_base64,  # Base64 encoded image content
+                    'isStarred': document.favourite,
+                    'lastOpened': document.saved_at.strftime('%d/%m/%y'),
                 })
 
             return Response(files, status=200)
@@ -262,13 +369,15 @@ class FileDeleteView(APIView):
             file_name = request.query_params.get('file_name')
             document = DocumentData.objects.get(user=request.user, file_name=file_name)
 
-            # Delete the actual file
-            document.file_object.delete()
+            preview_filename = f"{os.path.basename(os.path.splitext(document.file_object.name)[0])}_preview.jpg"
+            preview_path = os.path.join(settings.MEDIA_ROOT, "documents", preview_filename)
 
-            # Optionally delete the preview file if it exists
-            preview_path = f"{os.path.splitext(document.file_object.name)[0]}_preview.png"
+            # print("Preview path:", preview_path)
             if os.path.exists(preview_path):
                 os.remove(preview_path)
+
+            # Delete the actual file
+            document.file_object.delete()
 
             # Delete the database entry
             document.delete()
@@ -278,4 +387,122 @@ class FileDeleteView(APIView):
             return Response({"error": "File not found."}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=500)
-          
+        
+class OnboardingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        # Get the authenticated user
+        self.user = request.user
+
+        # Extract and validate data from the request
+        try:
+            self.name, self.dob, self.screen_time, self.sleep_time, self.eye_strain, self.glasses, self.timestamp = self.extract_data(request)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            onboarding_entry = self.save_or_update_onboarding()
+            return Response(
+                {"message": "Onboarding data saved successfully.", "id": onboarding_entry.id},
+                status=status.HTTP_201_CREATED,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to save onboarding data: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    def extract_data(self, request):
+        # Extract data from request
+        name = request.data.get("name")
+        dob = request.data.get("dob")  # Date of birth should be in YYYY-MM-DD format
+        screen_time = request.data.get("screen_time")
+        sleep_time = request.data.get("sleep_time")
+        eye_strain = request.data.get("eye_strain")
+        glasses = request.data.get("glasses")
+        timestamp = request.data.get("timestamp")
+
+        required_fields = {
+            "name": name,
+            "dob": dob,
+            "screen_time": screen_time,
+            "sleep_time": sleep_time,
+            "eye_strain": eye_strain,
+            "glasses": glasses,
+            "timestamp": timestamp
+        }
+
+        # Check for missing fields
+        missing_fields = [field for field, value in required_fields.items() if value is None]
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+
+        # Validate data types
+        if not isinstance(name, str):
+            raise ValueError("Invalid name: must be a string.")
+
+        try:
+            dob = datetime.strptime(dob, "%Y-%m-%d").date()  # Convert to date format
+        except ValueError:
+            raise ValueError("Invalid DOB format: must be YYYY-MM-DD.")
+
+        if not isinstance(screen_time, int) or screen_time < 0:
+            raise ValueError("Invalid screen time: must be a positive integer.")
+
+        if not isinstance(sleep_time, int) or sleep_time < 0:
+            raise ValueError("Invalid sleep time: must be a positive integer.")
+
+        if not isinstance(eye_strain, bool):
+            raise ValueError("Invalid eye strain value: must be a boolean.")
+
+        if not isinstance(glasses, bool):
+            raise ValueError("Invalid glasses value: must be a boolean.")
+
+        if not isinstance(timestamp, (int, float)):
+            raise ValueError("Invalid timestamp: must be a numeric value.")
+
+        # Convert timestamp
+        timestamp_s = timestamp / 1000
+        timestamp_dt = datetime.fromtimestamp(timestamp_s)
+
+        return name, dob, screen_time, sleep_time, eye_strain, glasses, timestamp_dt
+
+    def save_or_update_onboarding(self):
+        onboarding_entry, _ = OnboardingData.objects.update_or_create(
+            user=self.user,
+            defaults={
+                "name": self.name,
+                "dob": self.dob,
+                "screen_time": self.screen_time,
+                "sleep_time": self.sleep_time,
+                "eye_strain": self.eye_strain,
+                "glasses": self.glasses,
+                "created_at": self.timestamp,
+            }
+        )
+        return onboarding_entry
+
+
+class OnboardingRetrievalView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure user is authenticated
+
+    def get(self, request, *args, **kwargs):
+        try:
+            # Get the latest onboarding data for the user
+            onboarding_data = OnboardingData.objects.get(user=request.user)
+
+            return Response(
+                {
+                    "name": onboarding_data.name,
+                    "dob": onboarding_data.dob.strftime("%Y-%m-%d") if onboarding_data.dob else None,  # Format DOB
+                    "screen_time": onboarding_data.screen_time,
+                    "sleep_time": onboarding_data.sleep_time,
+                    "eye_strain": onboarding_data.eye_strain,
+                    "glasses": onboarding_data.glasses,
+                    "created_at": onboarding_data.created_at,
+                },
+                status=200
+            )
+        except OnboardingData.DoesNotExist:
+            return Response({"error": "No onboarding data found for this user."}, status=404)

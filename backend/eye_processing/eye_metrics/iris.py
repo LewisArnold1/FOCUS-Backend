@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-import os
 from scipy.interpolate import splprep, splev
 
 class IrisProcessor:
