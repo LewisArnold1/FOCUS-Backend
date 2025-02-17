@@ -153,4 +153,4 @@ class IrisProcessor:
         grid = np.vstack((top_row, bottom_row))
 
         # Display the combined grid
-        cv2.imshow("Pupil Processor Output", grid)
+        cv2.imshow("Iris Output", grid)
