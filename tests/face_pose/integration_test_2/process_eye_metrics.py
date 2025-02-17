@@ -1,16 +1,12 @@
 import cv2
 
-from .face import FaceProcessor
-from .blinks import BlinkProcessor
-from .iris import IrisProcessor
-from .fixations_saccades import FixationSaccadeDetector
-
+from face import FaceProcessor
+from blinks import BlinkProcessor
+from iris import IrisProcessor
 
 face_processor = FaceProcessor()
 blink_processor = BlinkProcessor()
 iris_processor = IrisProcessor()
-eye_movement_detector = FixationSaccadeDetector()
-
 
 def process_eye(frame, verbose=0):
     frame = cv2.flip(frame, 1)
@@ -46,3 +42,4 @@ def process_eye(frame, verbose=0):
 
     return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus
 
+    
