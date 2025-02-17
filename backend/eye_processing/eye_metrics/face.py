@@ -12,8 +12,7 @@ class FaceProcessor:
         self.mp_drawing_styles = mp.solutions.drawing_styles
         self.default_specs = self.mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1)
         
-        self.prev_eye_positions = None 
-        self.prev_rotation_matrix = None
+        self.prev_eye_positions = None
         self.prev_time = None  
 
     def process_face(self, frame, draw_mesh=False, draw_contours=False, show_axis=True, draw_eye=False):
@@ -151,7 +150,6 @@ class FaceProcessor:
         current_time = time.time()
         if self.prev_eye_positions is None or self.prev_time is None:
             self.prev_eye_positions = (left_eye, right_eye)
-            self.prev_rotation_matrix = np.vstack([x_axis, y_axis, z_axis]).T
             self.prev_time = current_time
             return np.array([0.0, 0.0, 0.0]), 0.0
 
