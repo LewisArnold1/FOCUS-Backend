@@ -62,37 +62,6 @@ class FaceProcessor:
         cv2.line(frame, tuple(nose_tip), tuple(x_end), (0, 0, 255), 2)  # X-axis in Red
         cv2.line(frame, tuple(nose_tip), tuple(y_end), (0, 255, 0), 2)  # Y-axis in Green
         cv2.line(frame, tuple(nose_tip), tuple(z_end), (255, 0, 0), 2)  # Z-axis in Blue
-        
-
-        """
-        # Get nose tip as the origin
-        nose_tip = np.array([face_landmarks.landmark[1].x, 
-                             face_landmarks.landmark[1].y, 
-                             face_landmarks.landmark[1].z])
-
-        # Define standard basis vectors (unit vectors in face-fixed space)
-        basis_vectors = {
-            'X (red)': np.array([1, 0, 0]),   # X-axis
-            'Y (green)': np.array([0, 1, 0]), # Y-axis
-            'Z (blue)': np.array([0, 0, 1])   # Z-axis
-        }
-
-        nose_pixel = (int(nose_tip[0] * frame_width), int(nose_tip[1] * frame_height))
-
-        scale = 50  
-
-        for label, vec in basis_vectors.items():
-            # Compute endpoint in pixel coordinates
-            end_pixel = (int(nose_pixel[0] + vec[0] * scale), int(nose_pixel[1] - vec[1] * scale))
-
-            # Color mapping
-            color = (0, 0, 255) if "X" in label else (0, 255, 0) if "Y" in label else (255, 0, 0)
-
-            # Draw the axis line
-            cv2.line(frame, nose_pixel, end_pixel, color, 2)
-            cv2.putText(frame, label, end_pixel, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
-        """
-        
             
         if draw_all:
             self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)

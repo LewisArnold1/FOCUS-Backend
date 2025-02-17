@@ -17,8 +17,10 @@ def process_eye(frame, verbose=0):
         return face_detected, None, None, None, None, None, None, None, None, None, focus
 
     blink_detected, avg_ear = blink_processor.process_blink(left_eye, right_eye)
+    
+    print(normalised_eye_speed)
 
-    if (normalised_eye_speed > 0.3 or (abs(yaw) > 25 or abs(pitch) < 150)):
+    if (normalised_eye_speed > 0.25 or (abs(yaw) > 25 or abs(pitch) > 30)):
         return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, None, None, focus
     
     focus = True
