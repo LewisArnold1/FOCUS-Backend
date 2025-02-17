@@ -12,7 +12,8 @@ iris_processor = IrisProcessor()
 eye_movement_detector = FixationSaccadeDetector()
 
 
-def process_eye(frame, verbose=1):
+def process_eye(frame, verbose=0):
+    frame = cv2.flip(frame, 1)
     face_detected, left_eye, right_eye, normalised_eye_speed, yaw, pitch, roll = face_processor.process_face(frame)
     focus = False
 
@@ -20,8 +21,10 @@ def process_eye(frame, verbose=1):
         return face_detected, None, None, None, None, None, None, None, None, None, focus
 
     blink_detected, avg_ear = blink_processor.process_blink(left_eye, right_eye)
+    
+    print(normalised_eye_speed)
 
-    if (normalised_eye_speed > 0.3 or (abs(yaw) > 25 or abs(pitch) < 150)):
+    if (normalised_eye_speed > 0.25 or (abs(yaw) > 25 or abs(pitch) > 30)):
         return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, None, None, focus
     
     focus = True
@@ -38,7 +41,8 @@ def process_eye(frame, verbose=1):
 
         # Display the images side by side (if verbose is set to 1)
         if verbose:
-            iris_processor._display_images_in_grid(cv2.flip(left_grey, 1), cv2.flip(left_colour, 1), cv2.flip(right_grey, 1), cv2.flip(right_colour, 1))
+            iris_processor._display_images_in_grid(left_grey, left_colour, right_grey, right_colour)
         
+
     return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus
 

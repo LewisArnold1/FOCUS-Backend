@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import time
+from scipy.spatial.transform import Rotation   
 
 class FaceProcessor:
     def __init__(self):
@@ -15,12 +16,12 @@ class FaceProcessor:
         self.prev_rotation_matrix = None
         self.prev_time = None  
 
-    def process_face(self, frame, draw=False, draw_mesh=True, draw_contours=True, draw_all=True):
+    def process_face(self, frame, draw_mesh=False, draw_contours=False, show_axis=True, draw_eye=False):
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.face_mesh.process(frame_rgb)
 
         if not results.multi_face_landmarks:
-            return False, None, None, 0.0, None, None, None
+            return 0, None, None, 0.0, None, None, None
         
         frame_height, frame_width, _ = frame.shape
 
@@ -41,18 +42,19 @@ class FaceProcessor:
         left_eye_pixels = self.convert_face_frame_to_pixels(left_eye, frame_width, frame_height)
         right_eye_pixels = self.convert_face_frame_to_pixels(right_eye, frame_width, frame_height)
 
-        if not draw:
+        if not (draw_mesh or draw_contours or show_axis or draw_eye):
             return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll
 
-        if draw_all:
+        if draw_mesh or draw_contours:
             self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
-            self._draw_eye_annotations(frame, left_eye_pixels, right_eye_pixels, face_rect)
-        elif draw_mesh or draw_contours:
-            self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
-        else:
+
+        if show_axis:
+            self._show_axis(frame, face_landmarks, x_axis, y_axis, z_axis, frame_width, frame_height)
+
+        if draw_eye:
             self._draw_eye_annotations(frame, left_eye_pixels, right_eye_pixels, face_rect)
 
-        cv2.imshow("Face Landmarks", cv2.flip(frame, 1))
+        cv2.imshow("Face Landmarks", frame)
 
         return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll
     
@@ -75,7 +77,7 @@ class FaceProcessor:
                             face_landmarks.landmark[10].z])
 
         # Compute x-axis: from left eye to right eye (left to right)
-        x_axis = right_eye - left_eye
+        x_axis = left_eye - right_eye
         x_axis /= np.linalg.norm(x_axis)  
 
         # Compute y-axis: from nose to forehead (down to up)
@@ -90,17 +92,28 @@ class FaceProcessor:
         R_face_to_camera = np.vstack([x_axis, y_axis, z_axis]).T  # 3x3 rotation matrix
 
         # Convert to Euler angles (yaw, pitch, roll)
-        yaw = np.arctan2(R_face_to_camera[1, 0], R_face_to_camera[0, 0])  # Rotation around Z-axis
-        pitch = np.arctan2(-R_face_to_camera[2, 0], np.sqrt(R_face_to_camera[2, 1]**2 + R_face_to_camera[2, 2]**2))  # Rotation around Y-axis
-        roll = np.arctan2(R_face_to_camera[2, 1], R_face_to_camera[2, 2])  # Rotation around X-axis
 
-        yaw, pitch, roll = np.degrees([yaw, pitch, roll]) 
+        # yaw = np.arctan2(-R_face_to_camera[2, 0], np.sqrt(R_face_to_camera[2, 1]**2 + R_face_to_camera[2, 2]**2))  # Rotation around Y-axis
+        # roll = np.arctan2(R_face_to_camera[1, 0], R_face_to_camera[0, 0])  # Rotation around Z-axis
+        # pitch = np.arctan2(R_face_to_camera[2, 1], R_face_to_camera[2, 2])  # Rotation around X-axis
+
+        r =  Rotation.from_matrix(R_face_to_camera)
+        roll, yaw, pitch = r.as_euler("zyx",degrees=True)
+        roll = (-roll) % 360 - 180
+        
+        # print(f"nose_tip: {nose_tip}, left_eye: {left_eye}, right_eye: {right_eye}, forehead: {forehead}")
+        # print(f"x_axis: {x_axis}, y_axis: {y_axis}, z_axis: {z_axis}")
+        # print(f"R_face_to_camera: {R_face_to_camera}")
+        print(np.linalg.det(R_face_to_camera))
+        # yaw, pitch, roll = np.degrees([yaw, pitch, roll]) 
+
+        print(f"x-axis: {pitch}, y-axis: {yaw}, z-axis: {roll}")
 
         return x_axis, y_axis, z_axis, yaw, pitch, roll
 
     def extract_main_face(self, face_landmarks, frame_width, frame_height):
         if not face_landmarks:
-            return None, False
+            return None, 0
 
         # Convert landmark points to pixel coordinates
         landmark_points = [(int(l.x * frame_width), int(l.y * frame_height)) for l in face_landmarks.landmark]
@@ -111,7 +124,7 @@ class FaceProcessor:
         x_max = max(p[0] for p in landmark_points)
         y_max = max(p[1] for p in landmark_points)
 
-        return ((x_min, y_min, x_max - x_min, y_max - y_min), True)
+        return ((x_min, y_min, x_max - x_min, y_max - y_min), 1)
     
     def extract_eye_regions(self, face_landmarks):
         LEFT_EYE_IDX = [33, 133, 160, 158, 153, 144]  # Left eye only
@@ -127,7 +140,7 @@ class FaceProcessor:
         right_eye = self.sort_eye_landmarks(right_eye)
 
         return left_eye, right_eye
-
+    
     def sort_eye_landmarks(self, eye_points):
         centroid = np.mean(eye_points, axis=0)  # Get center of eye shape
         angles = np.arctan2(eye_points[:, 1] - centroid[1], eye_points[:, 0] - centroid[0])
@@ -146,29 +159,13 @@ class FaceProcessor:
         if delta_t == 0:
             return np.array([0.0, 0.0, 0.0]), 0.0
 
-        # Compute translational velocity for each landmark and average
-        v_translational_left = np.mean((left_eye - self.prev_eye_positions[0]) / delta_t, axis=0)
-        v_translational_right = np.mean((right_eye - self.prev_eye_positions[1]) / delta_t, axis=0)
-        v_translational = (v_translational_left + v_translational_right) / 2
-
-        # Compute angular velocity using finite differences on the rotation matrix
-        R_current = np.vstack([x_axis, y_axis, z_axis]).T
-        R_diff = R_current @ self.prev_rotation_matrix.T  # Relative rotation matrix
-        angle = np.arccos((np.trace(R_diff) - 1) / 2.0)
-        omega = (angle / delta_t) * np.array([R_diff[2, 1] - R_diff[1, 2],
-                                              R_diff[0, 2] - R_diff[2, 0],
-                                              R_diff[1, 0] - R_diff[0, 1]])
-
-        # Compute rotational contribution to velocity
-        r_eye_avg = (np.mean(left_eye, axis=0) + np.mean(right_eye, axis=0)) / 2
-        v_rotational = np.cross(omega, r_eye_avg)
-
-        # Compute total velocity
-        v_total = v_translational + v_rotational
+        # Compute velocity for each landmark and average
+        v_left = np.mean((left_eye - self.prev_eye_positions[0]) / delta_t, axis=0)
+        v_right = np.mean((right_eye - self.prev_eye_positions[1]) / delta_t, axis=0)
+        v_total = (v_left + v_right) / 2
 
         # Store previous values
         self.prev_eye_positions = (left_eye, right_eye)
-        self.prev_rotation_matrix = R_current
         self.prev_time = current_time
         
         # Compute Speed 
@@ -210,3 +207,26 @@ class FaceProcessor:
                 landmark_drawing_spec=None,
                 connection_drawing_spec=self.default_specs
             )
+
+    def _show_axis(self, frame, face_landmarks, x_axis, y_axis, z_axis, frame_width, frame_height):
+        # Get the nose tip as the origin of the axes
+        nose_tip = np.array([face_landmarks.landmark[1].x * frame_width, 
+                          face_landmarks.landmark[1].y * frame_height]).astype(int)
+
+        # Define scale for axis visualisation
+        axis_length = 50  # Length of the axis lines
+
+        # Compute the end points of the axes
+        x_end = (nose_tip + (x_axis[:2] * axis_length)).astype(int)  # X-axis (Red)
+        y_end = (nose_tip + (y_axis[:2] * axis_length)).astype(int)  # Y-axis (Green)
+        z_end = (nose_tip + (z_axis[:2] * axis_length)).astype(int)  # Z-axis (Blue)
+
+        # Draw axes
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(x_end), (0, 0, 255), 2, tipLength=0.3)  # X-axis (Red)
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(y_end), (0, 255, 0), 2, tipLength=0.3)  # Y-axis (Green)
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(z_end), (255, 0, 0), 2, tipLength=0.3)  # Z-axis (Blue)
+
+        # Add text labels for the axes
+        cv2.putText(frame, "X", tuple(x_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, "Y", tuple(y_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
+        cv2.putText(frame, "Z", tuple(z_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 1, cv2.LINE_AA)
