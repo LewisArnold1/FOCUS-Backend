@@ -211,7 +211,7 @@ class DocumentUpdateView(APIView):
             self.new_file_name = extracted_data.get("new_file_name")
             self.line_number = extracted_data.get("line_number")
             self.page_number = extracted_data.get("page_number")
-            self.timestamp = extracted_data["timestamp"]  # Required field
+            self.timestamp = extracted_data.get("timestamp")  # Required field
             self.favourite = extracted_data.get("favourite")  
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
@@ -231,9 +231,9 @@ class DocumentUpdateView(APIView):
     def extract_data(self, request):
         file_name = request.POST.get('file_name') # Required
         new_file_name = request.POST.get('new_file_name') 
-        line_number = int(request.POST.get('line_number'))
-        page_number = int(request.POST.get('page_number'))
-        timestamp = int(request.POST.get('timestamp')) # Required
+        line_number = request.POST.get('line_number')
+        page_number = request.POST.get('page_number')
+        timestamp = float(request.POST.get('timestamp')) # Required
         favourite = request.POST.get('favourite')
 
         # Ensure required fields are present
@@ -248,13 +248,15 @@ class DocumentUpdateView(APIView):
             raise ValueError("Invalid new file name: must be a string value.")
 
         if line_number is not None:
+            line_number = int(line_number)
             if not isinstance(line_number, int) or line_number < 0:
                 raise ValueError("Invalid line number: must be a non-negative integer.")
 
         if page_number is not None:
+            page_number = int(page_number)
             if not isinstance(page_number, int) or page_number < 0:
                 raise ValueError("Invalid page number: must be a non-negative integer.")
-
+            
         if not isinstance(timestamp, (int, float)):
             raise ValueError("Invalid timestamp: must be a numeric value (int or float).")
 
@@ -264,11 +266,11 @@ class DocumentUpdateView(APIView):
 
         # Convert `favourite` to boolean (handles string "true"/"false")
         if favourite is not None:
-            if isinstance(favourite, str):
-                favourite = favourite.lower() in ["true", "1"]
-            elif not isinstance(favourite, bool):
+            if(isinstance(favourite, str)):
+                favourite = favourite.lower() == "true"
+            if not isinstance(favourite, bool):
                 raise ValueError("Invalid favourite value: must be a boolean (true/false).")
-
+  
         return {
             "file_name": file_name,
             "new_file_name": new_file_name,
@@ -353,7 +355,7 @@ class FileListView(APIView):
                     'name': document.file_name,
                     'thumbnail': preview_base64,  # Base64 encoded image content
                     'isStarred': document.favourite,
-                    'lastOpened': document.saved_at.strftime('%d/%m/%y'),
+                    'lastOpened': document.saved_at.timestamp() * 1000,
                 })
 
             return Response(files, status=200)
