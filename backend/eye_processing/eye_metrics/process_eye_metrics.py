@@ -45,9 +45,9 @@ def process_eye(frame, timestamp_dt, draw_mesh=False, draw_contours=False, show_
             iris_processor._display_images_in_grid(left_grey, left_colour, right_grey, right_colour)
 
     # Process fixations and saccades
-    left_velocity, right_velocity, movement_type = eye_movement_detector.process_eye_movements(
+    left_iris_velocity, right_iris_velocity, movement_type = eye_movement_detector.process_eye_movements(
         left_centre, right_centre, frame_width, frame_height, timestamp_dt
     ) 
 
-    return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, diagnostic_frame
+    return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame
 
