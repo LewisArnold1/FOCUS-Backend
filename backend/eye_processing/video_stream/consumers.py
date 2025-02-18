@@ -93,12 +93,12 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             image = Image.open(BytesIO(image_data))
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-            # Extract eye metrics
-            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, _ = process_eye(frame)
-
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
+
+            # Extract eye metrics
+            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(frame, timestamp_dt)
 
             max_session_id = await sync_to_async(UserSession.objects.filter(user=self.user).aggregate)(Max('session_id'))
             session_id = max_session_id['session_id__max']
@@ -121,6 +121,9 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 left_centre=left_centre, 
                 right_centre=right_centre,
                 focus=focus,
+                left_iris_velocity=left_iris_velocity,
+                right_iris_velocity=right_iris_velocity, 
+                movement_type=movement_type,
             )
             await sync_to_async(eye_metrics.save)()
 
@@ -135,8 +138,12 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             image = Image.open(BytesIO(image_data))
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
+            # Convert the timestamp from milliseconds to a datetime object
+            timestamp_s = timestamp / 1000
+            timestamp_dt = datetime.fromtimestamp(timestamp_s)
+
             # Call `process_eye` with visualisation options
-            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, diagnostic_frame = process_eye(frame, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
+            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
 
             # Encode the processed frame back to base64
             _, buffer = cv2.imencode('.jpg', diagnostic_frame)

@@ -12,9 +12,10 @@ iris_processor = IrisProcessor()
 eye_movement_detector = FixationSaccadeDetector()
 
 
-def process_eye(frame, verbose=0):
+def process_eye(frame, timestamp_dt, draw_mesh=False, draw_contours=False, show_axis=False, draw_eye=False, verbose=0):
     frame = cv2.flip(frame, 1)
-    face_detected, left_eye, right_eye, normalised_eye_speed, yaw, pitch, roll, diagnostic_frame = face_processor.process_face(frame)
+    frame_height, frame_width, _ = frame.shape
+    face_detected, left_eye, right_eye, normalised_eye_speed, yaw, pitch, roll, diagnostic_frame = face_processor.process_face(frame, draw_mesh=draw_mesh, draw_contour=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
     focus = False
 
     if face_detected == 0:
@@ -42,7 +43,11 @@ def process_eye(frame, verbose=0):
         # Display the images side by side (if verbose is set to 1)
         if verbose:
             iris_processor._display_images_in_grid(left_grey, left_colour, right_grey, right_colour)
-        
 
-    return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, diagnostic_frame
+    # Process fixations and saccades
+    left_iris_velocity, right_iris_velocity, movement_type = eye_movement_detector.process_eye_movements(
+        left_centre, right_centre, frame_width, frame_height, timestamp_dt
+    ) 
+
+    return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame
 
