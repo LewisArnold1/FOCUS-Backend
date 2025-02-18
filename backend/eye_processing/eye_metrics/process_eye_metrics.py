@@ -14,18 +14,18 @@ eye_movement_detector = FixationSaccadeDetector()
 
 def process_eye(frame, verbose=0):
     frame = cv2.flip(frame, 1)
-    face_detected, left_eye, right_eye, normalised_eye_speed, yaw, pitch, roll = face_processor.process_face(frame)
+    face_detected, left_eye, right_eye, normalised_eye_speed, yaw, pitch, roll, diagnostic_frame = face_processor.process_face(frame)
     focus = False
 
     if face_detected == 0:
-        return face_detected, None, None, None, None, None, None, None, None, None, focus
+        return face_detected, None, None, None, None, None, None, None, None, focus, diagnostic_frame
 
     blink_detected, avg_ear = blink_processor.process_blink(left_eye, right_eye)
     
     print(normalised_eye_speed)
 
     if (normalised_eye_speed > 0.25 or (abs(yaw) > 25 or abs(pitch) > 30)):
-        return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, None, None, focus
+        return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, None, None, focus, diagnostic_frame
     
     focus = True
     left_centre, right_centre = None, None
@@ -44,5 +44,5 @@ def process_eye(frame, verbose=0):
             iris_processor._display_images_in_grid(left_grey, left_colour, right_grey, right_colour)
         
 
-    return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus
+    return face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, diagnostic_frame
 
