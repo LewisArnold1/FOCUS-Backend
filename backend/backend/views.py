@@ -20,6 +20,8 @@ class LoginView(TokenObtainPairView):
             print(max_session_id + 1)
             # Call the parent method to generate and return the token
             response = super().post(request, *args, **kwargs)
+            response.data['session_id'] = new_session.session_id
+            
             return response
         else:
             raise ValidationError("Invalid credentials")
