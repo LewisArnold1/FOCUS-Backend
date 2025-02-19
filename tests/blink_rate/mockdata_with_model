@@ -7,23 +7,13 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Input
 from tensorflow.keras.optimizers import Adam
 from statsmodels.tsa.arima.model import ARIMA
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
 from sklearn.preprocessing import PolynomialFeatures
 
-# Generate noisy decreasing blink rate + complex reference curve
+# Generate noisy decreasing blink rate
 def generate_random_decreasing_curve(duration=10, sample_rate=10, initial_blink_rate=20):
     time = [i / sample_rate for i in range(duration * sample_rate)]
     
-    # Complex reference curve: multi-phase decay + sinusoidal variation
-    k1, k2, k3 = 0.15, 0.3, 0.2  # Different decay rates
-    C = initial_blink_rate * 0.4  
-    A = initial_blink_rate * 0.2  
-    f = 1.5  
-
-    reference_curve = [initial_blink_rate * math.exp(-k1 * t) + 
-                       C * math.exp(-k2 * t) + 
-                       A * math.sin(f * t) * math.exp(-k3 * t) for t in time]
-
     # Generate noisy blink rate
     blink_rate = [0] * len(time)
     blink_rate[0] = initial_blink_rate
@@ -34,7 +24,7 @@ def generate_random_decreasing_curve(duration=10, sample_rate=10, initial_blink_
         blink_rate[i] += random.gauss(0, 1)  
         blink_rate[i] = max(min(blink_rate[i], 20), 0)
     
-    return time, blink_rate, reference_curve
+    return time, blink_rate
 
 # ARIMA Prediction
 def predict_arima(blink_data, steps=1):
@@ -50,17 +40,19 @@ def predict_arima(blink_data, steps=1):
         print(f"ARIMA error: {e}")
         return [max(blink_data[-1], 0)]
 
-# Polynomial Regression Prediction
-def predict_polynomial(blink_data, degree=3, prediction_steps=40):
+# Ridge Regression for better Polynomial Fit
+def predict_ridge_polynomial(blink_data, degree=4, prediction_steps=40, alpha=1.0):
     X = [[i] for i in range(len(blink_data))]
     y = blink_data
     
     poly = PolynomialFeatures(degree)
     X_poly = poly.fit_transform(X)
     
-    model = LinearRegression()
+    # Apply Ridge Regression to avoid overfitting
+    model = Ridge(alpha=alpha)
     model.fit(X_poly, y)
     
+    # Make predictions for the next steps
     X_pred = [[i] for i in range(len(blink_data), len(blink_data) + prediction_steps)]
     X_pred_poly = poly.transform(X_pred)
     
@@ -106,7 +98,7 @@ def predict_lstm(blink_data, prediction_steps=40, look_back=10):
 
 
 # Generate Data
-time, blink_rate, reference_curve = generate_random_decreasing_curve(duration=10, sample_rate=10)
+time, blink_rate = generate_random_decreasing_curve(duration=10, sample_rate=10)
 
 # Define the split time (first 6 minutes for training, last 4 minutes for prediction)
 train_duration = 6
@@ -116,13 +108,29 @@ train_samples = train_duration * 10  # 10 samples per minute
 train_blink_rate = blink_rate[:train_samples]
 train_time = time[:train_samples]
 
-# Predict the next 4 minutes using ARIMA, Polynomial Regression, and LSTM
+# Predict the next 4 minutes using ARIMA, Ridge Polynomial Regression, and LSTM
 arima_predictions = predict_arima(train_blink_rate, steps=40)
-poly_predictions = predict_polynomial(train_blink_rate, degree=3, prediction_steps=40)
+ridge_poly_predictions = predict_ridge_polynomial(train_blink_rate, degree=4, prediction_steps=40, alpha=1.0)  # Ridge Regression
 lstm_predictions = predict_lstm(train_blink_rate, prediction_steps=40)
 
 # Create time for the prediction period (next 4 minutes)
 prediction_time = time[train_samples:train_samples + 40]
+
+# Polynomial Regression for Line of Best Fit (for the entire 10 minutes)
+def polynomial_best_fit(time, blink_rate, degree=4):
+    model = PolynomialFeatures(degree)
+    X_poly = model.fit_transform(np.array(time).reshape(-1, 1))
+    
+    # Apply linear regression to the polynomial features
+    lin_reg = Ridge()
+    lin_reg.fit(X_poly, blink_rate)
+    
+    blink_rate_pred = lin_reg.predict(X_poly)
+    
+    return blink_rate_pred
+
+# Generate the best fit line for the noisy data (for the entire 10 minutes)
+polynomial_fit_full = polynomial_best_fit(time, blink_rate, degree=4)
 
 # Visualization
 plt.figure(figsize=(12, 8))
@@ -130,24 +138,24 @@ plt.figure(figsize=(12, 8))
 # Plot Blink Rate vs Predictions
 plt.subplot(2, 1, 1)
 plt.plot(time, blink_rate, label='Noisy Blink Rate', color='blue', alpha=0.7)
-plt.plot(time, reference_curve, label='Complex Reference Curve', color='red', linestyle='dashed')
 plt.plot(prediction_time, arima_predictions, label='ARIMA Predictions', color='green', linestyle='dotted')
-plt.plot(prediction_time, poly_predictions, label='Polynomial Regression Predictions', color='purple', linestyle='dashdot')
+plt.plot(prediction_time, ridge_poly_predictions, label='Ridge Polynomial Regression Predictions', color='purple', linestyle='dashdot')
 plt.plot(prediction_time, lstm_predictions, label='LSTM Predictions', color='orange', linestyle='solid')
+plt.plot(time, polynomial_fit_full, label='Polynomial Best Fit (Entire Data)', color='red', linestyle='--')  # Polynomial fit for entire data
 plt.xlabel('Time (minutes)')
 plt.ylabel('Blink Rate (blinks per minute)')
 plt.title('Blink Rate vs Predictions (First 6 Minutes for Training)')
 plt.legend()
 
-# Compute MAE (Mean Absolute Error) for ARIMA, Polynomial, and LSTM Predictions
-mae_arima = [abs(pred - reference_curve[i+train_samples]) for i, pred in enumerate(arima_predictions)]
-mae_poly = [abs(pred - reference_curve[i+train_samples]) for i, pred in enumerate(poly_predictions)]
-mae_lstm = [abs(pred - reference_curve[i+train_samples]) for i, pred in enumerate(lstm_predictions)]
+# Compute MAE (Mean Absolute Error) between the noisy blink rate and the predictions
+mae_arima = [abs(pred - blink_rate[i+train_samples]) for i, pred in enumerate(arima_predictions)]
+mae_poly = [abs(pred - blink_rate[i+train_samples]) for i, pred in enumerate(ridge_poly_predictions)]
+mae_lstm = [abs(pred - blink_rate[i+train_samples]) for i, pred in enumerate(lstm_predictions)]
 
 # Plot Error Over Time (MAE)
 plt.subplot(2, 1, 2)
 plt.plot(prediction_time, mae_arima, label='ARIMA Error (MAE)', color='green')
-plt.plot(prediction_time, mae_poly, label='Polynomial Regression Error (MAE)', color='purple')
+plt.plot(prediction_time, mae_poly, label='Ridge Polynomial Error (MAE)', color='purple')
 plt.plot(prediction_time, mae_lstm, label='LSTM Error (MAE)', color='orange')
 plt.xlabel('Time (minutes)')
 plt.ylabel('Error (MAE)')
