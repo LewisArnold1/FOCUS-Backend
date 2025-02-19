@@ -162,11 +162,10 @@ def test_auto(ear_filename,output_filename):
     eyes_closed_4 = []
     eyes_closed_5 = []
     for i in range(len(ear_list)):
-        n = 30 # Require n frames to create & apply threshold
-        # calculate max from last n frames
-        if len(ear_list[:i]) >= n:
-            # calculate max from last n frames
-            max  = sum(sorted(ear_list, reverse=True)[:n])/n
+        # calculate max from last 30 frames
+        if len(ear_list[:i]) >= 30:
+            # calculate max from largest 10 EARs in the last 30 frames
+            max  = sum(sorted(ear_list, reverse=True)[:10])/10
             # calculate different thresholds
             threshold_1 = max*0.4
             threshold_2 = max*0.5
