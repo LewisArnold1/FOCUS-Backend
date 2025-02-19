@@ -235,4 +235,4 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
 # main(TEST_EARS_FILENAMES[9:12], TEST_TIMESTAMPS_FILENAMES[9:12], TEST_LABELS_FILENAMES[9:12])
 
 # Test with Soniya low fps ~ 7 fps
-# main(TEST_EARS_FILENAMES[9], TEST_TIMESTAMPS_FILENAMES[9], TEST_LABELS_FILENAMES[9]) - change numbers
+# main(TEST_EARS_FILENAMES[12:15], TEST_TIMESTAMPS_FILENAMES[12:15], TEST_LABELS_FILENAMES[12:15]) - currently only one exists
