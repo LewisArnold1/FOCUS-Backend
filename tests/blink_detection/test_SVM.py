@@ -18,11 +18,14 @@ TEST_EARS_5 = "mahie_test_2_ears.csv"
 TEST_EARS_6 = "mahie_test_3_ears.csv"
 TEST_EARS_7 = "soniya_test_1_ears.csv"
 TEST_EARS_8 = "soniya_test_2_ears.csv"
-TEST_EARS_9 = "soniya_test_3_low_fps_ears.csv"
+TEST_EARS_9 = "soniya_test_3_ears.csv"
 TEST_EARS_10 = "mahie_test_4_low_fps_ears.csv"
 TEST_EARS_11 = "mahie_test_5_low_fps_ears.csv"
 TEST_EARS_12 = "mahie_test_6_low_fps_ears.csv"
-TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3, TEST_EARS_4, TEST_EARS_5, TEST_EARS_6, TEST_EARS_7, TEST_EARS_8, TEST_EARS_9, TEST_EARS_10, TEST_EARS_11, TEST_EARS_12])
+TEST_EARS_13 = "soniya_test_4_low_fps_ears.csv"
+TEST_EARS_14 = "soniya_test_5_low_fps_ears.csv"
+TEST_EARS_15 = "soniya_test_6_low_fps_ears.csv"
+TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3, TEST_EARS_4, TEST_EARS_5, TEST_EARS_6, TEST_EARS_7, TEST_EARS_8, TEST_EARS_9, TEST_EARS_10, TEST_EARS_11, TEST_EARS_12, TEST_EARS_13, TEST_EARS_14, TEST_EARS_15])
 
 # Files for testing timestamps
 TEST_TIMESTAMPS_1 = "zak_test_3_timestamps.txt"
@@ -33,11 +36,14 @@ TEST_TIMESTAMPS_5 = "mahie_test_2_timestamps.txt"
 TEST_TIMESTAMPS_6 = "mahie_test_3_timestamps.txt"
 TEST_TIMESTAMPS_7 = "soniya_test_1_timestamps.txt"
 TEST_TIMESTAMPS_8 = "soniya_test_2_timestamps.txt"
-TEST_TIMESTAMPS_9 = "soniya_test_3_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_9 = "soniya_test_3_timestamps.txt"
 TEST_TIMESTAMPS_10 = "mahie_test_4_low_fps_timestamps.txt"
 TEST_TIMESTAMPS_11 = "mahie_test_5_low_fps_timestamps.txt"
 TEST_TIMESTAMPS_12 = "mahie_test_6_low_fps_timestamps.txt"
-TEST_TIMESTAMPS_FILENAMES = np.array([TEST_TIMESTAMPS_1, TEST_TIMESTAMPS_2, TEST_TIMESTAMPS_3, TEST_TIMESTAMPS_4, TEST_TIMESTAMPS_5, TEST_TIMESTAMPS_6, TEST_TIMESTAMPS_7, TEST_TIMESTAMPS_8, TEST_TIMESTAMPS_9, TEST_TIMESTAMPS_10, TEST_TIMESTAMPS_11, TEST_TIMESTAMPS_12])
+TEST_TIMESTAMPS_13 = "soniya_test_4_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_14 = "soniya_test_5_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_15 = "soniya_test_6_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_FILENAMES = np.array([TEST_TIMESTAMPS_1, TEST_TIMESTAMPS_2, TEST_TIMESTAMPS_3, TEST_TIMESTAMPS_4, TEST_TIMESTAMPS_5, TEST_TIMESTAMPS_6, TEST_TIMESTAMPS_7, TEST_TIMESTAMPS_8, TEST_TIMESTAMPS_9, TEST_TIMESTAMPS_10, TEST_TIMESTAMPS_11, TEST_TIMESTAMPS_12, TEST_TIMESTAMPS_13, TEST_TIMESTAMPS_14, TEST_TIMESTAMPS_15])
 
 # Files for testing labels
 TEST_LABELS_1 = "zak_test_3_ideal.csv"
@@ -48,11 +54,14 @@ TEST_LABELS_5 = "mahie_test_2_ideal.csv"
 TEST_LABELS_6 = "mahie_test_3_ideal.csv"
 TEST_LABELS_7 = "soniya_test_1_ideal.csv"
 TEST_LABELS_8 = "soniya_test_2_ideal.csv"
-TEST_LABELS_9 = "soniya_test_3_low_fps_ideal.csv"
+TEST_LABELS_9 = "soniya_test_3_ideal.csv"
 TEST_LABELS_10 = "mahie_test_4_low_fps_ideal.csv"
 TEST_LABELS_11 = "mahie_test_5_low_fps_ideal.csv"
 TEST_LABELS_12 = "mahie_test_6_low_fps_ideal.csv"
-TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3, TEST_LABELS_4, TEST_LABELS_5, TEST_LABELS_6, TEST_LABELS_7, TEST_LABELS_8, TEST_LABELS_9, TEST_LABELS_10, TEST_LABELS_11, TEST_LABELS_12])
+TEST_LABELS_13 = "soniya_test_4_low_fps_ideal.csv"
+TEST_LABELS_14 = "soniya_test_5_low_fps_ideal.csv"
+TEST_LABELS_15 = "soniya_test_6_low_fps_ideal.csv"
+TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3, TEST_LABELS_4, TEST_LABELS_5, TEST_LABELS_6, TEST_LABELS_7, TEST_LABELS_8, TEST_LABELS_9, TEST_LABELS_10, TEST_LABELS_11, TEST_LABELS_12, TEST_LABELS_13, TEST_LABELS_14, TEST_LABELS_15])
 
 def load_data(ears_filenames, timestamps_filenames, labels_filenames):
     # Folder with test files
