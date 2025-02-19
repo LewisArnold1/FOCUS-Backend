@@ -26,6 +26,9 @@ class SimpleEyeMetrics(models.Model):
     left_centre = models.JSONField(null=True, blank=True)
     right_centre = models.JSONField(null=True, blank=True)
     focus = models.BooleanField(default=False)
+    left_iris_velocity=models.FloatField(null=True, blank=True)
+    right_iris_velocity=models.FloatField(null=True, blank=True)
+    movement_type=models.CharField(max_length=10, default="fixation")
 
     def __str__(self):
         return f"User: {self.user.username} - Session: {self.session_id} - Video: {self.video_id} - Timestamp: {self.timestamp}"

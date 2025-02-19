@@ -67,14 +67,26 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         data_json = json.loads(text_data)
         frame_data = data_json.get('frame', None)
         timestamp = data_json.get('timestamp', None)  # Extract timestamp
-        x_coordinate_px = data_json.get('xCoordinatePx', None)
-        y_coordinate_px = data_json.get('yCoordinatePx', None)
+        mode = data_json.get('mode', 'reading')  # Default to 'reading' if not provided
 
-        if frame_data:
-            # Process the frame and get the blink count                
-            await self.process_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
+        if mode == "reading":
+            x_coordinate_px = data_json.get('xCoordinatePx', None)
+            y_coordinate_px = data_json.get('yCoordinatePx', None)
 
-    async def process_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px):
+            if frame_data:
+                await self.process_reading_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
+
+        elif mode == "diagnostic":
+            draw_mesh = data_json.get('draw_mesh', False)
+            draw_contours = data_json.get('draw_contours', False)
+            show_axis = data_json.get('show_axis', True)  # Default to True
+            draw_eye = data_json.get('draw_eye', False)
+
+            if frame_data:
+                await self.process_diagnostic_frame(frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye)
+
+
+    async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px):
         try:
             from eye_processing.models import SimpleEyeMetrics, UserSession
             # Decode the base64-encoded image
@@ -82,12 +94,12 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             image = Image.open(BytesIO(image_data))
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-            # Extract eye metrics
-            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus = process_eye(frame)
-
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
+
+            # Extract eye metrics
+            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(frame, timestamp_dt)
 
             max_session_id = await sync_to_async(UserSession.objects.filter(user=self.user).aggregate)(Max('session_id'))
             session_id = max_session_id['session_id__max']
@@ -110,6 +122,9 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 left_centre=left_centre, 
                 right_centre=right_centre,
                 focus=focus,
+                left_iris_velocity=left_iris_velocity,
+                right_iris_velocity=right_iris_velocity, 
+                movement_type=movement_type,
             )
             await sync_to_async(eye_metrics.save)()
 
@@ -117,6 +132,39 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             await self.predict_blink_count()        
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
+
+    async def process_diagnostic_frame(self, frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye):
+        try:
+            # Decode the base64-encoded image
+            image_data = base64.b64decode(frame_data.split(',')[1])
+            image = Image.open(BytesIO(image_data))
+            frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+            # Convert the timestamp from milliseconds to a datetime object
+            timestamp_s = timestamp / 1000
+            timestamp_dt = datetime.fromtimestamp(timestamp_s)
+
+            # Call `process_eye` with visualisation options
+            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
+
+            # Encode the processed frame back to base64
+            _, buffer = cv2.imencode('.jpg', diagnostic_frame)
+            processed_frame_base64 = base64.b64encode(buffer).decode('utf-8')
+
+            # Send processed image back via WebSocket
+            await self.send(text_data=json.dumps({
+            "mode": "diagnostic",
+            "frame": f"data:image/jpeg;base64,{processed_frame_base64}",
+            "face_detected": face_detected,
+            "yaw": yaw,
+            "pitch": pitch,
+            "roll": roll,
+            "eye_speed": normalised_eye_speed
+            }))
+
+        except (base64.binascii.Error, UnidentifiedImageError) as e:
+            print("Error decoding image:", e)
+
             
     async def predict_blink_count(self):
         predicted_blink_count = await sync_to_async(predict_blink_count)(self.user)
