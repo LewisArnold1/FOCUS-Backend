@@ -23,6 +23,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class VideoFrameConsumer(AsyncWebsocketConsumer):
 
+    # total_frames = 0
+
     async def connect(self):
         query_string = self.scope['query_string'].decode('utf-8')
         print("Query string received:", query_string)
@@ -67,6 +69,10 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         frame_data = data_json.get('frame', None)
         timestamp = data_json.get('timestamp', None)  # Extract timestamp
         mode = data_json.get('mode', 'reading')  # Default to 'reading' if not provided
+
+        # self.total_frames = self.total_frames + 1
+        # if(self.total_frames % 30 == 0):
+        #     print("Total Frames: ", self.total_frames)
 
         if mode == "reading":
             x_coordinate_px = data_json.get('xCoordinatePx', None)
@@ -154,10 +160,10 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             "mode": "diagnostic",
             "frame": f"data:image/jpeg;base64,{processed_frame_base64}",
             "face_detected": face_detected,
-            "yaw": yaw,
-            "pitch": pitch,
-            "roll": roll,
-            "eye_speed": normalised_eye_speed
+            "yaw": float(yaw) if yaw != None else None,
+            "pitch": float(pitch) if pitch != None else None,
+            "roll": float(roll) if roll != None else None,
+            "eye_speed": float(normalised_eye_speed) if normalised_eye_speed != None else None,
             }))
 
         except (base64.binascii.Error, UnidentifiedImageError) as e:
