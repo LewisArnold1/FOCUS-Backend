@@ -94,14 +94,13 @@ def test_svm(model, scaler, X_list, y_list):
         
         print(f"Test results for video {i+1}:")
         # print("Accuracy:", accuracy_score(y, y_pred))
-
+        
         cm = confusion_matrix(y, y_pred)
         tn, fp, fn, tp = cm.ravel()
-        print(f"True Positives: {tp}, False Positives: {fp}, True Negatives: {tn}, False Negatives: {fn}")
         precision = tp/(tp+fp)
         recall =  tp/(tp+fn)
         F1_score = 2*precision*recall/(precision+recall)
-        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy_score(y, y_pred):.3f}\n")
+        print(f"TP: {tp}, FP: {fp}, TN: {tn}, FN: {fn}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy_score(y, y_pred):.3f}\n")
         
         # print("Classification Report:\n", classification_report(y, y_pred))
 
@@ -154,7 +153,7 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     print('Training Accuracy:\n')
     test_svm(svm_model, scaler, X_train, y_train)
     
-    # Test accuracy of model on test videos (from ame people)
+    # Test accuracy of model on test videos (from same people)
     print('Test Accuracy:\n')
     test_svm(svm_model, scaler, X_test, y_test)
 
@@ -165,8 +164,8 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     # test_segments(svm_model, scaler, X_test, y_test)
 
     # Save model
-    joblib.dump(svm_model, 'svm_model_2.joblib')
-    joblib.dump(scaler, 'scaler_2.joblib')
+    # joblib.dump(svm_model, 'svm_model_2.joblib')
+    # joblib.dump(scaler, 'scaler_2.joblib')
 
     # 1 is w zak vids
     # 2 is w/o zak vids

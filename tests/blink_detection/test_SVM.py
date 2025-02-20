@@ -160,11 +160,10 @@ def test_svm(model, scaler, X_list, y_list):
 
         cm = confusion_matrix(y, y_pred)
         tn, fp, fn, tp = cm.ravel()
-        print(f"True Positives: {tp}, False Positives: {fp}, True Negatives: {tn}, False Negatives: {fn}")
         precision = tp/(tp+fp)
         recall =  tp/(tp+fn)
         F1_score = 2*precision*recall/(precision+recall)
-        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy_score(y, y_pred):.3f}\n")
+        print(f"TP: {tp}, FP: {fp}, TN: {tn}, FN: {fn}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy_score(y, y_pred):.3f}\n")
         
         # print("Classification Report:\n", classification_report(y, y_pred))
 
@@ -223,10 +222,10 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     return
 
 # Test with participant 2-3 video 3s () - does not include zak vids
-# main(TEST_EARS_FILENAMES[1:3], TEST_TIMESTAMPS_FILENAMES[1:3], TEST_LABELS_FILENAMES[1:3])
+main(TEST_EARS_FILENAMES[1:3], TEST_TIMESTAMPS_FILENAMES[1:3], TEST_LABELS_FILENAMES[1:3])
 
 # Test with mahie ~30 fps
-# main(TEST_EARS_FILENAMES[3:6], TEST_TIMESTAMPS_FILENAMES[3:6], TEST_LABELS_FILENAMES[3:6])
+main(TEST_EARS_FILENAMES[3:6], TEST_TIMESTAMPS_FILENAMES[3:6], TEST_LABELS_FILENAMES[3:6])
 
 # Test with Soniya ~ 19 fps
 # main(TEST_EARS_FILENAMES[6:9], TEST_TIMESTAMPS_FILENAMES[6:9], TEST_LABELS_FILENAMES[6:9])
