@@ -84,7 +84,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         elif mode == "diagnostic":
             draw_mesh = data_json.get('draw_mesh', False)
             draw_contours = data_json.get('draw_contours', False)
-            show_axis = data_json.get('show_axis', True)  # Default to True
+            show_axis = data_json.get('show_axis', False) 
             draw_eye = data_json.get('draw_eye', False)
 
             if frame_data:
