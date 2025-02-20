@@ -13,11 +13,11 @@ IDEAL_FRAMES_FILENAME = "firstname_test_x_ideal.csv"
 EAR_FILENAME = "firstname_test_x_ears.csv"
 OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"  # blinktype =  manual / auto / cnn
 
-VIDEO_FILENAME = "zak_test_1.avi"
-TIMESTAMP_FILENAME = "zak_test_1_timestamps.txt"
-IDEAL_FRAMES_FILENAME = "waasiq_test_3_ideal.csv"
-EAR_FILENAME = "zak_test_1_ears.csv"
-OUTPUT_FILENAME = "waasiq_test_3_auto.csv" # Manual: 25% | 50% | 75%, Auto: 0.4 | ... | 0.8
+VIDEO_FILENAME = "mahie_test_3.avi"
+TIMESTAMP_FILENAME = "mahie_test_3_timestamps.txt"
+IDEAL_FRAMES_FILENAME = "mahie_test_3_ideal.csv"
+EAR_FILENAME = "mahie_test_3_ears.csv"
+OUTPUT_FILENAME = "mahie_test_3_auto.csv" # Manual: 25% | 50% | 75%, Auto: 0.4 | ... | 0.8
 
 # Import the function to test
 from process_eye_metrics import process_eye_manual
@@ -160,52 +160,45 @@ def test_auto(ear_filename,output_filename):
     eyes_closed_2 = []
     eyes_closed_3 = []
     eyes_closed_4 = []
-    eyes_closed_5 = []
     for i in range(len(ear_list)):
         # calculate max from last 30 frames
         if len(ear_list[:i]) >= 30:
             # calculate max from largest 10 EARs in the last 30 frames
             max  = sum(sorted(ear_list, reverse=True)[:10])/10
             # calculate different thresholds
-            threshold_1 = max*0.4
-            threshold_2 = max*0.5
-            threshold_3 = max*0.6
-            threshold_4 = max*0.7
-            threshold_5 = max*0.8
+            threshold_1 = max*0.5
+            threshold_2 = max*0.6
+            threshold_3 = max*0.7
+            threshold_4 = max*0.8
             # Compare this frame with thresholds
             if ear_list[i] < threshold_1: # change as appropriate
                 eyes_closed_1.append(1)
                 eyes_closed_2.append(1)
                 eyes_closed_3.append(1)
                 eyes_closed_4.append(1)
-                eyes_closed_5.append(1)
             elif ear_list[i] < threshold_2:
                 eyes_closed_1.append(0)
                 eyes_closed_2.append(1)
                 eyes_closed_3.append(1)
                 eyes_closed_4.append(1)
-                eyes_closed_5.append(1)
             elif ear_list[i] < threshold_3:
                 eyes_closed_1.append(0)
                 eyes_closed_2.append(0)
                 eyes_closed_3.append(1)
                 eyes_closed_4.append(1)
-                eyes_closed_5.append(1)
             elif ear_list[i] < threshold_4:
                 eyes_closed_1.append(0)
                 eyes_closed_2.append(0)
                 eyes_closed_3.append(0)
                 eyes_closed_4.append(1)
-                eyes_closed_5.append(1)
             else:
                 eyes_closed_1.append(0)
                 eyes_closed_2.append(0)
                 eyes_closed_3.append(0)
                 eyes_closed_4.append(0)
-                eyes_closed_5.append(1)
 
     # Save to CSV file
-    data = zip(eyes_closed_1, eyes_closed_2, eyes_closed_3, eyes_closed_4, eyes_closed_5) # five columns
+    data = zip(eyes_closed_1, eyes_closed_2, eyes_closed_3, eyes_closed_4) # 4 columns
     with open(output_path, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(data)
@@ -281,12 +274,12 @@ def calculate_metrics(ideal, eyes_closed_output):
     true_negatives = np.sum((eyes_closed_output == 0) & (ideal == 0))
     false_negatives = np.sum((eyes_closed_output == 0) & (ideal == 1))
             
-    print(f"TP: {true_positives}, FP: {false_positives}, TN: {true_negatives}, FN: {false_negatives}")
+    
     precision = true_positives/(true_positives+false_positives)
     recall =  true_positives/(true_positives+false_negatives)
     F1_score = 2*precision*recall/(precision+recall)
     overall_accuracy = (true_positives+true_negatives)/len(ideal)
-    print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
+    print(f"TP: {true_positives}, FP: {false_positives}, TN: {true_negatives}, FN: {false_negatives}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
     return
 
 def manual_metrics(ideal_filename, output_filename):
@@ -386,18 +379,16 @@ def auto_metrics(ideal_filename, output_filename):
 
     # Retrieve auto output & convert to __ numpy arrays
     eyes_closed_output = pd.read_csv(output_path, header=None) 
-    eyes_closed_1 = eyes_closed_output.iloc[:, 0].to_numpy() # 0.4
-    eyes_closed_2 = eyes_closed_output.iloc[:, 1].to_numpy() # 0.5
-    eyes_closed_3 = eyes_closed_output.iloc[:, 2].to_numpy() # 0.6
-    eyes_closed_4 = eyes_closed_output.iloc[:, 3].to_numpy() # 0.7
-    eyes_closed_5 = eyes_closed_output.iloc[:, 4].to_numpy() # 0.8
+    eyes_closed_1 = eyes_closed_output.iloc[:, 0].to_numpy() # 0.5
+    eyes_closed_2 = eyes_closed_output.iloc[:, 1].to_numpy() # 0.6
+    eyes_closed_3 = eyes_closed_output.iloc[:, 2].to_numpy() # 0.7
+    eyes_closed_4 = eyes_closed_output.iloc[:, 3].to_numpy() # 0.8
 
     # Calculate metrics
     calculate_metrics(eyes_closed_ideal, eyes_closed_1)
     calculate_metrics(eyes_closed_ideal, eyes_closed_2)
     calculate_metrics(eyes_closed_ideal, eyes_closed_3)
     calculate_metrics(eyes_closed_ideal, eyes_closed_4)
-    calculate_metrics(eyes_closed_ideal, eyes_closed_5)    
 
     return
 
