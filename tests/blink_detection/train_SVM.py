@@ -11,39 +11,28 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 WINDOW_SIZE = 10 # 10 frames before & 10 frames after
 
 # Files for training data
-TRAIN_EARS_1 = "zak_test_1_ears.csv"
-TRAIN_EARS_2 = "zak_test_2_ears.csv"
-TRAIN_EARS_3 = "anaya_test_1_ears.csv"
-TRAIN_EARS_4 = "anaya_test_2_ears.csv"
-TRAIN_EARS_5 = "waasiq_test_1_ears.csv"
-TRAIN_EARS_6 = "waasiq_test_2_ears.csv"
-TRAIN_EARS_FILENAMES = np.array([TRAIN_EARS_1, TRAIN_EARS_2, TRAIN_EARS_3, TRAIN_EARS_4, TRAIN_EARS_5, TRAIN_EARS_6])
-TRAIN_EARS_FILENAMES = TRAIN_EARS_FILENAMES[-4:]
-
+TRAIN_EARS_1 = "anaya_test_1_ears.csv"
+TRAIN_EARS_2 = "anaya_test_2_ears.csv"
+TRAIN_EARS_3 = "waasiq_test_1_ears.csv"
+TRAIN_EARS_4 = "waasiq_test_2_ears.csv"
+TRAIN_EARS_FILENAMES = np.array([TRAIN_EARS_1, TRAIN_EARS_2, TRAIN_EARS_3, TRAIN_EARS_4])
 
 # Files for training labels
-TRAIN_LABELS_1 = "zak_test_1_ideal.csv"
-TRAIN_LABELS_2 = "zak_test_2_ideal.csv"
-TRAIN_LABELS_3 = "anaya_test_1_ideal.csv"
-TRAIN_LABELS_4 = "anaya_test_2_ideal.csv"
-TRAIN_LABELS_5 = "waasiq_test_1_ideal.csv"
-TRAIN_LABELS_6 = "waasiq_test_2_ideal.csv"
-TRAIN_LABELS_FILENAMES = np.array([TRAIN_LABELS_1, TRAIN_LABELS_2, TRAIN_LABELS_3, TRAIN_LABELS_4, TRAIN_LABELS_5, TRAIN_LABELS_6])
-TRAIN_LABELS_FILENAMES = TRAIN_LABELS_FILENAMES[-4:]
+TRAIN_LABELS_1 = "anaya_test_1_ideal.csv"
+TRAIN_LABELS_2 = "anaya_test_2_ideal.csv"
+TRAIN_LABELS_3 = "waasiq_test_1_ideal.csv"
+TRAIN_LABELS_4 = "waasiq_test_2_ideal.csv"
+TRAIN_LABELS_FILENAMES = np.array([TRAIN_LABELS_1, TRAIN_LABELS_2, TRAIN_LABELS_3, TRAIN_LABELS_4])
 
 # Files for testing data
-TEST_EARS_1 = "zak_test_3_ears.csv"
-TEST_EARS_2 = "anaya_test_3_ears.csv"
-TEST_EARS_3 = "waasiq_test_3_ears.csv"
-TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3])
-TEST_EARS_FILENAMES = TEST_EARS_FILENAMES[-2:]
+TEST_EARS_1 = "anaya_test_3_ears.csv"
+TEST_EARS_2 = "waasiq_test_3_ears.csv"
+TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2])
 
 # Files for testing labels
-TEST_LABELS_1 = "zak_test_3_ideal.csv"
-TEST_LABELS_2 = "anaya_test_3_ideal.csv"
-TEST_LABELS_3 = "waasiq_test_3_ideal.csv"
-TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3])
-TEST_LABELS_FILENAMES = TEST_LABELS_FILENAMES[-2:]
+TEST_LABELS_1 = "anaya_test_3_ideal.csv"
+TEST_LABELS_2 = "waasiq_test_3_ideal.csv"
+TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2])
 
 def load_data(ears_filenames, labels_filenames):
     # Folder with test files
@@ -94,7 +83,7 @@ def test_svm(model, scaler, X_list, y_list):
         
         print(f"Test results for video {i+1}:")
         # print("Accuracy:", accuracy_score(y, y_pred))
-        
+
         cm = confusion_matrix(y, y_pred)
         tn, fp, fn, tp = cm.ravel()
         precision = tp/(tp+fp)
