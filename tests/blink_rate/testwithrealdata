@@ -1,0 +1,186 @@
+import csv
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Input
+from tensorflow.keras.optimizers import Adam
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import PolynomialFeatures
+from datetime import datetime
+
+# Load real blink data without pandas
+file_path = "blink_rate_data.csv"
+
+timestamps = []
+blink_data = []
+
+with open(file_path, "r") as file:
+    reader = csv.reader(file)
+    header = next(reader)  # Skip the header
+    print(f"CSV Header: {header}")  # Debugging
+
+    for row in reader:
+        print(f"Read Row: {row}")  # Debugging
+        
+        if len(row) != 2 or not row[0].strip() or not row[1].strip():
+            print(f"Skipping malformed row: {row}")  # Debugging
+            continue  # Skip malformed rows
+
+        # Parse timestamp safely (adjusted for full datetime)
+        try:
+            time_obj = datetime.strptime(row[0], "%H:%M:%S")  # Adjusted format
+        except ValueError:
+            print(f"Skipping invalid timestamp: {row[0]}")  # Debugging
+            continue  # Skip invalid timestamps
+
+        # Convert timestamp to seconds since start
+        if not timestamps:
+            start_time = time_obj  # Store the first timestamp
+        seconds_since_start = (time_obj - start_time).total_seconds()
+
+        # Parse blink count safely
+        try:
+            blink_count = int(row[1])
+        except ValueError:
+            blink_count = 0  # Default to 0 if invalid
+            print(f"Skipping invalid blink count: {row[1]}")  # Debugging
+
+        timestamps.append(seconds_since_start)
+        blink_data.append(blink_count)
+
+# Ensure data is available
+if not blink_data:
+    print("Error: No valid blink data found. Check input file format.")
+    print(f"Timestamps: {timestamps}")
+    print(f"Blink Data: {blink_data}")
+    exit()
+
+# Aggregate duplicate timestamps (take max blink count per second)
+unique_timestamps = []
+aggregated_blinks = []
+prev_time = None
+
+for i, time in enumerate(timestamps):
+    if time == prev_time:
+        aggregated_blinks[-1] = max(aggregated_blinks[-1], blink_data[i])  # Take max value
+    else:
+        unique_timestamps.append(time)
+        aggregated_blinks.append(blink_data[i])
+    prev_time = time
+
+# Convert lists to numpy arrays
+time_series = np.array(unique_timestamps)
+blink_data = np.array(aggregated_blinks)
+
+# --- ARIMA Prediction ---
+def predict_arima(blink_data, steps=5):
+    if len(blink_data) < 5:
+        return [blink_data[-1]] * steps  # Avoid errors by repeating last known value
+    
+    try:
+        model = ARIMA(blink_data, order=(3, 1, 2))
+        model_fit = model.fit()
+        prediction = model_fit.forecast(steps=steps)
+        return np.clip(prediction, 0, 20)
+    except Exception as e:
+        print(f"ARIMA error: {e}")
+        return [blink_data[-1]] * steps
+
+# --- Ridge Polynomial Regression ---
+def predict_ridge_polynomial(blink_data, degree=4, prediction_steps=5, alpha=1.0):
+    if len(blink_data) < degree:
+        return [blink_data[-1]] * prediction_steps  # Avoid errors if not enough data
+    
+    X = np.arange(len(blink_data)).reshape(-1, 1)
+    y = blink_data
+    
+    poly = PolynomialFeatures(degree)
+    X_poly = poly.fit_transform(X)
+    
+    model = Ridge(alpha=alpha)
+    model.fit(X_poly, y)
+    
+    X_pred = np.arange(len(blink_data), len(blink_data) + prediction_steps).reshape(-1, 1)
+    X_pred_poly = poly.transform(X_pred)
+    
+    return np.clip(model.predict(X_pred_poly), 0, 20)
+
+# --- LSTM Prediction ---
+def predict_lstm(blink_data, prediction_steps=5, look_back=5):
+    if len(blink_data) < look_back + 1:
+        return [blink_data[-1]] * prediction_steps  # Prevent LSTM from breaking
+    
+    X_train, y_train = [], []
+    
+    for i in range(len(blink_data) - look_back):
+        X_train.append(blink_data[i:i+look_back])
+        y_train.append(blink_data[i+look_back])
+    
+    X_train, y_train = np.array(X_train), np.array(y_train)
+    X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+
+    model = Sequential([
+        Input(shape=(look_back, 1)),
+        LSTM(50, return_sequences=True),
+        LSTM(50),
+        Dense(1)
+    ])
+
+    model.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
+    model.fit(X_train, y_train, epochs=10, batch_size=8, verbose=1)
+    
+    last_sequence = np.array(blink_data[-look_back:]).reshape(1, look_back, 1)
+    lstm_predictions = []
+
+    for _ in range(prediction_steps):
+        next_pred = model.predict(last_sequence, verbose=0)[0][0]
+        next_pred = max(0, min(next_pred, 20))
+        lstm_predictions.append(next_pred)
+        last_sequence = np.append(last_sequence[:, 1:, :], [[[next_pred]]], axis=1)
+
+    return lstm_predictions
+
+# Predict future blink rates
+prediction_steps = 5
+arima_predictions = predict_arima(blink_data, steps=prediction_steps)
+ridge_poly_predictions = predict_ridge_polynomial(blink_data, degree=4, prediction_steps=prediction_steps, alpha=1.0)
+lstm_predictions = predict_lstm(blink_data, prediction_steps=prediction_steps)
+
+# Print predictions for debugging
+print("ARIMA Predictions:", arima_predictions)
+print("Ridge Polynomial Predictions:", ridge_poly_predictions)
+print("LSTM Predictions:", lstm_predictions)
+
+# Time for predictions
+future_time = np.arange(time_series[-1] + 1, time_series[-1] + prediction_steps + 1)
+
+# Ensure full time range is displayed
+plt.figure(figsize=(12, 6))
+
+# Plot actual blink data with full timestamp range
+plt.plot(time_series, blink_data, label="Actual Blink Rate", color="blue", marker="o")
+
+# Plot predictions (adjust future time)
+future_time = np.arange(time_series[-1] + 1, time_series[-1] + prediction_steps + 1)
+
+plt.plot(future_time, arima_predictions, label="ARIMA Prediction", color="green", linestyle="dotted")
+plt.plot(future_time, ridge_poly_predictions, label="Ridge Polynomial Prediction", color="purple", linestyle="dashdot")
+plt.plot(future_time, lstm_predictions, label="LSTM Prediction", color="orange", linestyle="solid")
+
+# Adjust x-axis to show full range (including 10 minutes of data + predictions)
+full_time = np.concatenate([time_series, future_time])  # Combine the actual and future time
+
+# Format x-axis to show time in minutes/seconds
+plt.xticks(np.arange(0, max(full_time), step=60), labels=[f"{int(t // 60)}:{int(t % 60):02d}" for t in np.arange(0, max(full_time), step=60)])
+
+# Add labels, title, and legend
+plt.xlabel("Time (Minutes:Seconds)")
+plt.ylabel("Blink Rate")
+plt.title("Blink Rate Predictions Over Time")
+plt.legend()
+
+# Show the graph
+plt.show()
+
