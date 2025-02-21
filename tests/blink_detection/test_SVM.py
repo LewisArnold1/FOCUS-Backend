@@ -210,8 +210,8 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     # Path to load model
     script_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(script_dir, "SVM_models")
-    model_path = os.path.join(models_dir, 'svm_model_1.joblib')
-    scaler_path = os.path.join(models_dir, 'scaler_1.joblib')
+    model_path = os.path.join(models_dir, 'svm_model_3.joblib')
+    scaler_path = os.path.join(models_dir, 'scaler_3.joblib')
 
     # Load model
     svm_model = joblib.load(model_path)
@@ -227,16 +227,16 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     
     return
 
-# Test with participant 2-3 video 3s () - does not include zak vids
-main(TEST_EARS_FILENAMES[1:3], TEST_TIMESTAMPS_FILENAMES[1:3], TEST_LABELS_FILENAMES[1:3])
+# Test on training data - participants 1 & 2 video 3s
+# ADD HERE
 
-# Test with mahie ~30 fps
-main(TEST_EARS_FILENAMES[3:6], TEST_TIMESTAMPS_FILENAMES[3:6], TEST_LABELS_FILENAMES[3:6])
+# Test on testing data: participant 1 & 2 video 3s + participant 3 all videos
+main(TEST_EARS_FILENAMES[1:6], TEST_TIMESTAMPS_FILENAMES[1:6], TEST_LABELS_FILENAMES[1:6])
 
-# Test with Soniya ~ 19 fps
+# Test with participant 4 (Soniya ~ 19 fps)
 # main(TEST_EARS_FILENAMES[6:9], TEST_TIMESTAMPS_FILENAMES[6:9], TEST_LABELS_FILENAMES[6:9])
 
-# Test with mahie low fps (17,14,17)
+# Test with participant 3 low fps (mahie 17,14,17)
 # main(TEST_EARS_FILENAMES[9:12], TEST_TIMESTAMPS_FILENAMES[9:12], TEST_LABELS_FILENAMES[9:12])
 
 # Test with Soniya low fps ~ 7 fps
