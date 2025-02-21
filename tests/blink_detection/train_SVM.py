@@ -119,7 +119,7 @@ def test_svm_overall(model, scaler, X_list, y_list):
     recall =  TP/(TP+FN)
     F1_score = 2*precision*recall/(precision+recall)
     accuracy = (TP + TN)/(TP+FP+TN+FP)
-    print(f"TP: {tp}, FP: {fp}, TN: {tn}, FN: {fn}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy:.3f}\n")
+    print(f"TP: {TP}, FP: {FP}, TN: {TN}, FN: {FN}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy:.3f}\n")
 
 def test_segments(model, scaler, X_list, y_list):
     num_segments = 12
@@ -164,7 +164,7 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     X_test, y_test = create_feature_matrices(test_ear_values, test_labels, window_size)
 
     # Set hyperparameters
-    C = 1
+    C = 0.001
     W = {0:1, 1:1}
 
     # Train model
@@ -179,8 +179,16 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     5 is C=1, W=1:3
     6 is C=1, W=1:3.5
     7 is C=1, W=1:4
-    ...
-    XX is C=, W=
+
+    Changing C:
+    8 is C=10, W=1:1
+    9 is C=100, W=1:1
+    10 is C=1000, W=1:1
+    11 is C=0.1, W=1:1
+    12 is C=0.01, W=1:1
+    13 is C=0.001, W=1:1
+
+    Tune SVM:
     '''
 
     # # Test accuracy of model on each of the training videos
@@ -208,12 +216,13 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     # Path to save model - change filenames for each iteration as appropriate
     script_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(script_dir, "SVM_models")
-    model_path = os.path.join(models_dir, 'svm_model_1.joblib')
-    scaler_path = os.path.join(models_dir, 'scaler_1.joblib')
+    model_path = os.path.join(models_dir, 'svm_model_13.joblib')
+    scaler_path = os.path.join(models_dir, 'scaler_13.joblib')
 
     # Save model
     joblib.dump(svm_model, model_path)
     joblib.dump(scaler, scaler_path)
+    print(C)
     print(W)
     print('Model Saved')
     
