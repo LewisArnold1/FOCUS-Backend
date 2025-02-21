@@ -164,8 +164,8 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     X_test, y_test = create_feature_matrices(test_ear_values, test_labels, window_size)
 
     # Set hyperparameters
-    C = 0.001
-    W = {0:1, 1:1}
+    C = 0.01
+    W = {0:1, 1:2}
 
     # Train model
     svm_model, scaler = train_svm(X_train, y_train, C, W)
@@ -188,7 +188,27 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     12 is C=0.01, W=1:1
     13 is C=0.001, W=1:1
 
-    Tune SVM:
+    deciding best W - is it only test that matters, cos then take 1:2, if both take 1:3
+
+    Tune C with high W:
+    5  is C=1, W=1:3
+    14 is C=0.5, W=1:3
+    15 is C=0.1, W=1:3
+    16 is C=0.05, W=1:3
+    17 is C=0.01, W=1:3
+    18 is C=10, W=1:3
+    19 is C=100, W=1:3
+
+    Tune C with best? W:
+    3  is C=1, W=1:2
+    20 is C=0.5, W=1:2
+    21 is C=0.1, W=1:2
+    22 is C=0.05, W=1:2
+    23 is C=0.01, W=1:2
+
+
+    24 is C=0.025, W=1:2
+
     '''
 
     # # Test accuracy of model on each of the training videos
@@ -216,8 +236,8 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     # Path to save model - change filenames for each iteration as appropriate
     script_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(script_dir, "SVM_models")
-    model_path = os.path.join(models_dir, 'svm_model_13.joblib')
-    scaler_path = os.path.join(models_dir, 'scaler_13.joblib')
+    model_path = os.path.join(models_dir, 'svm_model_23.joblib')
+    scaler_path = os.path.join(models_dir, 'scaler_23.joblib')
 
     # Save model
     joblib.dump(svm_model, model_path)
