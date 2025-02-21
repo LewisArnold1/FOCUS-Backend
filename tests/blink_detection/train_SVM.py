@@ -27,12 +27,18 @@ TRAIN_LABELS_FILENAMES = np.array([TRAIN_LABELS_1, TRAIN_LABELS_2, TRAIN_LABELS_
 # Files for testing data
 TEST_EARS_1 = "anaya_test_3_ears.csv"
 TEST_EARS_2 = "waasiq_test_3_ears.csv"
-TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2])
+TEST_EARS_3 = "mahie_test_1_ears.csv"
+TEST_EARS_4 = "mahie_test_2_ears.csv"
+TEST_EARS_5 = "mahie_test_3_ears.csv"
+TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3, TEST_EARS_4, TEST_EARS_5])
 
 # Files for testing labels
 TEST_LABELS_1 = "anaya_test_3_ideal.csv"
 TEST_LABELS_2 = "waasiq_test_3_ideal.csv"
-TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2])
+TEST_LABELS_3 = "mahie_test_1_ideal.csv"
+TEST_LABELS_4 = "mahie_test_2_ideal.csv"
+TEST_LABELS_5 = "mahie_test_3_ideal.csv"
+TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3, TEST_LABELS_4, TEST_LABELS_5])
 
 def load_data(ears_filenames, labels_filenames):
     # Folder with test files
@@ -62,7 +68,7 @@ def create_feature_matrices(ear_values_lists, labels_lists, window_size):
         y.append(y_video)
     return X, y
 
-def train_svm(X, y):
+def train_svm(X, y, C, W):
     X_combined = np.vstack(X) # Stack predictors
     y_combined = np.hstack(y) # Stack labels
     
@@ -71,12 +77,12 @@ def train_svm(X, y):
     X_scaled = scaler.fit_transform(X_combined)
 
     # Fit linear SVM model - introduce weight to prioritise closed eyes being detected
-    svm_model = SVC(kernel='linear', C=1,  class_weight={0: 1, 1:1.75})
+    svm_model = SVC(kernel='linear', C=C,  class_weight=W)
     svm_model.fit(X_scaled, y_combined)
     
     return svm_model, scaler
 
-def test_svm(model, scaler, X_list, y_list):
+def test_svm_videos(model, scaler, X_list, y_list):
     for i, (X, y) in enumerate(zip(X_list, y_list)):
         X_scaled = scaler.transform(X)
         y_pred = model.predict(X_scaled)
@@ -90,8 +96,30 @@ def test_svm(model, scaler, X_list, y_list):
         recall =  tp/(tp+fn)
         F1_score = 2*precision*recall/(precision+recall)
         print(f"TP: {tp}, FP: {fp}, TN: {tn}, FN: {fn}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy_score(y, y_pred):.3f}\n")
-        
-        # print("Classification Report:\n", classification_report(y, y_pred))
+
+def test_svm_overall(model, scaler, X_list, y_list):
+    TP = 0
+    FP = 0
+    TN = 0
+    FN = 0
+    for i, (X, y) in enumerate(zip(X_list, y_list)):
+        X_scaled = scaler.transform(X)
+        y_pred = model.predict(X_scaled)
+
+        # Add confusion values for this video to total
+        cm = confusion_matrix(y, y_pred)
+        tn, fp, fn, tp = cm.ravel()
+        TP += tp
+        FP += fp
+        TN += tn
+        FN += fn
+
+    # Calculate metrics using confusion values from all vids combined
+    precision = TP/(TP+FP)
+    recall =  TP/(TP+FN)
+    F1_score = 2*precision*recall/(precision+recall)
+    accuracy = (TP + TN)/(TP+FP+TN+FP)
+    print(f"TP: {tp}, FP: {fp}, TN: {tn}, FN: {fn}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy:.3f}\n")
 
 def test_segments(model, scaler, X_list, y_list):
     num_segments = 12
@@ -134,17 +162,42 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     # Create temporal window frames X and corresponding labels y
     X_train, y_train = create_feature_matrices(train_ear_values, train_labels, window_size)
     X_test, y_test = create_feature_matrices(test_ear_values, test_labels, window_size)
-    
-    # Train model
-    svm_model, scaler = train_svm(X_train, y_train)
 
-    # Test accuracy of model on training videos
-    print('Training Accuracy:\n')
-    test_svm(svm_model, scaler, X_train, y_train)
+    # Set hyperparameters
+    C = 1
+    W = {0:1, 1:1}
+
+    # Train model
+    svm_model, scaler = train_svm(X_train, y_train, C, W)
+
+    ''' Model Tuning
+    Increasing Weight (to improve recall)
+    1 is C=1, W=1:1
+    2 is C=1, W=1:1.5
+    3 is C=1, W=1:2
+    4 is C=1, W=1:2.5
+    5 is C=1, W=1:3
+    6 is C=1, W=1:3.5
+    7 is C=1, W=1:4
+    ...
+    XX is C=, W=
+    '''
+
+    # # Test accuracy of model on each of the training videos
+    # print('Metrics for each training video:\n')
+    # test_svm_videos(svm_model, scaler, X_train, y_train)
     
-    # Test accuracy of model on test videos (from same people)
-    print('Test Accuracy:\n')
-    test_svm(svm_model, scaler, X_test, y_test)
+    # # Test accuracy of model on each of the test videos
+    # print('Metrics for each testing video:\n')
+    # test_svm_videos(svm_model, scaler, X_test, y_test)
+
+    # Overall accuracy over both the training videos
+    print('Metrics over all training videos:\n')
+    test_svm_overall(svm_model, scaler, X_train, y_train)
+
+    # Overall accuracy over all the test videos
+    print('Metrics over all testing videos:\n')
+    test_svm_overall(svm_model, scaler, X_test, y_test)
 
     # print('Accuracy with segmented training videos:')
     # test_segments(svm_model, scaler, X_train, y_train)
@@ -152,13 +205,17 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     # print('Accuracy with segmented test videos:')
     # test_segments(svm_model, scaler, X_test, y_test)
 
+    # Path to save model - change filenames for each iteration as appropriate
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    models_dir = os.path.join(script_dir, "SVM_models")
+    model_path = os.path.join(models_dir, 'svm_model_1.joblib')
+    scaler_path = os.path.join(models_dir, 'scaler_1.joblib')
+
     # Save model
-    # joblib.dump(svm_model, 'svm_model_2.joblib')
-    # joblib.dump(scaler, 'scaler_2.joblib')
-
-    # 1 is w zak vids
-    # 2 is w/o zak vids
-
+    joblib.dump(svm_model, model_path)
+    joblib.dump(scaler, scaler_path)
+    print(W)
+    print('Model Saved')
     
     return
 

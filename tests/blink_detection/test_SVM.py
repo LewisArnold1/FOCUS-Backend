@@ -206,10 +206,16 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
 
     # Create temporal window frames X and corresponding labels y
     X_test, y_test = create_feature_matrices(test_ear_values, test_timestamps, test_labels)
-    
+
+    # Path to load model
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    models_dir = os.path.join(script_dir, "SVM_models")
+    model_path = os.path.join(models_dir, 'svm_model_1.joblib')
+    scaler_path = os.path.join(models_dir, 'scaler_1.joblib')
+
     # Load model
-    svm_model = joblib.load('svm_model_2.joblib')
-    scaler = joblib.load('scaler_2.joblib')
+    svm_model = joblib.load(model_path)
+    scaler = joblib.load(scaler_path)
     # 1 is w zak vids
     # 2 is w/o zak vids
     
