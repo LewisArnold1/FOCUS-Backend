@@ -34,59 +34,82 @@ TRAIN_LABELS_3 = "waasiq_test_1_ideal.csv"
 TRAIN_LABELS_4 = "waasiq_test_2_ideal.csv"
 TRAIN_LABELS_FILENAMES = np.array([TRAIN_LABELS_1, TRAIN_LABELS_2, TRAIN_LABELS_3, TRAIN_LABELS_4])
 
+# Files for training outputs
+TRAIN_OUTPUT_1 = "anaya_test_1_svm.csv"
+TRAIN_OUTPUT_2 = "anaya_test_2_svm.csv"
+TRAIN_OUTPUT_3 = "waasiq_test_1_svm.csv"
+TRAIN_OUTPUT_4 = "waasiq_test_2_svm.csv"
+TRAIN_OUTPUT_FILENAMES = np.array([TRAIN_OUTPUT_1, TRAIN_OUTPUT_2, TRAIN_OUTPUT_3, TRAIN_OUTPUT_4])
+
 # Files for testing data
-TEST_EARS_1 = "zak_test_3_ears.csv"
-TEST_EARS_2 = "anaya_test_3_ears.csv"
-TEST_EARS_3 = "waasiq_test_3_ears.csv"
-TEST_EARS_4 = "mahie_test_1_ears.csv"
-TEST_EARS_5 = "mahie_test_2_ears.csv"
-TEST_EARS_6 = "mahie_test_3_ears.csv"
-TEST_EARS_7 = "soniya_test_1_ears.csv"
-TEST_EARS_8 = "soniya_test_2_ears.csv"
-TEST_EARS_9 = "soniya_test_3_ears.csv"
-TEST_EARS_10 = "mahie_test_4_low_fps_ears.csv"
-TEST_EARS_11 = "mahie_test_5_low_fps_ears.csv"
-TEST_EARS_12 = "mahie_test_6_low_fps_ears.csv"
-TEST_EARS_13 = "soniya_test_4_low_fps_ears.csv"
-TEST_EARS_14 = "soniya_test_5_low_fps_ears.csv"
-TEST_EARS_15 = "soniya_test_6_low_fps_ears.csv"
-TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3, TEST_EARS_4, TEST_EARS_5, TEST_EARS_6, TEST_EARS_7, TEST_EARS_8, TEST_EARS_9, TEST_EARS_10, TEST_EARS_11, TEST_EARS_12, TEST_EARS_13, TEST_EARS_14, TEST_EARS_15])
+TEST_EARS_1 = "anaya_test_3_ears.csv"
+TEST_EARS_2 = "waasiq_test_3_ears.csv"
+TEST_EARS_3 = "mahie_test_1_ears.csv"
+TEST_EARS_4 = "mahie_test_2_ears.csv"
+TEST_EARS_5 = "mahie_test_3_ears.csv"
+TEST_EARS_6 = "mahie_test_4_low_fps_ears.csv"
+TEST_EARS_7 = "mahie_test_5_low_fps_ears.csv"
+TEST_EARS_8 = "mahie_test_6_low_fps_ears.csv"
+TEST_EARS_9 = "soniya_test_1_ears.csv"
+TEST_EARS_10 = "soniya_test_2_ears.csv"
+TEST_EARS_11 = "soniya_test_3_ears.csv"
+TEST_EARS_12 = "soniya_test_4_low_fps_ears.csv"
+TEST_EARS_13 = "soniya_test_5_low_fps_ears.csv"
+TEST_EARS_14 = "soniya_test_6_low_fps_ears.csv"
+TEST_EARS_FILENAMES = np.array([TEST_EARS_1, TEST_EARS_2, TEST_EARS_3, TEST_EARS_4, TEST_EARS_5, TEST_EARS_6, TEST_EARS_7, TEST_EARS_8, TEST_EARS_9, TEST_EARS_10, TEST_EARS_11, TEST_EARS_12, TEST_EARS_13, TEST_EARS_14])
 
 # Files for testing timestamps
-TEST_TIMESTAMPS_1 = "zak_test_3_timestamps.txt"
-TEST_TIMESTAMPS_2 = "anaya_test_3_timestamps.txt"
-TEST_TIMESTAMPS_3 = "waasiq_test_3_timestamps.txt"
-TEST_TIMESTAMPS_4 = "mahie_test_1_timestamps.txt"
-TEST_TIMESTAMPS_5 = "mahie_test_2_timestamps.txt"
-TEST_TIMESTAMPS_6 = "mahie_test_3_timestamps.txt"
-TEST_TIMESTAMPS_7 = "soniya_test_1_timestamps.txt"
-TEST_TIMESTAMPS_8 = "soniya_test_2_timestamps.txt"
-TEST_TIMESTAMPS_9 = "soniya_test_3_timestamps.txt"
-TEST_TIMESTAMPS_10 = "mahie_test_4_low_fps_timestamps.txt"
-TEST_TIMESTAMPS_11 = "mahie_test_5_low_fps_timestamps.txt"
-TEST_TIMESTAMPS_12 = "mahie_test_6_low_fps_timestamps.txt"
-TEST_TIMESTAMPS_13 = "soniya_test_4_low_fps_timestamps.txt"
-TEST_TIMESTAMPS_14 = "soniya_test_5_low_fps_timestamps.txt"
-TEST_TIMESTAMPS_15 = "soniya_test_6_low_fps_timestamps.txt"
-TEST_TIMESTAMPS_FILENAMES = np.array([TEST_TIMESTAMPS_1, TEST_TIMESTAMPS_2, TEST_TIMESTAMPS_3, TEST_TIMESTAMPS_4, TEST_TIMESTAMPS_5, TEST_TIMESTAMPS_6, TEST_TIMESTAMPS_7, TEST_TIMESTAMPS_8, TEST_TIMESTAMPS_9, TEST_TIMESTAMPS_10, TEST_TIMESTAMPS_11, TEST_TIMESTAMPS_12, TEST_TIMESTAMPS_13, TEST_TIMESTAMPS_14, TEST_TIMESTAMPS_15])
+TEST_TIMESTAMPS_1 = "anaya_test_3_timestamps.txt"
+TEST_TIMESTAMPS_2 = "waasiq_test_3_timestamps.txt"
+TEST_TIMESTAMPS_3 = "mahie_test_1_timestamps.txt"
+TEST_TIMESTAMPS_4 = "mahie_test_2_timestamps.txt"
+TEST_TIMESTAMPS_5 = "mahie_test_3_timestamps.txt"
+TEST_TIMESTAMPS_6 = "mahie_test_4_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_7 = "mahie_test_5_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_8 = "mahie_test_6_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_9 = "soniya_test_1_timestamps.txt"
+TEST_TIMESTAMPS_10 = "soniya_test_2_timestamps.txt"
+TEST_TIMESTAMPS_11 = "soniya_test_3_timestamps.txt"
+TEST_TIMESTAMPS_12 = "soniya_test_4_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_13 = "soniya_test_5_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_14 = "soniya_test_6_low_fps_timestamps.txt"
+TEST_TIMESTAMPS_FILENAMES = np.array([TEST_TIMESTAMPS_1, TEST_TIMESTAMPS_2, TEST_TIMESTAMPS_3, TEST_TIMESTAMPS_4, TEST_TIMESTAMPS_5, TEST_TIMESTAMPS_6, TEST_TIMESTAMPS_7, TEST_TIMESTAMPS_8, TEST_TIMESTAMPS_9, TEST_TIMESTAMPS_10, TEST_TIMESTAMPS_11, TEST_TIMESTAMPS_12, TEST_TIMESTAMPS_13, TEST_TIMESTAMPS_14])
 
 # Files for testing labels
-TEST_LABELS_1 = "zak_test_3_ideal.csv"
-TEST_LABELS_2 = "anaya_test_3_ideal.csv"
-TEST_LABELS_3 = "waasiq_test_3_ideal.csv"
-TEST_LABELS_4 = "mahie_test_1_ideal.csv"
-TEST_LABELS_5 = "mahie_test_2_ideal.csv"
-TEST_LABELS_6 = "mahie_test_3_ideal.csv"
-TEST_LABELS_7 = "soniya_test_1_ideal.csv"
-TEST_LABELS_8 = "soniya_test_2_ideal.csv"
-TEST_LABELS_9 = "soniya_test_3_ideal.csv"
-TEST_LABELS_10 = "mahie_test_4_low_fps_ideal.csv"
-TEST_LABELS_11 = "mahie_test_5_low_fps_ideal.csv"
-TEST_LABELS_12 = "mahie_test_6_low_fps_ideal.csv"
-TEST_LABELS_13 = "soniya_test_4_low_fps_ideal.csv"
-TEST_LABELS_14 = "soniya_test_5_low_fps_ideal.csv"
-TEST_LABELS_15 = "soniya_test_6_low_fps_ideal.csv"
-TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3, TEST_LABELS_4, TEST_LABELS_5, TEST_LABELS_6, TEST_LABELS_7, TEST_LABELS_8, TEST_LABELS_9, TEST_LABELS_10, TEST_LABELS_11, TEST_LABELS_12, TEST_LABELS_13, TEST_LABELS_14, TEST_LABELS_15])
+TEST_LABELS_1 = "anaya_test_3_ideal.csv"
+TEST_LABELS_2 = "waasiq_test_3_ideal.csv"
+TEST_LABELS_3 = "mahie_test_1_ideal.csv"
+TEST_LABELS_4 = "mahie_test_2_ideal.csv"
+TEST_LABELS_5 = "mahie_test_3_ideal.csv"
+TEST_LABELS_6 = "mahie_test_4_low_fps_ideal.csv"
+TEST_LABELS_7 = "mahie_test_5_low_fps_ideal.csv"
+TEST_LABELS_8 = "mahie_test_6_low_fps_ideal.csv"
+TEST_LABELS_9 = "soniya_test_1_ideal.csv"
+TEST_LABELS_10 = "soniya_test_2_ideal.csv"
+TEST_LABELS_11 = "soniya_test_3_ideal.csv"
+TEST_LABELS_12 = "soniya_test_4_low_fps_ideal.csv"
+TEST_LABELS_13 = "soniya_test_5_low_fps_ideal.csv"
+TEST_LABELS_14 = "soniya_test_6_low_fps_ideal.csv"
+TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3, TEST_LABELS_4, TEST_LABELS_5, TEST_LABELS_6, TEST_LABELS_7, TEST_LABELS_8, TEST_LABELS_9, TEST_LABELS_10, TEST_LABELS_11, TEST_LABELS_12, TEST_LABELS_13, TEST_LABELS_14])
+
+# Files for test outputs
+TEST_OUTPUT_1 = "anaya_test_3_svm.csv"
+TEST_OUTPUT_2 = "waasiq_test_3_svm.csv"
+TEST_OUTPUT_3 = "mahie_test_1_svm.csv"
+TEST_OUTPUT_4 = "mahie_test_2_svm.csv"
+TEST_OUTPUT_5 = "mahie_test_3_svm.csv"
+TEST_OUTPUT_6 = "mahie_test_4_low_fps_svm.csv"
+TEST_OUTPUT_7 = "mahie_test_5_low_fps_svm.csv"
+TEST_OUTPUT_8 = "mahie_test_6_low_fps_svm.csv"
+TEST_OUTPUT_9 = "soniya_test_1_svm.csv"
+TEST_OUTPUT_10 = "soniya_test_2_svm.csv"
+TEST_OUTPUT_11 = "soniya_test_3_svm.csv"
+TEST_OUTPUT_12 = "soniya_test_4_low_fps_svm.csv"
+TEST_OUTPUT_13 = "soniya_test_5_low_fps_svm.csv"
+TEST_OUTPUT_14 = "soniya_test_6_low_fps_svm.csv"
+TEST_OUTPUT_FILENAMES = np.array([TEST_OUTPUT_1, TEST_OUTPUT_2, TEST_OUTPUT_3, TEST_OUTPUT_3, TEST_OUTPUT_5, TEST_OUTPUT_6, TEST_OUTPUT_7, TEST_OUTPUT_8, TEST_OUTPUT_9, TEST_OUTPUT_10, TEST_OUTPUT_11, TEST_OUTPUT_12, TEST_OUTPUT_13, TEST_OUTPUT_14])
+
+
 
 def load_data(ears_filenames, timestamps_filenames, labels_filenames):
     # Folder with test files
@@ -153,11 +176,6 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
                     indices = np.concatenate([before_indices, [i], after_indices])
                     window_features = [ear_values[idx] for idx in indices]
                 else:
-                    # If less than 10 fps (actually 11.4)
-                    # if len(before_indices) < 4 or len(after_indices) < 4:
-                    #     # window_features = [None]*21
-                    #     continue
-                        # not decided on if i should append None or ignore
                 # less than 25 fps
                     # extend EAR values to synthesise 21 frames from less than 21
                     before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
@@ -181,7 +199,6 @@ def test_svm(model, scaler, X_list, y_list):
         y_pred = model.predict(X_scaled)
         fps = len(y)/60
         print(f"Test results for video {i+1} ({fps:.1f} fps):")
-        # print("Accuracy:", accuracy_score(y, y_pred))
 
         cm = confusion_matrix(y, y_pred)
         tn, fp, fn, tp = cm.ravel()
@@ -189,8 +206,6 @@ def test_svm(model, scaler, X_list, y_list):
         recall =  tp/(tp+fn)
         F1_score = 2*precision*recall/(precision+recall)
         print(f"TP: {tp}, FP: {fp}, TN: {tn}, FN: {fn}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy_score(y, y_pred):.3f}\n")
-        
-        # print("Classification Report:\n", classification_report(y, y_pred))
 
 def test_segments(model, scaler, X_list, y_list):
     num_segments = 12
@@ -254,13 +269,13 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
 main(TRAIN_EARS_FILENAMES, TRAIN_TIMESTAMPS_FILENAMES, TRAIN_LABELS_FILENAMES)
 
 # Test on testing data: participant 1 & 2 video 3s + participant 3 all videos
-main(TEST_EARS_FILENAMES[1:6], TEST_TIMESTAMPS_FILENAMES[1:6], TEST_LABELS_FILENAMES[1:6])
+main(TEST_EARS_FILENAMES[0:5], TEST_TIMESTAMPS_FILENAMES[0:5], TEST_LABELS_FILENAMES[0:5])
 
 # Test with participant 3 low fps (mahie 17,14,17)
-main(TEST_EARS_FILENAMES[9:12], TEST_TIMESTAMPS_FILENAMES[9:12], TEST_LABELS_FILENAMES[9:12])
+main(TEST_EARS_FILENAMES[5:8], TEST_TIMESTAMPS_FILENAMES[5:8], TEST_LABELS_FILENAMES[5:8])
 
 # Test with participant 4 (Soniya ~ 19 fps)
-main(TEST_EARS_FILENAMES[6:9], TEST_TIMESTAMPS_FILENAMES[6:9], TEST_LABELS_FILENAMES[6:9])
+main(TEST_EARS_FILENAMES[8:11], TEST_TIMESTAMPS_FILENAMES[8:11], TEST_LABELS_FILENAMES[8:11])
 
 # Test with participant 4 low fps (Soniya ~ 7 fps)
 # main(TEST_EARS_FILENAMES[12:15], TEST_TIMESTAMPS_FILENAMES[12:15], TEST_LABELS_FILENAMES[12:15]) # - currently only one exists
