@@ -43,7 +43,7 @@ TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3, T
 def load_data(ears_filenames, labels_filenames):
     # Folder with test files
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    files_dir = os.path.join(script_dir, "blink_test_files")
+    files_dir = os.path.join(script_dir,"..","blink_test_files")
 
     # Load EAR values into array of arrays, containing all vid data - same for labels
     ear_values = [pd.read_csv(os.path.join(files_dir, file), header=None).values.flatten() for file in ears_filenames]
@@ -211,13 +211,13 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
 
     '''
 
-    # # Test accuracy of model on each of the training videos
-    # print('Metrics for each training video:\n')
-    # test_svm_videos(svm_model, scaler, X_train, y_train)
+    # Test accuracy of model on each of the training videos
+    print('Metrics for each training video:\n')
+    test_svm_videos(svm_model, scaler, X_train, y_train)
     
-    # # Test accuracy of model on each of the test videos
-    # print('Metrics for each testing video:\n')
-    # test_svm_videos(svm_model, scaler, X_test, y_test)
+    # Test accuracy of model on each of the test videos
+    print('Metrics for each testing video:\n')
+    test_svm_videos(svm_model, scaler, X_test, y_test)
 
     # Overall accuracy over both the training videos
     print('Metrics over all training videos:\n')
@@ -227,15 +227,17 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     print('Metrics over all testing videos:\n')
     test_svm_overall(svm_model, scaler, X_test, y_test)
 
-    # print('Accuracy with segmented training videos:')
-    # test_segments(svm_model, scaler, X_train, y_train)
+    # Segmented metrics for training videos - not discussed in report
+    print('Accuracy with segmented training videos:')
+    test_segments(svm_model, scaler, X_train, y_train)
 
-    # print('Accuracy with segmented test videos:')
-    # test_segments(svm_model, scaler, X_test, y_test)
+    # Segmented metrics for test videos - not discussed in report
+    print('Accuracy with segmented test videos:')
+    test_segments(svm_model, scaler, X_test, y_test)
 
     # Path to save model - change filenames for each iteration as appropriate
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    models_dir = os.path.join(script_dir, "SVM_models")
+    models_dir = os.path.join(script_dir, "..","SVM_models")
     model_path = os.path.join(models_dir, 'svm_model_23.joblib')
     scaler_path = os.path.join(models_dir, 'scaler_23.joblib')
 

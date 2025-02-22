@@ -91,7 +91,7 @@ TEST_LABELS_FILENAMES = np.array([TEST_LABELS_1, TEST_LABELS_2, TEST_LABELS_3, T
 def load_data(ears_filenames, timestamps_filenames, labels_filenames):
     # Folder with test files
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    files_dir = os.path.join(script_dir, "blink_test_files")
+    files_dir = os.path.join(script_dir,"..","blink_test_files")
     print(ears_filenames)
 
     # Load EAR values into array of arrays, containing all vid data - same for labels
@@ -234,7 +234,7 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
 
     # Path to load model
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    models_dir = os.path.join(script_dir, "SVM_models")
+    models_dir = os.path.join(script_dir, "..","SVM_models")
     model_path = os.path.join(models_dir, 'svm_model_21.joblib')
     scaler_path = os.path.join(models_dir, 'scaler_21.joblib')
 
