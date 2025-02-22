@@ -9,6 +9,31 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
+'''
+Test metrics on both training and testing data
+'''
+
+# Files for training data
+TRAIN_EARS_1 = "anaya_test_1_ears.csv"
+TRAIN_EARS_2 = "anaya_test_2_ears.csv"
+TRAIN_EARS_3 = "waasiq_test_1_ears.csv"
+TRAIN_EARS_4 = "waasiq_test_2_ears.csv"
+TRAIN_EARS_FILENAMES = np.array([TRAIN_EARS_1, TRAIN_EARS_2, TRAIN_EARS_3, TRAIN_EARS_4])
+
+# Files for training timestamps
+TRAIN_TIMESTAMPS_1 = "anaya_test_1_timestamps.txt"
+TRAIN_TIMESTAMPS_2 = "anaya_test_2_timestamps.txt"
+TRAIN_TIMESTAMPS_3 = "waasiq_test_1_timestamps.txt"
+TRAIN_TIMESTAMPS_4 = "waasiq_test_2_timestamps.txt"
+TRAIN_TIMESTAMPS_FILENAMES = np.array([TRAIN_TIMESTAMPS_1, TRAIN_TIMESTAMPS_2, TRAIN_TIMESTAMPS_3, TRAIN_TIMESTAMPS_4])
+
+# Files for training labels
+TRAIN_LABELS_1 = "anaya_test_1_ideal.csv"
+TRAIN_LABELS_2 = "anaya_test_2_ideal.csv"
+TRAIN_LABELS_3 = "waasiq_test_1_ideal.csv"
+TRAIN_LABELS_4 = "waasiq_test_2_ideal.csv"
+TRAIN_LABELS_FILENAMES = np.array([TRAIN_LABELS_1, TRAIN_LABELS_2, TRAIN_LABELS_3, TRAIN_LABELS_4])
+
 # Files for testing data
 TEST_EARS_1 = "zak_test_3_ears.csv"
 TEST_EARS_2 = "anaya_test_3_ears.csv"
@@ -154,8 +179,8 @@ def test_svm(model, scaler, X_list, y_list):
     for i, (X, y) in enumerate(zip(X_list, y_list)):
         X_scaled = scaler.transform(X)
         y_pred = model.predict(X_scaled)
-        
-        print(f"Test results for video {i+1}:")
+        fps = len(y)/60
+        print(f"Test results for video {i+1} ({fps:.1f} fps):")
         # print("Accuracy:", accuracy_score(y, y_pred))
 
         cm = confusion_matrix(y, y_pred)
@@ -210,14 +235,12 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     # Path to load model
     script_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(script_dir, "SVM_models")
-    model_path = os.path.join(models_dir, 'svm_model_3.joblib')
-    scaler_path = os.path.join(models_dir, 'scaler_3.joblib')
+    model_path = os.path.join(models_dir, 'svm_model_21.joblib')
+    scaler_path = os.path.join(models_dir, 'scaler_21.joblib')
 
     # Load model
     svm_model = joblib.load(model_path)
     scaler = joblib.load(scaler_path)
-    # 1 is w zak vids
-    # 2 is w/o zak vids
     
     # Test accuracy of model on test videos
     test_svm(svm_model, scaler, X_test, y_test)
@@ -228,16 +251,16 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     return
 
 # Test on training data - participants 1 & 2 video 3s
-# ADD HERE
+main(TRAIN_EARS_FILENAMES, TRAIN_TIMESTAMPS_FILENAMES, TRAIN_LABELS_FILENAMES)
 
 # Test on testing data: participant 1 & 2 video 3s + participant 3 all videos
 main(TEST_EARS_FILENAMES[1:6], TEST_TIMESTAMPS_FILENAMES[1:6], TEST_LABELS_FILENAMES[1:6])
 
-# Test with participant 4 (Soniya ~ 19 fps)
-# main(TEST_EARS_FILENAMES[6:9], TEST_TIMESTAMPS_FILENAMES[6:9], TEST_LABELS_FILENAMES[6:9])
-
 # Test with participant 3 low fps (mahie 17,14,17)
-# main(TEST_EARS_FILENAMES[9:12], TEST_TIMESTAMPS_FILENAMES[9:12], TEST_LABELS_FILENAMES[9:12])
+main(TEST_EARS_FILENAMES[9:12], TEST_TIMESTAMPS_FILENAMES[9:12], TEST_LABELS_FILENAMES[9:12])
 
-# Test with Soniya low fps ~ 7 fps
-# main(TEST_EARS_FILENAMES[12:15], TEST_TIMESTAMPS_FILENAMES[12:15], TEST_LABELS_FILENAMES[12:15]) - currently only one exists
+# Test with participant 4 (Soniya ~ 19 fps)
+main(TEST_EARS_FILENAMES[6:9], TEST_TIMESTAMPS_FILENAMES[6:9], TEST_LABELS_FILENAMES[6:9])
+
+# Test with participant 4 low fps (Soniya ~ 7 fps)
+# main(TEST_EARS_FILENAMES[12:15], TEST_TIMESTAMPS_FILENAMES[12:15], TEST_LABELS_FILENAMES[12:15]) # - currently only one exists
