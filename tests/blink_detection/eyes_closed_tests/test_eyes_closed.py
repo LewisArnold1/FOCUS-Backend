@@ -6,18 +6,90 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
-# change to first name & test number x of each saved video
+# Filenames have  the following format
+
+'''
 VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
 IDEAL_FRAMES_FILENAME = "firstname_test_x_ideal.csv"
 EAR_FILENAME = "firstname_test_x_ears.csv"
-OUTPUT_FILENAME = "firstname_test_x_blinktype.csv"  # blinktype =  manual / auto / cnn
+MANUAL_OUTPUT_FILENAME = "firstname_test_x_manual.csv"  # Manual: 25% | 50% | 75%
+AUTO_OUTPUT_FILENAME = "firstname_test_x_auto.csv"      # Auto: 0.4 | ... | 0.8
+'''
 
-VIDEO_FILENAME = "mahie_test_3.avi"
-TIMESTAMP_FILENAME = "mahie_test_3_timestamps.txt"
-IDEAL_FRAMES_FILENAME = "mahie_test_3_ideal.csv"
-EAR_FILENAME = "mahie_test_3_ears.csv"
-OUTPUT_FILENAME = "mahie_test_3_auto.csv" # Manual: 25% | 50% | 75%, Auto: 0.4 | ... | 0.8
+# Define participant 1 filenames
+VIDEO_1 = "anaya_test_1.avi"
+TIMESTAMP_1 = "anaya_test_1_timestamps.txt"
+IDEAL_1 = "anaya_test_1_ideal.csv"
+EAR_1 = "anaya_test_1_ears.csv"
+MANUAL_OUTPUT_1 = "anaya_test_1_manual.csv" 
+AUTO_OUTPUT_1 = "anaya_test_1_auto.csv" 
+
+VIDEO_2 = "anaya_test_2.avi"
+TIMESTAMP_2 = "anaya_test_2_timestamps.txt"
+IDEAL_2 = "anaya_test_2_ideal.csv"
+EAR_2 = "anaya_test_2_ears.csv"
+MANUAL_OUTPUT_2 = "anaya_test_2_manual.csv" 
+AUTO_OUTPUT_2 = "anaya_test_2_auto.csv" 
+
+VIDEO_3 = "anaya_test_3.avi"
+TIMESTAMP_3 = "anaya_test_3_timestamps.txt"
+IDEAL_3 = "anaya_test_3_ideal.csv"
+EAR_3 = "anaya_test_3_ears.csv"
+MANUAL_OUTPUT_3 = "anaya_test_3_manual.csv" 
+AUTO_OUTPUT_3 = "anaya_test_3_auto.csv" 
+
+# Define participant 2 filenames
+VIDEO_4 = "waasiq_test_1.avi"
+TIMESTAMP_4 = "waasiq_test_1_timestamps.txt"
+IDEAL_4 = "waasiq_test_1_ideal.csv"
+EAR_4 = "waasiq_test_1_ears.csv"
+MANUAL_OUTPUT_4 = "waasiq_test_1_manual.csv" 
+AUTO_OUTPUT_4 = "waasiq_test_1_auto.csv" 
+
+VIDEO_5 = "waasiq_test_2.avi"
+TIMESTAMP_5 = "waasiq_test_2_timestamps.txt"
+IDEAL_5 = "waasiq_test_2_ideal.csv"
+EAR_5 = "waasiq_test_2_ears.csv"
+MANUAL_OUTPUT_5 = "waasiq_test_2_manual.csv" 
+AUTO_OUTPUT_5 = "waasiq_test_2_auto.csv" 
+
+VIDEO_6 = "waasiq_test_3.avi"
+TIMESTAMP_6 = "waasiq_test_3_timestamps.txt"
+IDEAL_6 = "waasiq_test_3_ideal.csv"
+EAR_6 = "waasiq_test_3_ears.csv"
+MANUAL_OUTPUT_6 = "waasiq_test_3_manual.csv" 
+AUTO_OUTPUT_6 = "waasiq_test_3_auto.csv" 
+
+# Define participant 3 filenames
+VIDEO_7 = "mahie_test_1.avi"
+TIMESTAMP_7 = "mahie_test_1_timestamps.txt"
+IDEAL_7 = "mahie_test_1_ideal.csv"
+EAR_7 = "mahie_test_1_ears.csv"
+MANUAL_OUTPUT_7 = "mahie_test_1_manual.csv" 
+AUTO_OUTPUT_7 = "mahie_test_1_auto.csv" 
+
+VIDEO_8 = "mahie_test_2.avi"
+TIMESTAMP_8 = "mahie_test_2_timestamps.txt"
+IDEAL_8 = "mahie_test_2_ideal.csv"
+EAR_8 = "mahie_test_2_ears.csv"
+MANUAL_OUTPUT_8 = "mahie_test_2_manual.csv" 
+AUTO_OUTPUT_8 = "mahie_test_2_auto.csv" 
+
+VIDEO_9 = "mahie_test_3.avi"
+TIMESTAMP_9 = "mahie_test_3_timestamps.txt"
+IDEAL_9 = "mahie_test_3_ideal.csv"
+EAR_9 = "mahie_test_3_ears.csv"
+MANUAL_OUTPUT_9 = "mahie_test_3_manual.csv" 
+AUTO_OUTPUT_9 = "mahie_test_3_auto.csv" 
+
+# Create arrays of filenames
+VIDEO_FILENAMES = np.array([VIDEO_1, VIDEO_2, VIDEO_3, VIDEO_4, VIDEO_5, VIDEO_6, VIDEO_7, VIDEO_8, VIDEO_9])
+TIMESTAMP_FILENAMES = np.array([TIMESTAMP_1, TIMESTAMP_2, TIMESTAMP_3, TIMESTAMP_4, TIMESTAMP_5, TIMESTAMP_6, TIMESTAMP_7, TIMESTAMP_8, TIMESTAMP_9])
+IDEAL_FILENAMES = np.array([IDEAL_1, IDEAL_2, IDEAL_3, IDEAL_4, IDEAL_5, IDEAL_6, IDEAL_7, IDEAL_8, IDEAL_9])
+EAR_FILENAMES = np.array([EAR_1, EAR_2, EAR_3, EAR_4, EAR_5, EAR_6, EAR_7, EAR_8, EAR_9])
+MANUAL_OUTPUT_FILENAMES = np.array([MANUAL_OUTPUT_1, MANUAL_OUTPUT_2, MANUAL_OUTPUT_3, MANUAL_OUTPUT_4, MANUAL_OUTPUT_5, MANUAL_OUTPUT_6, MANUAL_OUTPUT_7, MANUAL_OUTPUT_8, MANUAL_OUTPUT_9])
+AUTO_OUTPUT_FILENAMES = np.array([AUTO_OUTPUT_1, AUTO_OUTPUT_2, AUTO_OUTPUT_3, AUTO_OUTPUT_4, AUTO_OUTPUT_5, AUTO_OUTPUT_6, AUTO_OUTPUT_7, AUTO_OUTPUT_8, AUTO_OUTPUT_9])
 
 # Import the function to test
 from process_eye_metrics import process_eye
@@ -48,11 +120,11 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
     if not cap.isOpened():
         print("Error: Cannot open video file.")
         return
-    # elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-    #     print("Timestamps or frames missing.")
-    #     return
-    # else:
-    #     print(f"Video has {len(timestamps)} frames/timestamps")
+    elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+        print("Timestamps or frames missing.")
+        return
+    else:
+        print(f"Video has {len(timestamps)} frames/timestamps")
 
     # Process each frame
     frame_idx = 0
@@ -237,7 +309,7 @@ def test_auto(ear_filename,output_filename):
 #     else:
 #         print(f"Video has {len(timestamps)} frames/timestamps")
     
-#     ''' CNN ''' # to be changed
+#     ''' CNN '''
 
 #     # Process each frame
 #     frame_idx = 0
@@ -306,11 +378,6 @@ def manual_metrics(ideal_filename, output_filename):
 
 def calculate_metrics_segmented(ideal, eyes_closed_output):
 
-    '''Below prints ideal & output for segment 3'''
-    # for i in range(149,298):
-    #     print(f"ideal: {ideal[i]}, output:{eyes_closed_output[i]}")
-
-    '''Below calculates metrics for each segment'''
     # Check arrays are same length
     if len(ideal) != len(eyes_closed_output):
         print("Output is wrong length")
@@ -330,12 +397,11 @@ def calculate_metrics_segmented(ideal, eyes_closed_output):
         false_negatives = np.sum((segment_output == 0) & (segment_ideal == 1))
         precision = true_positives/(true_positives+false_positives)
         recall =  true_positives/(true_positives+false_negatives)
-        # F1_score = 2*precision*recall/(precision+recall)
-        # overall_accuracy = (true_positives+true_negatives)/len(segment_ideal)
+        F1_score = 2*precision*recall/(precision+recall)
+        overall_accuracy = (true_positives+true_negatives)/len(segment_ideal)
         print(f"\nSegment no. {i+1}:")
         print(f"TP: {true_positives}, FP: {false_positives}, TN: {true_negatives}, FN: {false_negatives}")
-        # print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
-        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}")
+        print(f"Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {overall_accuracy:.3f}")
     
     return
 
@@ -358,7 +424,7 @@ def manual_metrics_segmented(ideal_filename, output_filename):
 
     calculate_metrics_segmented(eyes_closed_ideal, eyes_closed_25)
     calculate_metrics_segmented(eyes_closed_ideal, eyes_closed_50)
-    # calculate_metrics_segmented(eyes_closed_ideal, eyes_closed_75)
+    calculate_metrics_segmented(eyes_closed_ideal, eyes_closed_75)
 
     return
 
@@ -409,26 +475,28 @@ def pop(ideal_filename):
     print('done')
 
 
+# Test methods for each video
 
+for i in range(9):
+    '''Calculate EAR at each frame, for all 9 videos'''
+    ear_list = calculate_ears(VIDEO_FILENAMES[i],TIMESTAMP_FILENAMES[i], EAR_FILENAMES[i])
 
-'''Calculate EAR at each frame, for all 9 videos'''
-ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
+    '''If outputs are 'no eye', re-record video with better lighting - alternatively if for only few frames, data may be cleaned'''
+    # pop(IDEAL_FILENAMES[i])
 
-'''If outputs are 'no eye', please re-record video with better lighting!! - alternatively if for only few frames, data may be cleaned'''
-# pop(IDEAL_FRAMES_FILENAME)
+    '''Run manual thresholding (including threshold sweep)'''
+    test_manual(EAR_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
 
-'''Run manual thresholding (including threshold sweep)'''
-# test_manual(EAR_FILENAME, OUTPUT_FILENAME) # could still add smoothing filter?
+    '''Run auto thresholding (including threshold sweep)'''
+    test_auto(EAR_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
-'''Run auto thresholding (including threshold sweep)'''
-# test_auto(EAR_FILENAME, OUTPUT_FILENAME)
+    '''Run CNN'''
+    # test_CNN(EAR_FILENAMES[i], CNN_OUTPUT_FILENAMES[i])
 
-'''Run CNN'''
-# test_CNN(EAR_FILENAME, OUTPUT_FILENAME)
+    '''Test & Save Metrics for all'''
+    manual_metrics(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
+    auto_metrics(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
-'''Test & Save Metrics for all'''
-# manual_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
-# auto_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
-
-'''Segmented metrics - not currently included in report'''
-# manual_metrics_segmented(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
+    '''Segmented metrics - not discussed in report'''
+    manual_metrics_segmented(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
+    manual_metrics_segmented(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
