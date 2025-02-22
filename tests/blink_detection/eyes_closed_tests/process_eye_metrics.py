@@ -21,86 +21,31 @@ blink_processor = BlinkProcessor()
 iris_processor = IrisProcessor()
 
 
-'''
-Method needs two arguments while testing auto blink threshold
-'''
-
-
-def process_eye_manual(frame):
-
+def process_eye(frame):
     # Extract left and right eye landmarks
     _, left_eye, right_eye, _ = face_processor.process_face(frame)
     if left_eye is None or right_eye is None:
         print("No eye")
-        return 0, None, None
-    
-    # Process pupil coordinates
-    # pupil = pupil_processor.process_pupil(frame, left_eye)
+        return 0, None
+
+    # Process pupil coordinates - ignored for blink test    
     pupil = None
     
-    '''
-    Uncomment blink test methods as required.
-    Also change what is returned as required.
-    '''
-    
-    '''
-    Manual
-    '''
-    closed, ear = blink_processor.manual_threshold(left_eye, right_eye)
+    # Calculate EAR
+    ear = blink_processor.eye_aspect_ratio(left_eye, right_eye)
 
-    '''
-    Auto - for now requires ear_list as argument. Unnecessary in website
-    '''
-    # closed, ear = blink_processor.auto_threshold(left_eye, right_eye, ear_list)
-
-
-    '''
-    CNN
-    '''
-    # closed = blink_processor.CNN(left_eye, right_eye)
-
-    return closed, ear, pupil
-
-
-def process_eye_auto(frame, ear_list):       # For auto only
-    # Extract left and right eye landmarks
-    _, left_eye, right_eye, _ = face_processor.process_face(frame)
-    if left_eye is None or right_eye is None:
-        print("No eye")
-        return 0, None, None
-    
-    # Process pupil coordinates
-    # pupil = pupil_processor.process_pupil(frame, left_eye)
-    pupil = None
-    
-    '''
-    Uncomment blink test methods as required.
-    Also change what is returned as required.
-    '''
-
-    '''
-    Auto - for now requires ear_list as argument. Unnecessary in website
-    '''
-    closed, ear = blink_processor.auto_threshold(left_eye, right_eye, ear_list)
-
-
-    '''
-    CNN
-    '''
-    # closed = blink_processor.CNN(left_eye, right_eye)
-
-    return closed, ear, pupil
+    return ear, pupil
 
 def process_eye_CNN(frame):
     # Extract left and right eye landmarks
     _, left_eye, right_eye, _ = face_processor.process_face(frame)
     if left_eye is None or right_eye is None:
         print("No eye")
-        return 0, None, None
-    
+        return 0, None
+
     # Process pupil coordinates - ignored for blink test
     pupil = None
 
     closed = blink_processor.CNN(left_eye, right_eye)
 
-    return closed
+    return closed, pupil

@@ -20,8 +20,7 @@ EAR_FILENAME = "mahie_test_3_ears.csv"
 OUTPUT_FILENAME = "mahie_test_3_auto.csv" # Manual: 25% | 50% | 75%, Auto: 0.4 | ... | 0.8
 
 # Import the function to test
-from process_eye_metrics import process_eye_manual
-from process_eye_metrics import process_eye_auto
+from process_eye_metrics import process_eye
 from process_eye_metrics import process_eye_CNN
 
 def calculate_ears(video_filename,timestamp_filename,ear_filename):
@@ -65,7 +64,7 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
             break
 
-        _, ear, _ = process_eye_manual(frame)
+        ear, _ = process_eye(frame)
         if ear is None:
             print(frame_idx)
         else:
@@ -413,7 +412,7 @@ def pop(ideal_filename):
 
 
 '''Calculate EAR at each frame, for all 9 videos'''
-# ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
+ear_list = calculate_ears(VIDEO_FILENAME,TIMESTAMP_FILENAME, EAR_FILENAME)
 
 '''If outputs are 'no eye', please re-record video with better lighting!! - alternatively if for only few frames, data may be cleaned'''
 # pop(IDEAL_FRAMES_FILENAME)
@@ -429,7 +428,7 @@ def pop(ideal_filename):
 
 '''Test & Save Metrics for all'''
 # manual_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
-auto_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
+# auto_metrics(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
 
 '''Segmented metrics - not currently included in report'''
 # manual_metrics_segmented(IDEAL_FRAMES_FILENAME, OUTPUT_FILENAME)
