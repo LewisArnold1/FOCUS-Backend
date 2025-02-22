@@ -20,7 +20,7 @@ class FaceProcessor:
         results = self.face_mesh.process(frame_rgb)
 
         if not results.multi_face_landmarks:
-            return 0, None, None, 0.0, None, None, None
+            return 0, None, None, 0.0, None, None, None, frame
         
         frame_height, frame_width, _ = frame.shape
 
@@ -42,7 +42,7 @@ class FaceProcessor:
         right_eye_pixels = self.convert_face_frame_to_pixels(right_eye, frame_width, frame_height)
 
         if not (draw_mesh or draw_contours or show_axis or draw_eye):
-            return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll
+            return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll, frame
 
         if draw_mesh or draw_contours:
             self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
@@ -101,10 +101,10 @@ class FaceProcessor:
         # print(f"nose_tip: {nose_tip}, left_eye: {left_eye}, right_eye: {right_eye}, forehead: {forehead}")
         # print(f"x_axis: {x_axis}, y_axis: {y_axis}, z_axis: {z_axis}")
         # print(f"R_face_to_camera: {R_face_to_camera}")
-        print(np.linalg.det(R_face_to_camera))
+        # print(np.linalg.det(R_face_to_camera))
         # yaw, pitch, roll = np.degrees([yaw, pitch, roll]) 
 
-        print(f"x-axis: {pitch}, y-axis: {yaw}, z-axis: {roll}")
+        # print(f"x-axis: {pitch}, y-axis: {yaw}, z-axis: {roll}")
 
         return x_axis, y_axis, z_axis, yaw, pitch, roll
 
