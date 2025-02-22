@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import csv
 import joblib
 import json
 from datetime import datetime, timedelta
@@ -193,7 +194,7 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
     return X, y
 
 
-def test_svm(model, scaler, X_list, y_list):
+def test_svm(model, scaler, X_list, y_list, output_filenames):
     for i, (X, y) in enumerate(zip(X_list, y_list)):
         X_scaled = scaler.transform(X)
         y_pred = model.predict(X_scaled)
@@ -206,6 +207,14 @@ def test_svm(model, scaler, X_list, y_list):
         recall =  tp/(tp+fn)
         F1_score = 2*precision*recall/(precision+recall)
         print(f"TP: {tp}, FP: {fp}, TN: {tn}, FN: {fn}, Precision: {precision:.3f}, Recall: {recall:.3f}, F1 Score: {F1_score:.3f}, Overall: {accuracy_score(y, y_pred):.3f}\n")
+
+        # Save y to output file
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_path = os.path.join(script_dir, "..", "blink_test_files",output_filenames[i])
+        with open(output_path,'w',newline='') as file:
+            writer = csv.writer(file)
+            for value in y_pred:
+                writer.writerow([value])
 
 def test_segments(model, scaler, X_list, y_list):
     num_segments = 12
@@ -240,7 +249,7 @@ def test_segments(model, scaler, X_list, y_list):
             #     print(test)
 
 
-def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
+def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames, test_output_filenames):
     # Load data
     test_ear_values, test_timestamps, test_labels = load_data(test_ears_filenames, test_timestamp_filenames, test_labels_filenames)
 
@@ -258,7 +267,7 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     scaler = joblib.load(scaler_path)
     
     # Test accuracy of model on test videos
-    test_svm(svm_model, scaler, X_test, y_test)
+    test_svm(svm_model, scaler, X_test, y_test, test_output_filenames)
 
     # print('Accuracy with segmented test videos:')
     # test_segments(svm_model, scaler, X_test, y_test)
@@ -266,16 +275,16 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames):
     return
 
 # Test on training data - participants 1 & 2 video 3s
-main(TRAIN_EARS_FILENAMES, TRAIN_TIMESTAMPS_FILENAMES, TRAIN_LABELS_FILENAMES)
+main(TRAIN_EARS_FILENAMES, TRAIN_TIMESTAMPS_FILENAMES, TRAIN_LABELS_FILENAMES, TRAIN_OUTPUT_FILENAMES)
 
 # Test on testing data: participant 1 & 2 video 3s + participant 3 all videos
-main(TEST_EARS_FILENAMES[0:5], TEST_TIMESTAMPS_FILENAMES[0:5], TEST_LABELS_FILENAMES[0:5])
+main(TEST_EARS_FILENAMES[0:5], TEST_TIMESTAMPS_FILENAMES[0:5], TEST_LABELS_FILENAMES[0:5], TEST_OUTPUT_FILENAMES[0:5])
 
 # Test with participant 3 low fps (mahie 17,14,17)
-main(TEST_EARS_FILENAMES[5:8], TEST_TIMESTAMPS_FILENAMES[5:8], TEST_LABELS_FILENAMES[5:8])
+main(TEST_EARS_FILENAMES[5:8], TEST_TIMESTAMPS_FILENAMES[5:8], TEST_LABELS_FILENAMES[5:8], TEST_OUTPUT_FILENAMES[5:8])
 
 # Test with participant 4 (Soniya ~ 19 fps)
-main(TEST_EARS_FILENAMES[8:11], TEST_TIMESTAMPS_FILENAMES[8:11], TEST_LABELS_FILENAMES[8:11])
+main(TEST_EARS_FILENAMES[8:11], TEST_TIMESTAMPS_FILENAMES[8:11], TEST_LABELS_FILENAMES[8:11], TEST_OUTPUT_FILENAMES[8:11])
 
 # Test with participant 4 low fps (Soniya ~ 7 fps)
-# main(TEST_EARS_FILENAMES[12:15], TEST_TIMESTAMPS_FILENAMES[12:15], TEST_LABELS_FILENAMES[12:15]) # - currently only one exists
+# main(TEST_EARS_FILENAMES[12:15], TEST_TIMESTAMPS_FILENAMES[11:14], TEST_LABELS_FILENAMES[11:14], TEST_OUTPUT_FILENAMES[11:14]) # - currently only one exists
