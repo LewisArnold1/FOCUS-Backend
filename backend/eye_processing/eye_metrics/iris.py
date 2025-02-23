@@ -14,6 +14,8 @@ class IrisProcessor:
     
     def detect_iris(self):
         cropped, mask = self.crop_eyes_spline(self.eye_points)
+        if cropped.size == 0:
+            return None, None, None
         grey = self.convert_to_greyscale(cropped)
         contrast = self.enhance_contrast(grey, clip_limit=8.0, tile_grid_size=(1, 1))
         colour, overall_centroid = self.iris(contrast, mask)
