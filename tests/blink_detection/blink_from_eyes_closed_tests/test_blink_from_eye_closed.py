@@ -84,9 +84,13 @@ def consecutive_frames(ideal_filenames, output_filenames):
     # For each video
     video_num = 1
     for (ideal_file,output_file) in zip(ideal_filenames,output_filenames):
+        print(f'video {video_num}')
         # Load ideal and predicted data
         closed_ideal = pd.read_csv(os.path.join(tests_dir, ideal_file), header=None).values.flatten()
         closed_pred = pd.read_csv(os.path.join(tests_dir, output_file), header=None).values.flatten()
+
+        # Remove first and last 10 ideal frames (not considered by SVM method due to temporal window required)
+        closed_ideal = closed_ideal[10:-10]
 
         '''
         Ideal file only ever has 1s at blinks
@@ -95,62 +99,79 @@ def consecutive_frames(ideal_filenames, output_filenames):
         
         # Find blinks in ideal eyes-closed file
         blinks_ideal = np.zeros(len(closed_ideal))
-        for i in range(1,len(closed_ideal)-1):
+        for i in range(1,len(closed_ideal)):
             if closed_ideal[i-1] == 0 and closed_ideal[i] == 1:
                 blinks_ideal[i] = 1
+                # print(i)
+        print(f'Actual Blinks: {sum(blinks_ideal)}')
 
         # Determine blinks from closed_pred with sweep of consecutive frames - do more!
+        blinks_pred_cons_1 = np.zeros(len(closed_ideal))
         blinks_pred_cons_2 = np.zeros(len(closed_ideal))
         blinks_pred_cons_3 = np.zeros(len(closed_ideal))
         blinks_pred_cons_4 = np.zeros(len(closed_ideal))
-        for i in range(4,len(closed_ideal)-1):
+
+        for i in range(1,len(closed_ideal)-3):
+            # No consecutive frames needed
+            if closed_pred[i-1] == 0 and closed_pred[i] == 1:
+                blinks_pred_cons_1[i] = 1
+            
             # At least 2 cons frames
-            if closed_ideal[i-2] == 0 and closed_ideal[i-1] == 1 and blinks_ideal[i] == 1:
+            if closed_pred[i-1] == 0 and closed_pred[i] == 1 and closed_pred[i+1] == 1:
                 blinks_pred_cons_2[i] = 1
 
+
             # At least 3 cons frames
-            if closed_ideal[i-3] == 0 and closed_ideal[i-2] == 1 and closed_ideal[i-1] == 1 and blinks_ideal[i] == 1:
+            if closed_pred[i-1] == 0 and closed_pred[i] == 1 and closed_pred[i+1] == 1 and closed_pred[i+2] == 1:
                 blinks_pred_cons_3[i] = 1
 
             # At least 4 cons frames
-            if closed_ideal[i-4] == 0 and closed_ideal[i-3] == 1 and closed_ideal[i-2] == 1 and closed_ideal[i-1] == 1 and blinks_ideal[i] == 1:
+            if closed_pred[i-1] == 0 and closed_pred[i] == 1 and closed_pred[i+1] == 1 and closed_pred[i+2] == 1 and closed_pred[i+3] == 1:
                 blinks_pred_cons_4[i] = 1
             
         # For every actual blink, check if a blink was predicted within +-0.25s (+-7 frames)
+        correctly_detected_1 = 0
         correctly_detected_2 = 0
         correctly_detected_3 = 0
         correctly_detected_4 = 0
         for i in range(len(blinks_ideal)):
             if blinks_ideal[i]==1:
                 # Check if a blink has been detected for each method
-                if any(blinks_pred_cons_2[max(0,i-7):min(len(blinks_ideal),i+8)]):
-                    correctly_detected_2 +- 1
+                if any(blinks_pred_cons_1[max(0,i-10):min(len(blinks_ideal),i+10)]):
+                    correctly_detected_1 += 1
+                if any(blinks_pred_cons_2[max(0,i-10):min(len(blinks_ideal),i+10)]):
+                    correctly_detected_2 += 1
                 if any(blinks_pred_cons_3[max(0,i-7):min(len(blinks_ideal),i+8)]):
-                    correctly_detected_3 +- 1
+                    correctly_detected_3 += 1
                 if any(blinks_pred_cons_4[max(0,i-7):min(len(blinks_ideal),i+8)]):
-                    correctly_detected_4 +- 1
+                    correctly_detected_4 += 1
         
-        # For every blink detected, check if there is suppsoed to be a detected blink within +-0.25s (+-7 frames)
-        excessively_detected_2 = 0
-        excessively_detected_3 = 0
-        excessively_detected_4 = 0
-        for i in range(len(blinks_ideal)):
-            if blinks_pred_cons_2[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
-                    excessively_detected_2 += 1
-            if blinks_pred_cons_3[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
-                    excessively_detected_3 += 1
-            if blinks_pred_cons_4[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
-                    excessively_detected_4 += 1
+        print(f"{correctly_detected_1} correct blinks with no cons frames")
+        print(f"{correctly_detected_2} correct blinks with 2 cons frames")
+        print(f"{correctly_detected_3} correct blinks with 3 cons frames")
+        print(f"{correctly_detected_4} correct blinks with 4 cons frames")
         
-        # Output results
-        print(f"Video number: {video_num}")
-        print(f"Correctly detected: {correctly_detected_2} (with 2 cons)")
-        print(f"Correctly detected: {correctly_detected_3} (with 3 cons)")
-        print(f"Correctly detected: {correctly_detected_4} (with 4 cons)")
-        print(f"Out of {sum(blinks_ideal)} actual blinks")
-        print(f"Incorrectly detected: {excessively_detected_2} (with 2 cons)")
-        print(f"Incorrectly detected: {excessively_detected_3} (with 3 cons)")
-        print(f"Incorrectly detected: {excessively_detected_4} (with 4 cons)")
+        # # For every blink detected, check if there is suppsoed to be a detected blink within +-0.25s (+-7 frames)
+        # excessively_detected_2 = 0
+        # excessively_detected_3 = 0
+        # excessively_detected_4 = 0
+        # for i in range(len(blinks_ideal)):
+        #     if blinks_pred_cons_2[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
+        #             excessively_detected_2 += 1
+        #     if blinks_pred_cons_3[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
+        #             excessively_detected_3 += 1
+        #     if blinks_pred_cons_4[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
+        #             excessively_detected_4 += 1
+        
+        # # Output results
+        # print(f"Video number: {video_num}")
+        # print(f"Correctly detected: {correctly_detected_2} (with 2 cons)")
+        # print(f"Correctly detected: {correctly_detected_3} (with 3 cons)")
+        # print(f"Correctly detected: {correctly_detected_4} (with 4 cons)")
+        # print(f"Out of {sum(blinks_ideal)} actual blinks")
+        # print(f"Incorrectly detected: {excessively_detected_2} (with 2 cons)")
+        # print(f"Incorrectly detected: {excessively_detected_3} (with 3 cons)")
+        # print(f"Incorrectly detected: {excessively_detected_4} (with 4 cons)")
 
         video_num += 1
         
