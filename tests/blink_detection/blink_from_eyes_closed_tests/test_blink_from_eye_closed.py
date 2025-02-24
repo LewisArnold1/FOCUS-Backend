@@ -153,6 +153,7 @@ def consecutive_frames(ideal_filenames, output_filenames):
                     excessively_detected_1 += 1
             if blinks_pred_cons_2[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
                     excessively_detected_2 += 1
+                    print(i)
             if blinks_pred_cons_3[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
                     excessively_detected_3 += 1
             if blinks_pred_cons_4[i]==1 and sum(blinks_ideal[max(0,i-7):min(len(blinks_ideal),i+8)])==0:
@@ -194,7 +195,6 @@ def consecutive_time(ideal_filenames, output_filenames, timestamp_filenames): # 
         for i in range(1,len(closed_ideal)-1):
             if closed_ideal[i-1] == 0 and blinks_ideal[i] == 1:
                 blinks_ideal[i] = 1
-        print(blinks_ideal)
 
         # Determine blinks from closed_pred with sweep on consecutive time
 
@@ -204,16 +204,18 @@ def main(ideal_filenames, output_filenames, timestamp_filenames):
     # consecutive_time(ideal_filenames, output_filenames, timestamp_filenames)
 
 # Test on training videos
-# main(TRAIN_LABELS_FILENAMES, TRAIN_OUTPUT_FILENAMES, TRAIN_TIMESTAMPS_FILENAMES)     
+print('Training videos\n')
+main(TRAIN_LABELS_FILENAMES, TRAIN_OUTPUT_FILENAMES, TRAIN_TIMESTAMPS_FILENAMES)     
 
-# Test on test videos: participant 1 & 2 video 3s + participant 3 all videos
+# # Test on test videos: participant 1 & 2 video 3s + participant 3 all videos
+print('Test Videos\n')
 main(TEST_LABELS_FILENAMES[0:5], TEST_OUTPUT_FILENAMES[0:5], TEST_TIMESTAMPS_FILENAMES[0:5])
 
 
-# Test on additional low fps videos
-
+# # Test on additional low fps videos
+# print('Low FPS test videos')
 # # Test with participant 3 low fps (mahie 17,14,17)
 # main(TEST_LABELS_FILENAMES[5:8], TEST_OUTPUT_FILENAMES[5:8], TEST_TIMESTAMPS_FILENAMES[5:8])
 
-# # Test with participant 4 (Soniya ~ 19 fps)
+# Test with participant 4 (Soniya ~ 19 fps)
 # main(TEST_LABELS_FILENAMES[8:11], TEST_OUTPUT_FILENAMES[8:11], TEST_TIMESTAMPS_FILENAMES[8:11])
