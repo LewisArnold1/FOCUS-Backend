@@ -74,27 +74,6 @@ class RetrieveLastBlinkRateView(APIView):
 
         return blink_rates
     
-    def calculate_blink_rate(self, blink_timestamps):
-        """
-        Calculate blink rate per minute from blink timestamps.
-        """
-        if not blink_timestamps.exists():
-            return []
-
-        timestamps = [entry.timestamp for entry in blink_timestamps]
-        start_time = timestamps[0]
-        end_time = timestamps[-1]
-        blink_rates = []
-        current_time = start_time
-
-        while current_time <= end_time:
-            next_minute = current_time + timedelta(minutes=1)
-            blink_count = sum(1 for t in timestamps if current_time <= t < next_minute)
-            blink_rates.append(blink_count)
-            current_time = next_minute
-
-        return blink_rates
-
 class RetrieveAllUserSessionsView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
 
