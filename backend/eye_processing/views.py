@@ -53,9 +53,9 @@ class RetrieveLastBlinkRateView(APIView):
 
         # Loop through each timestamp and calculate blink rate
         for index, blink in enumerate(blink_counts):
-            if blink == 1:  # Blink detected
-                if not blink_in_progress:  # If it's the start of a blink
-                    minute_blink_count += 1  # Count a blink
+            if blink == 1: 
+                if not blink_in_progress:  
+                    minute_blink_count += 1 
                     blink_in_progress = True
             else:  # Blink ended (0 detected)
                 blink_in_progress = False  # Reset the blink flag
