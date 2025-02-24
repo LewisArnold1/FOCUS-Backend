@@ -1,68 +1,228 @@
 import cv2
-import dlib
-from imutils import face_utils
+import mediapipe as mp
 import numpy as np
 import time
+from scipy.spatial.transform import Rotation   
 
 class FaceProcessor:
-    def __init__(self, predictor_path):
-        self.detector = dlib.get_frontal_face_detector()
-        self.predictor = dlib.shape_predictor(predictor_path)
-        self.prev_center = None  
+    def __init__(self):
+        self.mp_face_mesh = mp.solutions.face_mesh
+        self.face_mesh = self.mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True)
+        self.mp_drawing = mp.solutions.drawing_utils
+        self.mp_drawing_styles = mp.solutions.drawing_styles
+        self.default_specs = self.mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=1)
+        
+        self.prev_eye_positions = None
         self.prev_time = None  
 
-    def extract_main_face(self, rects):
-        # print(f"Number of faces detected: {len(rects)}")
-        if not rects:
-            return None, None
-        return max(rects, key=lambda rect: rect.width() * rect.height()), len(rects)
+    def process_face(self, frame, draw_mesh=False, draw_contours=False, show_axis=True, draw_eye=False):
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = self.face_mesh.process(frame_rgb)
 
-    def extract_eye_regions(self, shape):
-        (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["left_eye"]
-        (rStart, rEnd) = face_utils.FACIAL_LANDMARKS_IDXS["right_eye"]
-        left_eye = shape[lStart:lEnd]
-        right_eye = shape[rStart:rEnd]
+        if not results.multi_face_landmarks:
+            return 0, None, None, 0.0, None, None, None, frame
+        
+        frame_height, frame_width, _ = frame.shape
+
+        # Get face landmarks (main face)
+        face_landmarks = results.multi_face_landmarks[0]
+
+        # Compute face reference frame (axes)
+        x_axis, y_axis, z_axis, yaw, pitch, roll = self.compute_face_axes(face_landmarks)
+
+        # Convert main face coordinates to face frame
+        face_rect, face_detected = self.extract_main_face(face_landmarks, frame_width, frame_height)
+        left_eye, right_eye = self.extract_eye_regions(face_landmarks)
+
+        # Compute normalised eye velocity in camera frame
+        _, normalised_eye_speed = self.compute_velocity(left_eye, right_eye, x_axis, y_axis, z_axis)
+
+        # Transform coordinates to pixel coordinates for plotting
+        left_eye_pixels = self.convert_face_frame_to_pixels(left_eye, frame_width, frame_height)
+        right_eye_pixels = self.convert_face_frame_to_pixels(right_eye, frame_width, frame_height)
+
+        if not (draw_mesh or draw_contours or show_axis or draw_eye):
+            return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll, frame
+
+        if draw_mesh or draw_contours:
+            self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
+
+        if show_axis:
+            self._show_axis(frame, face_landmarks, x_axis, y_axis, z_axis, frame_width, frame_height)
+
+        if draw_eye:
+            self._draw_eye_annotations(frame, left_eye_pixels, right_eye_pixels, face_rect)
+
+        return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll, frame
+    
+    def compute_face_axes(self, face_landmarks):
+        # Extract key landmark positions (normalised coordinates)
+        nose_tip = np.array([face_landmarks.landmark[1].x,
+                            face_landmarks.landmark[1].y,
+                            face_landmarks.landmark[1].z])
+
+        left_eye = np.array([face_landmarks.landmark[33].x, 
+                            face_landmarks.landmark[33].y, 
+                            face_landmarks.landmark[33].z])
+
+        right_eye = np.array([face_landmarks.landmark[263].x, 
+                            face_landmarks.landmark[263].y, 
+                            face_landmarks.landmark[263].z])
+
+        forehead = np.array([face_landmarks.landmark[10].x, 
+                            face_landmarks.landmark[10].y, 
+                            face_landmarks.landmark[10].z])
+
+        # Compute x-axis: from left eye to right eye (left to right)
+        x_axis = left_eye - right_eye
+        x_axis /= np.linalg.norm(x_axis)  
+
+        # Compute y-axis: from nose to forehead (down to up)
+        y_axis = forehead - nose_tip
+        y_axis /= np.linalg.norm(y_axis) 
+
+        # Compute z-axis: orthogonal to x and y (right-hand rule)
+        z_axis = np.cross(x_axis, y_axis)
+        z_axis /= np.linalg.norm(z_axis) 
+
+        # Create rotation matrix (face to camera)
+        R_face_to_camera = np.vstack([x_axis, y_axis, z_axis]).T  # 3x3 rotation matrix
+
+        # Convert to Euler angles (yaw, pitch, roll)
+
+        # yaw = np.arctan2(-R_face_to_camera[2, 0], np.sqrt(R_face_to_camera[2, 1]**2 + R_face_to_camera[2, 2]**2))  # Rotation around Y-axis
+        # roll = np.arctan2(R_face_to_camera[1, 0], R_face_to_camera[0, 0])  # Rotation around Z-axis
+        # pitch = np.arctan2(R_face_to_camera[2, 1], R_face_to_camera[2, 2])  # Rotation around X-axis
+
+        r =  Rotation.from_matrix(R_face_to_camera)
+        roll, yaw, pitch = r.as_euler("zyx",degrees=True)
+        roll = (-roll) % 360 - 180
+        
+        # print(f"nose_tip: {nose_tip}, left_eye: {left_eye}, right_eye: {right_eye}, forehead: {forehead}")
+        # print(f"x_axis: {x_axis}, y_axis: {y_axis}, z_axis: {z_axis}")
+        # print(f"R_face_to_camera: {R_face_to_camera}")
+        # print(np.linalg.det(R_face_to_camera))
+        # yaw, pitch, roll = np.degrees([yaw, pitch, roll]) 
+
+        # print(f"x-axis: {pitch}, y-axis: {yaw}, z-axis: {roll}")
+
+        return x_axis, y_axis, z_axis, yaw, pitch, roll
+
+    def extract_main_face(self, face_landmarks, frame_width, frame_height):
+        if not face_landmarks:
+            return None, 0
+
+        # Convert landmark points to pixel coordinates
+        landmark_points = [(int(l.x * frame_width), int(l.y * frame_height)) for l in face_landmarks.landmark]
+        
+        # Compute bounding box
+        x_min = min(p[0] for p in landmark_points)
+        y_min = min(p[1] for p in landmark_points)
+        x_max = max(p[0] for p in landmark_points)
+        y_max = max(p[1] for p in landmark_points)
+
+        return ((x_min, y_min, x_max - x_min, y_max - y_min), 1)
+    
+    def extract_eye_regions(self, face_landmarks):
+        LEFT_EYE_IDX = [33, 133, 160, 158, 153, 144]  # Left eye only
+        RIGHT_EYE_IDX = [362, 263, 385, 387, 373, 380]  # Right eye only
+
+        left_eye = np.array([
+        (face_landmarks.landmark[i].x, face_landmarks.landmark[i].y, face_landmarks.landmark[i].z) for i in LEFT_EYE_IDX], dtype=np.float32)
+
+        right_eye = np.array([
+        (face_landmarks.landmark[i].x, face_landmarks.landmark[i].y, face_landmarks.landmark[i].z) for i in RIGHT_EYE_IDX], dtype=np.float32)
+        
+        left_eye = self.sort_eye_landmarks(left_eye)
+        right_eye = self.sort_eye_landmarks(right_eye)
+
         return left_eye, right_eye
     
-    def compute_face_speed(self, face_rect, frame_height):
-        current_time = time.time()  # Get current timestamp
-
-        # Compute the center of the face bounding box
-        x, y, w, h = face_rect.left(), face_rect.top(), face_rect.width(), face_rect.height()
-        face_center = np.array([x + w // 2, y + h // 2])
-
-        # If no previous data, store current position and return 0 speed
-        if self.prev_center is None or self.prev_time is None:
-            self.prev_center = face_center
+    def sort_eye_landmarks(self, eye_points):
+        centroid = np.mean(eye_points, axis=0)  # Get center of eye shape
+        angles = np.arctan2(eye_points[:, 1] - centroid[1], eye_points[:, 0] - centroid[0])
+        sorted_indices = np.argsort(angles)  # Sort by angle counterclockwise
+        return eye_points[sorted_indices]
+    
+    def compute_velocity(self, left_eye, right_eye, x_axis, y_axis, z_axis):
+        current_time = time.time()
+        if self.prev_eye_positions is None or self.prev_time is None:
+            self.prev_eye_positions = (left_eye, right_eye)
             self.prev_time = current_time
-            return 0.0
+            return np.array([0.0, 0.0, 0.0]), 0.0
 
-        # Compute displacement and velocity
-        normalised_displacement = np.linalg.norm(face_center - self.prev_center) / frame_height  # Normalised Euclidean distance
-        time_interval = current_time - self.prev_time
+        delta_t = current_time - self.prev_time
+        if delta_t == 0:
+            return np.array([0.0, 0.0, 0.0]), 0.0
 
-        normalised_speed = normalised_displacement / time_interval  # Pixels per second
+        # Compute velocity for each landmark and average
+        v_left = np.mean((left_eye - self.prev_eye_positions[0]) / delta_t, axis=0)
+        v_right = np.mean((right_eye - self.prev_eye_positions[1]) / delta_t, axis=0)
+        v_total = (v_left + v_right) / 2
 
-        # Update previous values
-        self.prev_center = face_center
+        # Store previous values
+        self.prev_eye_positions = (left_eye, right_eye)
         self.prev_time = current_time
-
-        return normalised_speed
-
-    def process_face(self, frame):
-        grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame_height = frame.shape[0]
-
-        faces = self.detector(grey, 0)
-        main_face, no_faces = self.extract_main_face(faces)
-        if no_faces == 0 or main_face is None:
-            return 0, None, None, 0.0
         
-        shape = self.predictor(grey, main_face)
-        shape = face_utils.shape_to_np(shape)
-
-        normalised_face_speed = self.compute_face_speed(main_face, frame_height)
-
-        left_eye, right_eye = self.extract_eye_regions(shape)
+        # Compute Speed 
+        speed = np.linalg.norm(v_total)
         
-        return no_faces, left_eye, right_eye, normalised_face_speed
+        return v_total, speed
+    
+    def convert_face_frame_to_pixels(self, transformed_points, frame_width, frame_height):
+        pixel_points = np.array([
+            (int((p[0]) * frame_width), int((p[1]) * frame_height))
+            for p in transformed_points
+        ])
+        return pixel_points
+
+    def _draw_eye_annotations(self, frame, left_eye_pixels, right_eye_pixels, face_rect):
+        x, y, w, h = face_rect
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Green box around face
+        
+        for (lx, ly) in left_eye_pixels:
+            cv2.circle(frame, (lx, ly), 2, (0, 255, 255), -1)  # Yellow dots for left eye
+        for (rx, ry) in right_eye_pixels:
+            cv2.circle(frame, (rx, ry), 2, (0, 0, 255), -1)  # Red dots for right eye
+
+    def _draw_face_mesh(self, frame, face_landmarks, draw_mesh=True, draw_contours=True):
+        if draw_mesh:
+            self.mp_drawing.draw_landmarks(
+                image=frame,
+                landmark_list=face_landmarks,
+                connections=self.mp_face_mesh.FACEMESH_TESSELATION,
+                landmark_drawing_spec=None,
+                connection_drawing_spec=self.mp_drawing_styles.get_default_face_mesh_tesselation_style()
+            )
+
+        if draw_contours:
+            self.mp_drawing.draw_landmarks(
+                image=frame,
+                landmark_list=face_landmarks,
+                connections=self.mp_face_mesh.FACEMESH_CONTOURS,
+                landmark_drawing_spec=None,
+                connection_drawing_spec=self.default_specs
+            )
+
+    def _show_axis(self, frame, face_landmarks, x_axis, y_axis, z_axis, frame_width, frame_height):
+        # Get the nose tip as the origin of the axes
+        nose_tip = np.array([face_landmarks.landmark[1].x * frame_width, 
+                          face_landmarks.landmark[1].y * frame_height]).astype(int)
+
+        # Define scale for axis visualisation
+        axis_length = 50  # Length of the axis lines
+
+        # Compute the end points of the axes
+        x_end = (nose_tip + (x_axis[:2] * axis_length)).astype(int)  # X-axis (Red)
+        y_end = (nose_tip + (y_axis[:2] * axis_length)).astype(int)  # Y-axis (Green)
+        z_end = (nose_tip + (z_axis[:2] * axis_length)).astype(int)  # Z-axis (Blue)
+
+        # Draw axes
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(x_end), (0, 0, 255), 2, tipLength=0.3)  # X-axis (Red)
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(y_end), (0, 255, 0), 2, tipLength=0.3)  # Y-axis (Green)
+        cv2.arrowedLine(frame, tuple(nose_tip), tuple(z_end), (255, 0, 0), 2, tipLength=0.3)  # Z-axis (Blue)
+
+        # Add text labels for the axes
+        cv2.putText(frame, "X", tuple(x_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, cv2.LINE_AA)
+        cv2.putText(frame, "Y", tuple(y_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
+        cv2.putText(frame, "Z", tuple(z_end), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 1, cv2.LINE_AA)

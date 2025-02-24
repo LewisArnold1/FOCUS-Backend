@@ -136,7 +136,7 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
             break
 
-        ear, _ = process_eye(frame)
+        _, ear = process_eye(frame)
         if ear is None:
             print(frame_idx)
         else:
@@ -479,24 +479,25 @@ def pop(ideal_filename):
 
 for i in range(9):
     '''Calculate EAR at each frame, for all 9 videos'''
-    ear_list = calculate_ears(VIDEO_FILENAMES[i],TIMESTAMP_FILENAMES[i], EAR_FILENAMES[i])
+    # ear_list = calculate_ears(VIDEO_FILENAMES[i],TIMESTAMP_FILENAMES[i], EAR_FILENAMES[i])
 
     '''If outputs are 'no eye', re-record video with better lighting - alternatively if for only few frames, data may be cleaned'''
     # pop(IDEAL_FILENAMES[i])
 
-    '''Run manual thresholding (including threshold sweep)'''
+    # '''Run manual thresholding (including threshold sweep)'''
     test_manual(EAR_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
 
-    '''Run auto thresholding (including threshold sweep)'''
-    test_auto(EAR_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+    # '''Run auto thresholding (including threshold sweep)'''
+    # test_auto(EAR_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
-    '''Run CNN'''
-    # test_CNN(EAR_FILENAMES[i], CNN_OUTPUT_FILENAMES[i])
+    # '''Run CNN'''
+    # # test_CNN(EAR_FILENAMES[i], CNN_OUTPUT_FILENAMES[i])
 
-    '''Test & Save Metrics for all'''
+    # '''Test & Save Metrics for all'''
     manual_metrics(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
-    auto_metrics(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+    # auto_metrics(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
-    '''Segmented metrics - not discussed in report'''
-    manual_metrics_segmented(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
-    manual_metrics_segmented(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+    # '''Segmented metrics - not discussed in report'''
+    # manual_metrics_segmented(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
+    # manual_metrics_segmented(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+print('Done')

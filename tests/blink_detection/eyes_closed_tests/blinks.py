@@ -1,30 +1,19 @@
 from scipy.spatial import distance as dist
 
-
 class BlinkProcessor:
-    def __init__(self, eye_ar_consec_frames=2):
-        self.eye_ar_consec_frames = eye_ar_consec_frames
-        self.counter = 0
-        # self.total = 0
+    def __init__(self):
+        self.total = 0
 
-    def eye_aspect_ratio(self, left_eye, right_eye):
-        # Left Eye
-        A = dist.euclidean(left_eye[1], left_eye[5])
-        B = dist.euclidean(left_eye[2], left_eye[4])
-        C = dist.euclidean(left_eye[0], left_eye[3])
-        left_EAR = (A + B) / (2.0 * C)
-        
-        # Right Eye
-        A = dist.euclidean(right_eye[1], right_eye[5])
-        B = dist.euclidean(right_eye[2], right_eye[4])
-        C = dist.euclidean(right_eye[0], right_eye[3])
-        right_EAR = (A + B) / (2.0 * C)
+    @staticmethod
+    def eye_aspect_ratio(eye):
+        A = dist.euclidean(eye[1], eye[5])
+        B = dist.euclidean(eye[2], eye[4])
+        C = dist.euclidean(eye[0], eye[3])
+        return (A + B) / (2.0 * C)
 
-        avg_EAR = (left_EAR + right_EAR) / 2.0
+    def process_blink(self, left_eye, right_eye):
+        left_ear = self.eye_aspect_ratio(left_eye)
+        right_ear = self.eye_aspect_ratio(right_eye)
+        ear = (left_ear + right_ear) / 2.0
 
-        return avg_EAR
-    
-    def CNN(self, left_eye, right_eye):
-        eye_closed = 0 # Apply CNN to input frame
-
-        return eye_closed
+        return ear
