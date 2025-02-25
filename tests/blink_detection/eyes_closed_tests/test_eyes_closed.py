@@ -120,11 +120,11 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
     if not cap.isOpened():
         print("Error: Cannot open video file.")
         return
-    elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-        print("Timestamps or frames missing.")
-        return
-    else:
-        print(f"Video has {len(timestamps)} frames/timestamps")
+    # elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
+    #     print("Timestamps or frames missing.")
+    #     return
+    # else:
+    #     print(f"Video has {len(timestamps)} frames/timestamps")
 
     # Process each frame
     frame_idx = 0
@@ -138,7 +138,7 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
 
         _, ear = process_eye(frame)
         if ear is None:
-            print(frame_idx)
+            print(f"No Eye at frame {frame_idx}")
         else:
             ear_list.append(ear)
             
@@ -151,7 +151,7 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
         for ear in ear_list:
             writer.writerow([ear])
 
-    print('Done')
+    print(f'EARs processed for {video_filename}')
 
     return ear_list
 
@@ -210,6 +210,9 @@ def test_manual(ear_filename, output_filename):
     with open(output_path, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(data)
+
+    print(f'Manual Threshold Results saved for {ear_filename}')
+
     return
 
 def test_auto(ear_filename,output_filename):
@@ -274,7 +277,7 @@ def test_auto(ear_filename,output_filename):
         writer = csv.writer(file)
         writer.writerows(data)
 
-    print('Done')
+    print(f'Adaptive Threshold Results saved for {ear_filename}')
 
     return
 
@@ -370,6 +373,7 @@ def manual_metrics(ideal_filename, output_filename):
     eyes_closed_50 = eyes_closed_output.iloc[:, 1].to_numpy()
     eyes_closed_75 = eyes_closed_output.iloc[:, 2].to_numpy()
 
+    print(f'\nManual threshold metrics for {output_filename}')
     calculate_metrics(eyes_closed_ideal, eyes_closed_25)
     calculate_metrics(eyes_closed_ideal, eyes_closed_50)
     calculate_metrics(eyes_closed_ideal, eyes_closed_75)
@@ -449,6 +453,9 @@ def auto_metrics(ideal_filename, output_filename):
     eyes_closed_3 = eyes_closed_output.iloc[:, 2].to_numpy() # 0.7
     eyes_closed_4 = eyes_closed_output.iloc[:, 3].to_numpy() # 0.8
 
+    # Display video name
+    print(f'\nAdaptive threshold metrics for {output_filename}')
+
     # Calculate metrics
     calculate_metrics(eyes_closed_ideal, eyes_closed_1)
     calculate_metrics(eyes_closed_ideal, eyes_closed_2)
@@ -457,22 +464,22 @@ def auto_metrics(ideal_filename, output_filename):
 
     return
 
-def pop(ideal_filename):
+def pop(filename):
     # Set Paths
     script_dir = os.path.dirname(os.path.abspath(__file__))
     tests_dir = os.path.join(script_dir, "..","blink_test_files")
-    ideal_path = os.path.join(tests_dir, ideal_filename)
+    path = os.path.join(tests_dir, filename)
 
     # Retrieve ideal eyes_closed_list
-    eyes_closed_ideal = pd.read_csv(ideal_path, header=None)
+    data = pd.read_csv(path, header=None)
 
-    # Remove the first row - change as required to clean data
-    eyes_closed_ideal = eyes_closed_ideal.iloc[1:]
+    # Remove chosen rows - change as required to clean data
+    data = data.iloc[7:]
 
     # Save the modified data back to the same file
-    eyes_closed_ideal.to_csv(ideal_path, header=False, index=False)
+    data.to_csv(path, header=False, index=False)
 
-    print('done')
+    print(f'Data cleaned for {filename}')
 
 
 # Test methods for each video
@@ -482,10 +489,10 @@ for i in range(9):
     # ear_list = calculate_ears(VIDEO_FILENAMES[i],TIMESTAMP_FILENAMES[i], EAR_FILENAMES[i])
 
     '''If outputs are 'no eye', re-record video with better lighting - alternatively if for only few frames, data may be cleaned'''
-    # pop(IDEAL_FILENAMES[i])
+    # pop(EAR_FILENAMES[i])
 
     # '''Run manual thresholding (including threshold sweep)'''
-    test_manual(EAR_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
+    # test_manual(EAR_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
 
     # '''Run auto thresholding (including threshold sweep)'''
     # test_auto(EAR_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
@@ -494,10 +501,9 @@ for i in range(9):
     # # test_CNN(EAR_FILENAMES[i], CNN_OUTPUT_FILENAMES[i])
 
     # '''Test & Save Metrics for all'''
-    manual_metrics(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
-    # auto_metrics(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+    # manual_metrics(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
+    auto_metrics(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
     # '''Segmented metrics - not discussed in report'''
     # manual_metrics_segmented(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
     # manual_metrics_segmented(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
-print('Done')

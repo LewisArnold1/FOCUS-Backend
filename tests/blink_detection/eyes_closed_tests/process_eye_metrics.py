@@ -23,7 +23,6 @@ def process_eye(frame, draw_mesh=False, draw_contours=False, show_axis=False, dr
     focus = False
 
     if face_detected == 0 or (left_eye is None and right_eye is None):
-        print("No Eye")
         return face_detected, None
 
     avg_ear = blink_processor.process_blink(left_eye, right_eye)

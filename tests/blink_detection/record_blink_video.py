@@ -6,13 +6,11 @@ import time
 
 # Import face processor to check eye is found in each frme
 try:
-    from eyes_closed_tests.face import FaceProcessor
+    from eyes_closed_tests.process_eye_metrics import process_eye
 except ImportError:
-    from eyes_closed_tests.face import FaceProcessor
+    from eyes_closed_tests.process_eye_metrics import process_eye
 
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PREDICTOR_PATH = os.path.join(CURRENT_DIR, 'eyes_closed_tests','shape_predictor_68_face_landmarks.dat')
-face_processor = FaceProcessor(PREDICTOR_PATH)
+# face_processor = FaceProcessor()
 
 '''
 Set video and timestamp filenames.
@@ -25,8 +23,8 @@ Run file - video will record then be played back after it is saved
 VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
 
-VIDEO_FILENAME = "soniya_test_3.avi"
-TIMESTAMP_FILENAME = "soniya_test_3_timestamps.txt"
+VIDEO_FILENAME = "anaya_test_2.avi"
+TIMESTAMP_FILENAME = "anaya_test_2_timestamps.txt"
 
 # Set to 60s for recording videos (can use 5-10s if you want to test its working)
 VIDEO_DURATION = 60
@@ -72,8 +70,8 @@ def record_video(video_filename, timestamp_filename, duration):
             break
 
         # process_face to check eye is found
-        _, left_eye, right_eye, _ = face_processor.process_face(frame)
-        if left_eye is None or right_eye is None:
+        _, ear = process_eye(frame)
+        if ear is None:
             dropped_frames+=1
             print(f"No eye no.{dropped_frames}\nat time {datetime.now().hour}:{datetime.now().minute}:{datetime.now().second:.2f}.")
         # Continue recording regardless
@@ -134,6 +132,7 @@ def play_video(video_filename, timestamp_filename):
         return
     elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
         print("Timestamps or frames missing.")
+        print(f"{len(timestamps)} Timestamps and {int(cap.get(cv2.CAP_PROP_FRAME_COUNT))} frames")
         return
     else:
         print(f"Video has {len(timestamps)} frames/timestamps")        
@@ -148,9 +147,6 @@ def play_video(video_filename, timestamp_filename):
         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
             break
 
-        '''
-        Do not delete below - required for testing
-        '''
         # Calculate relative timestamp
         relative_timestamp = (timestamps[frame_idx] - timestamps[0]).total_seconds()
 
@@ -166,9 +162,6 @@ def play_video(video_filename, timestamp_filename):
 
         # Display Text
         cv2.putText(frame, text, position, font, font_scale, font_color, thickness)
-        '''
-        Do not delete above - required for testing
-        '''
 
         # Show frame at current timestamp
         cv2.imshow('Frame', frame)
