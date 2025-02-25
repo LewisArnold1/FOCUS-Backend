@@ -5,7 +5,7 @@ from .models import SimpleEyeMetrics, UserSession
 from django.db.models import Max, Sum, Min
 from datetime import timedelta
 
-class RetrieveLastBlinkCountView(APIView):
+class RetrieveLastBlinkRateView(APIView):
 
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
     
@@ -15,22 +15,65 @@ class RetrieveLastBlinkCountView(APIView):
         current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
         latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
         
-        # Retrieve the last metric entry for the user, session, and video
-        last_metric = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id, video_id=latest_video_id).last()
+        # Retrieve blink timestamps for blink rate calculation
+        blink_records = SimpleEyeMetrics.objects.filter(
+            user=request.user, session_id=current_session_id, video_id=latest_video_id
+        ).order_by('timestamp')
 
-        # Check if there is any data for this user
-        if last_metric:
-            data = {
-                "blink_count": last_metric.blink_count
-            }
-        else:
-            data = {
-                "blink_count": 0  # Default value if no data exists for the user
-            }
-        # Send the blink count as a response
+        blink_rate = self.calculate_blink_rate(blink_records)
+
+        # Only send blink_rate
+        data = {
+            "blink_rate": blink_rate  # Return only blink rate per minute as an array
+        }
+        
         return Response(data, status=200)
+    
+    def calculate_blink_rate(self, blink_timestamps):
+        """
+        Calculate blink rate per minute from blink timestamps.
+        Treats consecutive 1s as one blink until there is a 0.
+        """
+        if not blink_timestamps.exists():
+            return []
 
+        # Extract blink counts (0 or 1) per frame from the database
+        blink_counts = [entry.blink_count for entry in blink_timestamps]
+        
+        # Initialize variables
+        blink_rates = []  # Store the number of blinks per minute
+        blink_in_progress = False  # Flag to track ongoing blink
+        current_blink_count = 0  # Count of blinks in the current minute
 
+        start_time = blink_timestamps[0].timestamp
+        end_time = blink_timestamps[-1].timestamp
+
+        current_time = start_time
+        minute_blink_count = 0
+
+        # Loop through each timestamp and calculate blink rate
+        for index, blink in enumerate(blink_counts):
+            if blink == 1: 
+                if not blink_in_progress:  
+                    minute_blink_count += 1 
+                    blink_in_progress = True
+            else:  # Blink ended (0 detected)
+                blink_in_progress = False  # Reset the blink flag
+
+            # Check if the minute has passed (based on timestamp)
+            if blink_timestamps[index].timestamp >= current_time + timedelta(minutes=1):
+                # Store the blink rate for the last minute
+                blink_rates.append(minute_blink_count)
+                # Move to the next minute
+                current_time = current_time + timedelta(minutes=1)
+                minute_blink_count = 0  # Reset for the new minute
+
+        # Make sure the last minute is added if there are remaining blinks
+        if minute_blink_count > 0:
+            blink_rates.append(minute_blink_count)
+
+        return blink_rates
+    
 class RetrieveAllUserSessionsView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
 
