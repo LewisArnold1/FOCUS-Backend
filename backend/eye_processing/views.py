@@ -1,9 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import SimpleEyeMetrics, UserSession
 from django.db.models import Max, Sum, Min
+from django.utils.timezone import now
+
 from datetime import timedelta
+from .models import SimpleEyeMetrics, UserSession
 
 class RetrieveLastBlinkRateView(APIView):
 
@@ -151,3 +153,49 @@ class RetrieveAllUserSessionsView(APIView):
 
         return total_time
     
+class RetrieveBreakCheckView(APIView):
+
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+    
+    def get(self, request, *args, **kwargs):
+
+        # Filter by user to retrieve the latest session ID and video ID
+        current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
+        latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
+        if current_session_id is None or latest_video_id is None:
+            return Response({"error": "No session or video data found."}, status=400)
+
+        # Define the time window (last 5 minutes)
+        five_minutes_ago = now() - timedelta(minutes=5)
+
+        # Retrieve data for the last 5 minutes
+        records = SimpleEyeMetrics.objects.filter(
+            user=request.user, 
+            session_id=current_session_id, 
+            video_id=latest_video_id, 
+            timestamp__gte=five_minutes_ago
+        )
+
+        total_records = records.count()
+
+        # Check if we have at least 300 records i.e. 1 fps for 5 mins
+        if total_records() < 300:
+            return Response({"status": "insufficient_data"}, status=200)
+
+        # Calculate the percentage of True values for focus and face_detected
+        focus_true_count = records.filter(focus=True).count()
+        face_detected_true_count = records.filter(face_detected=True).count()
+
+        focus_percentage = (focus_true_count / total_records) * 100
+        face_detected_percentage = (face_detected_true_count / total_records) * 100
+
+        # Determine if user has been sufficiently focused and their face detected
+        focus_status = focus_percentage >= 80
+        face_detected_status = face_detected_percentage >= 80
+
+        data = {
+            "focus_status": focus_status,  
+            "face_detected_status": face_detected_status,
+        }
+
+        return Response(data, status=200)
