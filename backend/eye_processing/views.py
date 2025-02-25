@@ -89,10 +89,8 @@ class RetrieveAllUserSessionsView(APIView):
         # Prepare session data
         sessions_data = []
         for session in user_sessions:
-            # Get total reading time for the session
-            session_total_time = self.calculate_total_session_reading_time(
-                request.user, session.session_id
-            )
+            total_reading_time, total_focus_time = self.calculate_total_session_times(request.user, session.session_id)
+
 
             # Get reading times for each video in this session
             video_reading_times = SimpleEyeMetrics.objects.filter(
@@ -103,9 +101,8 @@ class RetrieveAllUserSessionsView(APIView):
             video_data = [
                 {
                     "video_id": video["video_id"],
-                    "total_reading_time": self.calculate_reading_time(
-                        request.user, session.session_id, video["video_id"]
-                    ),
+                    "total_reading_time": self.calculate_reading_time(request.user, session.session_id, video["video_id"]),
+                    "total_focus_time": self.calculate_focus_time(request.user, session.session_id, video["video_id"]),
                 }
                 for video in video_reading_times
             ]
@@ -113,7 +110,8 @@ class RetrieveAllUserSessionsView(APIView):
             # Add session details to the response
             sessions_data.append({
                 "session_id": session.session_id,
-                "total_reading_time": session_total_time,
+                "total_reading_time": total_reading_time,
+                "total_focus_time": total_focus_time,
                 "videos": video_data,
             })
 
@@ -135,23 +133,42 @@ class RetrieveAllUserSessionsView(APIView):
         start_time = timestamps['start_time']
         end_time = timestamps['end_time']
 
-        if start_time and end_time:
-            return end_time - start_time
-        else:
-            return timedelta(0)  # Return 0 if no data is available
+        return (end_time - start_time) if start_time and end_time else timedelta(0)
+    
+    def calculate_focus_time(self, user, session_id, video_id):
+        reading_time = self.calculate_reading_time(user, session_id, video_id)
 
-    def calculate_total_session_reading_time(self, user, session_id):
-        # Get unique video IDs for the session
+        total_records = SimpleEyeMetrics.objects.filter(
+            user=user, session_id=session_id, video_id=video_id
+        ).count()
+
+        if total_records == 0:
+            return timedelta(0)
+
+        focus_records = SimpleEyeMetrics.objects.filter(
+            user=user, session_id=session_id, video_id=video_id, focus=True
+        ).count()
+
+        focus_percentage = (focus_records / total_records) if total_records > 0 else 0 
+    
+        return reading_time * focus_percentage
+
+    def calculate_total_session_times(self, user, session_id):
         video_ids = SimpleEyeMetrics.objects.filter(
             user=user, session_id=session_id
         ).values_list('video_id', flat=True).distinct()
 
-        # Calculate total reading time by summing reading times across all videos
-        total_time = timedelta(0)
-        for video_id in video_ids:
-            total_time += self.calculate_reading_time(user, session_id, video_id)
+        total_reading_time = timedelta(0)
+        weighted_focus_time = timedelta(0)
 
-        return total_time
+        for video_id in video_ids:
+            video_reading_time = self.calculate_reading_time(user, session_id, video_id)
+            video_focus_time = self.calculate_focus_time(user, session_id, video_id)
+
+            total_reading_time += video_reading_time
+            weighted_focus_time += video_focus_time
+
+        return total_reading_time, weighted_focus_time
     
 class RetrieveBreakCheckView(APIView):
 
