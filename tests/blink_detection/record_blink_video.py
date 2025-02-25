@@ -23,8 +23,8 @@ Run file - video will record then be played back after it is saved
 VIDEO_FILENAME = "firstname_test_x.avi"
 TIMESTAMP_FILENAME = "firstname_test_x_timestamps.txt"
 
-VIDEO_FILENAME = "anaya_test_2.avi"
-TIMESTAMP_FILENAME = "anaya_test_2_timestamps.txt"
+VIDEO_FILENAME = "anaya_test_1.avi"
+TIMESTAMP_FILENAME = "anaya_test_1_timestamps.txt"
 
 # Set to 60s for recording videos (can use 5-10s if you want to test its working)
 VIDEO_DURATION = 60
@@ -170,10 +170,11 @@ def play_video(video_filename, timestamp_filename):
         if frame_idx > 0 and frame_idx < len(timestamps)-1:
             wait_time = (timestamps[frame_idx+1]-timestamps[frame_idx]).total_seconds()
             sleep_time = max(0, wait_time)  # Prevent negative sleep
-            # time.sleep(sleep_time*3) # alter to find frames where blinks are
+            
 
         # change value here to speed up finding blinks
-        if frame_idx > 73:
+        if frame_idx > 1000:
+            time.sleep(sleep_time*1) # alter to find frames where blinks are
             pass    # use breakpoint before pass
         
         # Increment frame counter

@@ -5,6 +5,7 @@ import csv
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Filenames have  the following format
 
@@ -96,6 +97,7 @@ from process_eye_metrics import process_eye
 from process_eye_metrics import process_eye_CNN
 
 def calculate_ears(video_filename,timestamp_filename,ear_filename):
+    print(f'Processing EARs for {video_filename}')
     # Current directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -129,6 +131,9 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
     # Process each frame
     frame_idx = 0
     ear_list = []
+    A_list = []
+    B_list = []
+    C_list = []
     while cap.isOpened():
         ret, frame = cap.read()
 
@@ -136,14 +141,24 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
             break
 
-        _, ear = process_eye(frame)
+        _, ear, A, B, C = process_eye(frame)
         if ear is None:
             print(f"No Eye at frame {frame_idx}")
         else:
             ear_list.append(ear)
+            A_list.append(A)
+            B_list.append(B)
+            C_list.append(C)
             
         # Increment frame counter        
         frame_idx += 1
+    
+    x_axis = [x for x in range(len(ear_list))]
+
+    # plt.plot(x_axis, A_list)
+    plt.plot(x_axis, B_list)
+    plt.plot(x_axis, C_list)
+    plt.show()
     
     # Save output to CSV     
     with open(ear_path, 'w', newline='') as file:
@@ -492,17 +507,17 @@ for i in range(9):
     # pop(EAR_FILENAMES[i])
 
     # '''Run manual thresholding (including threshold sweep)'''
-    test_manual(EAR_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
+    # test_manual(EAR_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
 
     # '''Run auto thresholding (including threshold sweep)'''
-    test_auto(EAR_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+    # test_auto(EAR_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
     # '''Run CNN'''
     # # test_CNN(EAR_FILENAMES[i], CNN_OUTPUT_FILENAMES[i])
 
     # '''Test & Save Metrics for all'''
-    manual_metrics(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
-    auto_metrics(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+    # manual_metrics(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
+    # auto_metrics(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
     # '''Segmented metrics - not discussed in report'''
     # manual_metrics_segmented(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])

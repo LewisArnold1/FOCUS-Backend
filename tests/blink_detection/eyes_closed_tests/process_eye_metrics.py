@@ -24,10 +24,12 @@ def process_eye(frame, draw_mesh=False, draw_contours=False, show_axis=False, dr
 
     if face_detected == 0 or (left_eye is None and right_eye is None):
         return face_detected, None
-
-    avg_ear = blink_processor.process_blink(left_eye, right_eye)
     
-    return face_detected, avg_ear
+    # Compute blink using X-Y coordinates
+    # avg_ear = blink_processor.process_blink(left_eye[:, :2], right_eye[:, :2])
+    avg_ear, A, B, C = blink_processor.process_blink(left_eye, right_eye)
+    
+    return face_detected, avg_ear, A, B, C
 
 
 def process_eye_CNN(frame):

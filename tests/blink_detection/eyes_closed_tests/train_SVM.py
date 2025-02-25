@@ -164,7 +164,7 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     X_test, y_test = create_feature_matrices(test_ear_values, test_labels, window_size)
 
     # Set hyperparameters
-    C = 0.01
+    C = 1
     W = {0:1, 1:2}
 
     # Train model
@@ -211,13 +211,13 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
 
     '''
 
-    # Test accuracy of model on each of the training videos
-    print('Metrics for each training video:\n')
-    test_svm_videos(svm_model, scaler, X_train, y_train)
+    # # Test accuracy of model on each of the training videos
+    # print('Metrics for each training video:\n')
+    # test_svm_videos(svm_model, scaler, X_train, y_train)
     
-    # Test accuracy of model on each of the test videos
-    print('Metrics for each testing video:\n')
-    test_svm_videos(svm_model, scaler, X_test, y_test)
+    # # Test accuracy of model on each of the test videos
+    # print('Metrics for each testing video:\n')
+    # test_svm_videos(svm_model, scaler, X_test, y_test)
 
     # Overall accuracy over both the training videos
     print('Metrics over all training videos:\n')
@@ -227,19 +227,19 @@ def main(window_size, train_ears_filenames, train_labels_filenames, test_ears_fi
     print('Metrics over all testing videos:\n')
     test_svm_overall(svm_model, scaler, X_test, y_test)
 
-    # Segmented metrics for training videos - not discussed in report
-    print('Accuracy with segmented training videos:')
-    test_segments(svm_model, scaler, X_train, y_train)
+    # # Segmented metrics for training videos - not discussed in report
+    # print('Accuracy with segmented training videos:')
+    # test_segments(svm_model, scaler, X_train, y_train)
 
-    # Segmented metrics for test videos - not discussed in report
-    print('Accuracy with segmented test videos:')
-    test_segments(svm_model, scaler, X_test, y_test)
+    # # Segmented metrics for test videos - not discussed in report
+    # print('Accuracy with segmented test videos:')
+    # test_segments(svm_model, scaler, X_test, y_test)
 
     # Path to save model - change filenames for each iteration as appropriate
     script_dir = os.path.dirname(os.path.abspath(__file__))
     models_dir = os.path.join(script_dir, "..","SVM_models")
-    model_path = os.path.join(models_dir, 'svm_model_23.joblib')
-    scaler_path = os.path.join(models_dir, 'scaler_23.joblib')
+    model_path = os.path.join(models_dir, 'svm_model_30.joblib')
+    scaler_path = os.path.join(models_dir, 'scaler_30.joblib')
 
     # Save model
     joblib.dump(svm_model, model_path)

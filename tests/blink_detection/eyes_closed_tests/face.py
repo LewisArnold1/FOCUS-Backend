@@ -42,7 +42,7 @@ class FaceProcessor:
         right_eye_pixels = self.convert_face_frame_to_pixels(right_eye, frame_width, frame_height)
 
         if not (draw_mesh or draw_contours or show_axis or draw_eye):
-            return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll, frame
+            return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll, frame # change output!!
 
         if draw_mesh or draw_contours:
             self._draw_face_mesh(frame, face_landmarks, draw_mesh, draw_contours)
@@ -132,10 +132,14 @@ class FaceProcessor:
 
         right_eye = np.array([
         (face_landmarks.landmark[i].x, face_landmarks.landmark[i].y, face_landmarks.landmark[i].z) for i in RIGHT_EYE_IDX], dtype=np.float32)
-        
+        # print('\nBefore Sorting')
+        # print(left_eye)
+
         left_eye = self.sort_eye_landmarks(left_eye)
         right_eye = self.sort_eye_landmarks(right_eye)
 
+        # print('After sorting')
+        # print(left_eye)
         return left_eye, right_eye
     
     def sort_eye_landmarks(self, eye_points):
