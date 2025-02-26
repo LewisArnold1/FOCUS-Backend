@@ -176,27 +176,30 @@ class RetrieveBreakCheckView(APIView):
     
     def get(self, request, *args, **kwargs):
 
+        time_limit = float(request.query_params.get('time_limit', 1))  # Default to 1 minute
+        print(time_limit)
+
         # Filter by user to retrieve the latest session ID and video ID
         current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
         latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
         if current_session_id is None or latest_video_id is None:
             return Response({"error": "No session or video data found."}, status=400)
 
-        # Define the time window (last 5 minutes)
-        five_minutes_ago = now() - timedelta(minutes=5)
+        # Define the time window
+        time_window = now() - timedelta(minutes=time_limit)
 
-        # Retrieve data for the last 5 minutes
+        # Retrieve data for the last time window 
         records = SimpleEyeMetrics.objects.filter(
             user=request.user, 
             session_id=current_session_id, 
             video_id=latest_video_id, 
-            timestamp__gte=five_minutes_ago
+            timestamp__gte=time_window
         )
 
         total_records = records.count()
 
         # Check if we have at least 300 records i.e. 1 fps for 5 mins
-        if total_records < 300:
+        if total_records < (time_limit * 60):
             return Response({"status": "insufficient_data"}, status=200)
 
         # Calculate the percentage of True values for focus and face_detected
