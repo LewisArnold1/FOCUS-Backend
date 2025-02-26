@@ -31,7 +31,7 @@ def decode_frame(encoded_frame):
     buffer = np.frombuffer(base64.b64decode(encoded_frame), dtype=np.uint8)
     return cv2.imdecode(buffer, cv2.IMREAD_COLOR)
 
-TIME_WINDOW = 5
+TIME_WINDOW = 0.5
 
 class VideoFrameConsumer(AsyncWebsocketConsumer):
 
@@ -171,7 +171,9 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                     # Get EAR values for the full window
                     ear_values = [entry.eye_aspect_ratio for entry in past_frames]
                     timestamps = [entry.timestamp for entry in past_frames]
-                    blink_detected = process_blinks(ear_values, timestamps) if ear_values and timestamps else False
+                    middle_frame_timestamp = middle_frame_entry.timestamp
+                    blink_detected = process_blinks(ear_values, timestamps, middle_frame_timestamp) if ear_values and timestamps else False
+
                     if middle_frame is not None:
                         face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(middle_frame, middle_frame_entry.timestamp, blink_detected)
 
