@@ -63,6 +63,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             max_video_id = await sync_to_async(SimpleEyeMetrics.objects.filter(user=self.user, session_id=max_session_id['session_id__max']).aggregate)(Max('video_id'))
 
             self.video_id = (max_video_id['video_id__max'] or 0) + 1
+            self.session_id = max_session_id['session_id__max']  
 
             await self.accept()
         except IndexError:
@@ -73,7 +74,18 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             await self.close()
             
     async def disconnect(self, close_code):
-        pass 
+        from eye_processing.models import SimpleEyeMetrics
+
+        try:
+            # Set all frames to None for the user's current session and video
+            await sync_to_async(lambda: SimpleEyeMetrics.objects.filter(
+                user=self.user, 
+                session_id=self.session_id, 
+                video_id=self.video_id
+            ).update(frame=None))()
+            
+        except Exception as e:
+            print(f"Error clearing frames on disconnect: {e}")
 
     async def receive(self, text_data):
         # Parse the received JSON message
@@ -81,6 +93,8 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         frame_data = data_json.get('frame', None)
         timestamp = data_json.get('timestamp', None)  # Extract timestamp
         mode = data_json.get('mode', 'reading')  # Default to 'reading' if not provided
+        reading_mode = data_json.get('reading_mode', 3)
+        wpm = data_json.get('wpm', 0)
 
         # self.total_frames = self.total_frames + 1
         # if(self.total_frames % 30 == 0):
@@ -91,7 +105,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             y_coordinate_px = data_json.get('yCoordinatePx', None)
 
             if frame_data:
-                await self.process_reading_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px)
+                await self.process_reading_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm)
 
         elif mode == "diagnostic":
             draw_mesh = data_json.get('draw_mesh', False)
@@ -103,7 +117,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 await self.process_diagnostic_frame(frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye)
 
 
-    async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px):
+    async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm):
         try:
             from eye_processing.models import SimpleEyeMetrics, UserSession
 
@@ -135,6 +149,8 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 eye_aspect_ratio=avg_ear,
                 frame=encode_frame(frame),  # Store Base64 frame
                 blink_detected=blink_detected,
+                reading_mode=reading_mode,
+                wpm=wpm
             )
             await sync_to_async(eye_metrics.save)()
 
