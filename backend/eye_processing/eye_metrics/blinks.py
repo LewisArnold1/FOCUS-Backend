@@ -10,6 +10,8 @@ class BlinkProcessor:
 
     def process_ear(self, frame):
         left_eye, right_eye = self.process_face(frame)
+        if left_eye is None or right_eye is None:
+            return None
         left_ear = self.eye_aspect_ratio(left_eye)
         right_ear = self.eye_aspect_ratio(right_eye)
         avg_ear = (left_ear + right_ear) / 2.0
@@ -22,7 +24,7 @@ class BlinkProcessor:
         faces = self.detector(grey, 0)
         main_face, no_faces = self.extract_main_face(faces)
         if no_faces == 0 or main_face is None:
-            return 0, None, None, 0.0
+            return None, None
         
         shape = self.predictor(grey, main_face)
         shape = face_utils.shape_to_np(shape)

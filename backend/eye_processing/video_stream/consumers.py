@@ -171,7 +171,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                     # Get EAR values for the full window
                     ear_values = [entry.eye_aspect_ratio for entry in past_frames]
                     blink_detected = process_blinks(ear_values) if ear_values else False
-
                     if middle_frame is not None:
                         face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(middle_frame, middle_frame_entry.timestamp, blink_detected)
 
