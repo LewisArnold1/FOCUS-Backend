@@ -1,25 +1,37 @@
 import base64
 import json
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 import os
 import django
-
 import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
-from channels.generic.websocket import AsyncWebsocketConsumer
+import base64
 
+from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Max
 
 from eye_processing.eye_metrics.process_eye_metrics import process_eye
+from eye_processing.eye_metrics.process_blinks import process_ears, process_blinks
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()  # Ensure Django is initialised before importing Django modules
 
 from asgiref.sync import sync_to_async
 from rest_framework_simplejwt.authentication import JWTAuthentication
+
+
+def encode_frame(frame):
+    _, buffer = cv2.imencode('.jpg', frame)
+    return base64.b64encode(buffer).decode('utf-8')
+
+def decode_frame(encoded_frame):
+    buffer = np.frombuffer(base64.b64decode(encoded_frame), dtype=np.uint8)
+    return cv2.imdecode(buffer, cv2.IMREAD_COLOR)
+
+TIME_WINDOW = 5
 
 class VideoFrameConsumer(AsyncWebsocketConsumer):
 
@@ -94,46 +106,103 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
     async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px):
         try:
             from eye_processing.models import SimpleEyeMetrics, UserSession
-            # Decode the base64-encoded image
+
+            # Decode the incoming frame
             image_data = base64.b64decode(frame_data.split(',')[1])
             image = Image.open(BytesIO(image_data))
             frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-            # Convert the timestamp from milliseconds to a datetime object
+            # Convert timestamp
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
-            # Extract eye metrics
-            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(frame, timestamp_dt)
+            # Process EAR values for the current frame
+            avg_ear = process_ears(frame)
+            blink_detected=False
 
+            # Get session ID
             max_session_id = await sync_to_async(UserSession.objects.filter(user=self.user).aggregate)(Max('session_id'))
             session_id = max_session_id['session_id__max']
 
-             # Save the metrics for this frame in the database with the user
+            # Store EAR and frame in the database
             eye_metrics = SimpleEyeMetrics(
-                user=self.user,  # Associate the logged-in user
+                user=self.user,
                 session_id=session_id,
-                video_id=self.video_id, # Associate current videoID
+                video_id=self.video_id,
                 timestamp=timestamp_dt,
                 gaze_x=x_coordinate_px,
                 gaze_y=y_coordinate_px,
-                face_detected=face_detected,
-                normalised_eye_speed=normalised_eye_speed,
-                face_yaw=yaw,
-                face_roll=roll,
-                face_pitch=pitch,
                 eye_aspect_ratio=avg_ear,
+                frame=encode_frame(frame),  # Store Base64 frame
                 blink_detected=blink_detected,
-                left_centre=left_centre, 
-                right_centre=right_centre,
-                focus=focus,
-                left_iris_velocity=left_iris_velocity,
-                right_iris_velocity=right_iris_velocity, 
-                movement_type=movement_type,
             )
             await sync_to_async(eye_metrics.save)()
 
-            print(f"User: {self.user.username}, Timestamp: {timestamp_dt}, Total Blinks: {blink_detected}, EAR: {avg_ear}, x-coordinate: {x_coordinate_px}, y-coordinate: {y_coordinate_px}, Session ID: {eye_metrics.session_id}, Video ID: {eye_metrics.video_id}")
+            # Get past frames within time_window * 2
+            start_time = timestamp_dt - timedelta(seconds=TIME_WINDOW * 2)
+
+            # Check if at least one frame exists before start_time
+            frame_before_window = await sync_to_async(SimpleEyeMetrics.objects.filter(
+                user=self.user, session_id=session_id,
+                video_id=self.video_id,
+                timestamp__lt=start_time
+            ).exists)()
+
+            middle_frame = None
+
+            if frame_before_window:
+
+                # Retrieve frames in the time window
+                past_frames = await sync_to_async(list)(SimpleEyeMetrics.objects.filter(
+                    user=self.user, session_id=session_id,
+                    video_id=self.video_id,
+                    timestamp__gte=start_time,
+                    timestamp__lte=timestamp_dt
+                ).order_by("timestamp"))
+
+                # Extract middle frame 
+                middle_index = len(past_frames) // 2
+                middle_frame_entry = past_frames[middle_index] if past_frames else None
+
+                if middle_frame_entry and middle_frame_entry.frame:
+                    # Decode middle frame
+                    middle_frame = decode_frame(middle_frame_entry.frame)
+
+                    # Get EAR values for the full window
+                    ear_values = [entry.eye_aspect_ratio for entry in past_frames]
+                    blink_detected = process_blinks(ear_values) if ear_values else False
+
+                    if middle_frame is not None:
+                        face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(middle_frame, middle_frame_entry.timestamp, blink_detected)
+
+                        # Update database for the middle frame
+                        await sync_to_async(SimpleEyeMetrics.objects.filter(
+                            user=self.user, session_id=session_id,
+                            video_id=self.video_id,
+                            timestamp=middle_frame_entry.timestamp
+                        ).update)(
+                            face_detected=face_detected,
+                            normalised_eye_speed=normalised_eye_speed,
+                            face_yaw=yaw,
+                            face_roll=roll,
+                            face_pitch=pitch,
+                            left_centre=left_centre,
+                            right_centre=right_centre,
+                            focus=focus,
+                            left_iris_velocity=left_iris_velocity,
+                            right_iris_velocity=right_iris_velocity,
+                            movement_type=movement_type,
+                            blink_detected=blink_detected
+                        )
+
+                        # Cleanup: Delete old frames outside of time_window * 2
+                        await sync_to_async(lambda: SimpleEyeMetrics.objects.filter(
+                            user=self.user, 
+                            session_id=session_id,
+                            video_id=self.video_id,
+                            timestamp__lt=start_time
+                        ).update(frame=None))()
+
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
 
@@ -149,7 +218,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
             # Call `process_eye` with visualisation options
-            face_detected, normalised_eye_speed, yaw, pitch, roll, avg_ear, blink_detected, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
+            face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
 
             # Encode the processed frame back to base64
             _, buffer = cv2.imencode('.jpg', diagnostic_frame)
@@ -168,3 +237,4 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
 
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
+
