@@ -196,7 +196,7 @@ class RetrieveBreakCheckView(APIView):
         total_records = records.count()
 
         # Check if we have at least 300 records i.e. 1 fps for 5 mins
-        if total_records() < 300:
+        if total_records < 300:
             return Response({"status": "insufficient_data"}, status=200)
 
         # Calculate the percentage of True values for focus and face_detected
