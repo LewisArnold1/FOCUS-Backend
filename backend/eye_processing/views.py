@@ -209,12 +209,66 @@ class RetrieveBreakCheckView(APIView):
         face_detected_percentage = (face_detected_true_count / total_records) * 100
 
         # Determine if user has been sufficiently focused and their face detected
+        # Calculate blink rate per minute
+        blink_records = SimpleEyeMetrics.objects.filter(
+            user=request.user, session_id=current_session_id, video_id=latest_video_id, timestamp__gte=time_window
+        ).order_by('timestamp')
+
+        blink_rate = self.calculate_blink_rate(blink_records)
+
+        # Determine if the user has been sufficiently focused, their face detected, and has a normal blink rate
         focus_status = focus_percentage >= 80
         face_detected_status = face_detected_percentage >= 80
+        blink_rate_status = all(blink_count >= 5 for blink_count in blink_rate)
 
         data = {
             "focus_status": focus_status,  
             "face_detected_status": face_detected_status,
+            "blink_rate_status": blink_rate_status,  # True if blink rate is normal
         }
 
         return Response(data, status=200)
+    def calculate_blink_rate(self, blink_timestamps):
+        """
+        Calculate blink rate per minute from blink timestamps.
+        Treats consecutive 1s as one blink until there is a 0.
+        """
+        if not blink_timestamps.exists():
+            return []
+
+        # Extract blink counts (0 or 1) per frame from the database
+        blink_counts = [entry.blink_count for entry in blink_timestamps]
+        
+        # Initialize variables
+        blink_rates = []  # Store the number of blinks per minute
+        blink_in_progress = False  # Flag to track ongoing blink
+        current_blink_count = 0  # Count of blinks in the current minute
+
+        start_time = blink_timestamps[0].timestamp
+        end_time = blink_timestamps[-1].timestamp
+
+        current_time = start_time
+        minute_blink_count = 0
+
+        # Loop through each timestamp and calculate blink rate
+        for index, blink in enumerate(blink_counts):
+            if blink == 1: 
+                if not blink_in_progress:  
+                    minute_blink_count += 1 
+                    blink_in_progress = True
+            else:  # Blink ended (0 detected)
+                blink_in_progress = False  # Reset the blink flag
+
+            # Check if the minute has passed (based on timestamp)
+            if blink_timestamps[index].timestamp >= current_time + timedelta(minutes=1):
+                # Store the blink rate for the last minute
+                blink_rates.append(minute_blink_count)
+                # Move to the next minute
+                current_time = current_time + timedelta(minutes=1)
+                minute_blink_count = 0  # Reset for the new minute
+
+        # Make sure the last minute is added if there are remaining blinks
+        if minute_blink_count > 0:
+            blink_rates.append(minute_blink_count)
+
+        return blink_rates
