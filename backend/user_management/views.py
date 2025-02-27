@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import mimetypes
 import os
 import base64
+import jwt
 
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -11,7 +12,11 @@ from django.contrib.auth.models import User
 from django.http import FileResponse
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-import os
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.contrib.auth.hashers import make_password
 
 from .serializers import RegisterUserSerializer
 from .models import CalibrationData, DocumentData, OnboardingData
@@ -20,6 +25,111 @@ class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.all() # Ensure user does not already exist
     serializer_class = RegisterUserSerializer # Required data to create user
     permission_classes = [AllowAny] # Any user should be able to register
+
+    def perform_create(self, serializer):
+            user = serializer.save() # calls create method in serializer
+
+            user.is_active = False # User is not active until email is verified
+            user.save()
+
+            print("user id: ", user.id)
+            
+            # Valid for 24 hours 
+            token = jwt.encode(
+                {'user_id': user.id, 'exp': datetime.now(timezone.utc) + timedelta(hours=24)},
+                settings.SECRET_KEY,
+                algorithm='HS256'
+            )
+
+            verification_url = f"{settings.FRONTEND_URL}/verify-email/?token={token}"
+            try:
+                
+                send_mail(
+                    subject="Verify Your Email",
+                    message=f"Click the link to verify your email: {verification_url}",
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[user.username],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                return Response({"error": "Email sending failed"}, status=500) 
+
+            return Response({'message': 'Check your email for the verification link.'}, status=status.HTTP_201_CREATED)
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        token = request.data.get('token')
+
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            user = User.objects.get(id=payload['user_id'])
+
+            print("user id: ", user.id)
+            
+            if user.is_active:
+                return Response({'message': 'User already verified'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            user.is_active = True 
+            user.save()
+
+            return Response({'message': 'Email successfully verified!'}, status=status.HTTP_200_OK)
+
+        except jwt.ExpiredSignatureError:
+            return Response({'error': 'Verification link expired'}, status=status.HTTP_400_BAD_REQUEST)
+        except jwt.DecodeError:
+            return Response({'error': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+        
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        try:
+            user = User.objects.get(username=email)
+        except User.DoesNotExist:
+            return Response({"error": "User with this email does not exist."}, status=status.HTTP_404_NOT_FOUND)
+
+        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?uidb64={uidb64}&token={token}"
+        try: 
+            send_mail(
+                subject="Reset Your Password",
+                message=f"Click the link to reset your password: {reset_url}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.username],
+                fail_silently=False,
+            )
+        except Exception as e: 
+            return Response({"error": "Email sending failed"}, status=500) 
+
+        return Response({"message": "Password reset email sent."}, status=status.HTTP_200_OK)
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        uidb64 = request.data.get("uidb64")
+        token = request.data.get("token")
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+        except (User.DoesNotExist, ValueError):
+            return Response({"error": "Invalid user."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"error": "Invalid or expired token."}, status=status.HTTP_400_BAD_REQUEST)
+
+        new_password = request.data.get("password")
+        user.password = make_password(new_password)
+        user.save()
+
+        return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
 
 class ProfileView(APIView):
    permission_classes = [IsAuthenticated]
