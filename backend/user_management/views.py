@@ -36,7 +36,7 @@ class RegisterUserView(generics.CreateAPIView):
             
             # Valid for 24 hours 
             token = jwt.encode(
-                {'user_id': user.id, 'exp': datetime.now(timezone.utc) + timedelta(hours=24)},
+                {'user_id': user.username, 'exp': datetime.now(timezone.utc) + timedelta(hours=24)},
                 settings.SECRET_KEY,
                 algorithm='HS256'
             )
@@ -64,9 +64,7 @@ class VerifyEmailView(APIView):
 
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            user = User.objects.get(id=payload['user_id'])
-
-            print("user id: ", user.id)
+            user = User.objects.get(username=payload['user_id'])
             
             if user.is_active:
                 return Response({'message': 'User already verified'}, status=status.HTTP_400_BAD_REQUEST)
