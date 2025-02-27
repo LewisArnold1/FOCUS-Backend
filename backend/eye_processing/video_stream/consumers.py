@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 import base64
+import asyncio
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Max
@@ -131,7 +132,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
             # Process EAR values for the current frame
-            avg_ear = process_ears(frame)
+            avg_ear = await asyncio.to_thread(process_ears, frame)
             blink_detected=False
 
             # Get session ID
@@ -188,7 +189,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                     ear_values = [entry.eye_aspect_ratio for entry in past_frames]
                     timestamps = [entry.timestamp for entry in past_frames]
                     middle_frame_timestamp = middle_frame_entry.timestamp
-                    blink_detected = process_blinks(ear_values, timestamps, middle_frame_timestamp) if ear_values and timestamps else False
+                    blink_detected = await asyncio.to_thread(process_blinks, ear_values, timestamps, middle_frame_timestamp) if ear_values and timestamps else False
 
                     if middle_frame is not None:
                         face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(middle_frame, middle_frame_entry.timestamp, blink_detected)
