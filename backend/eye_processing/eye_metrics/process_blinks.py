@@ -54,9 +54,9 @@ def process_blinks(ear_values, timestamps, middle_frame_timestamp):
     before_EARs = [ear_values[i] for i in before_indices]
     after_EARs = [ear_values[i] for i in after_indices]
     
-    # For now check that code has worked
+    '''remove'''
     if len(before_indices) != len(after_indices):
-        print('zak is shit at coding') # remove this if code works lol
+        print('removing frames incorrectly')
         return False
     
     # Check >= 11.4 FPS
@@ -107,6 +107,12 @@ def process_blinks(ear_values, timestamps, middle_frame_timestamp):
     y_pred = svm_model.predict(X_scaled)
 
     '''
+
+    '''remove'''
+    if len(feature_window) != 21:
+        print('wrong feature window length')
+        return False
+    
     X_scaled = scaler.transform(feature_window)
     y_pred = svm_model.predict(X_scaled)
 
