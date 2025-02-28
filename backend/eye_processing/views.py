@@ -9,74 +9,144 @@ from django.utils.timezone import now
 
 from .models import SimpleEyeMetrics, UserSession
 
-class RetrieveLastBlinkRateView(APIView):
+class RetrieveBlinkRateView(APIView):
 
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
     
     def get(self, request, *args, **kwargs):
 
-        # Filter by user to retrieve the latest session ID and video ID
+        display = request.query_params.get("display", "user")
         current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
-        latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
+
+        if not current_session_id:
+            return Response({"error": "No session data found."}, status=400)
+
+        if display == "user":
+            return self.get_user_level_metrics(request.user)
+        elif display == "session":
+            return self.get_session_level_metrics(request.user, current_session_id)
+        elif display == "video":
+            current_video_id = SimpleEyeMetrics.objects.filter(
+                user=request.user, session_id=current_session_id
+            ).aggregate(Max('video_id'))['video_id__max']
+
+            if current_video_id is None:
+                return Response({"error": "No video data found."}, status=400)
+
+            return self.get_video_level_metrics(request.user, current_session_id, current_video_id)
+        else:
+            return Response({"error": "Invalid display parameter."}, status=400)
         
-        # Retrieve blink timestamps for blink rate calculation
+
+    def get_user_level_metrics(self, user):
+
+        user_sessions = UserSession.objects.filter(user=user)
+
+        if not user_sessions.exists():
+            return Response({"error": "No sessions found for this user."}, status=404)
+
+        session_blink_rates = []
+        for session in user_sessions:
+            session_rate, total_time = self.get_session_level_metrics(user, session.session_id, weighted=True)
+            if session_rate is not None:
+                session_blink_rates.append((session_rate, total_time))
+
+        # Compute weighted average blink rate
+        total_time_weighted = sum(time for _, time in session_blink_rates)
+        if session_blink_rates and total_time_weighted > 0:
+            avg_blink_rate = sum(rate * (time / total_time_weighted) for rate, time in session_blink_rates)
+            return Response({"avg_blink_rate_per_session": round(avg_blink_rate, 2)}, status=200)
+
+        return Response({"avg_blink_rate_per_session": None}, status=200)
+    
+    def get_session_level_metrics(self, user, session_id, weighted=False):
+        
+        video_data = SimpleEyeMetrics.objects.filter(user=user, session_id=session_id).values('video_id').distinct()
+
+        video_blink_rates = []
+        total_session_time = 0
+
+        for video in video_data:
+            video_id = video["video_id"]
+            video_rate, video_time = self.get_video_level_metrics(user, session_id, video_id, weighted=True)
+            if video_rate is not None:
+                video_blink_rates.append((video_rate, video_time))
+                total_session_time += video_time
+
+        # Compute weighted avg for session if needed
+        if video_blink_rates and total_session_time > 0:
+            avg_blink_rate = sum(rate * (time / total_session_time) for rate, time in video_blink_rates)
+            if weighted:
+                return avg_blink_rate, total_session_time  # Used for user-level aggregation
+            return Response({"avg_blink_rate_per_video": round(avg_blink_rate, 2)}, status=200)
+
+        return Response({"avg_blink_rate_per_video": None}, status=200)
+    
+    def get_video_level_metrics(self, user, session_id, video_id, weighted=False):
         blink_records = SimpleEyeMetrics.objects.filter(
-            user=request.user, session_id=current_session_id, video_id=latest_video_id
+            user=user, session_id=session_id, video_id=video_id
         ).order_by('timestamp')
 
-        blink_rate = self.calculate_blink_rate(blink_records)
+        if not blink_records.exists():
+            return (None, 0) if weighted else Response({"blink_rate_over_time": []}, status=200)
 
-        # Only send blink_rate
-        data = {
-            "blink_rate": blink_rate  # Return only blink rate per minute as an array
-        }
-        
-        return Response(data, status=200)
+        blink_rate_over_time, total_video_time = self.calculate_blink_rate(blink_records)
+
+        if weighted:
+            avg_blink_rate = np.mean([rate["blink_rate"] for rate in blink_rate_over_time]) if blink_rate_over_time else None
+            return avg_blink_rate, total_video_time
+
+        # Downsample if necessary
+        blink_rate_over_time = self.downsample_data(blink_rate_over_time)
+
+        return Response({"blink_rate_over_time": blink_rate_over_time}, status=200)
     
-    def calculate_blink_rate(self, blink_timestamps):
-        """
-        Calculate blink rate per minute from blink timestamps.
-        Treats consecutive 1s as one blink until there is a 0.
-        """
-        if not blink_timestamps.exists():
-            return []
-
-        # Extract blink counts (0 or 1) per frame from the database
-        blink_counts = [entry.blink_count for entry in blink_timestamps]
-        
-        # Initialize variables
-        blink_rates = []  # Store the number of blinks per minute
-        blink_in_progress = False  # Flag to track ongoing blink
-        current_blink_count = 0  # Count of blinks in the current minute
-
-        start_time = blink_timestamps[0].timestamp
-        end_time = blink_timestamps[-1].timestamp
-
+    def calculate_blink_rate(self, blink_records):
+        blink_values = [entry.blink_detected for entry in blink_records]
+        blink_rate_over_time = []
+        total_time = 0  # Total video time in minutes
+        start_time = blink_records[0].timestamp
         current_time = start_time
         minute_blink_count = 0
 
-        # Loop through each timestamp and calculate blink rate
-        for index, blink in enumerate(blink_counts):
-            if blink == 1: 
-                if not blink_in_progress:  
-                    minute_blink_count += 1 
-                    blink_in_progress = True
-            else:  # Blink ended (0 detected)
-                blink_in_progress = False  # Reset the blink flag
+        # Count blinks only when there are at least 3 consecutive ones
+        i = 0
+        while i < len(blink_values) - 2:
+            if blink_values[i] == 1 and blink_values[i + 1] == 1 and blink_values[i + 2] == 1:
+                minute_blink_count += 1
+                # Skip to the end of this blink sequence to prevent overcounting
+                while i < len(blink_values) and blink_values[i] == 1:
+                    i += 1
+            else:
+                i += 1
 
-            # Check if the minute has passed (based on timestamp)
-            if blink_timestamps[index].timestamp >= current_time + timedelta(minutes=1):
+            # Check if the minute has passed
+            if (i - 1) >= 0 and (i - 1) < len(blink_records) and blink_records[i - 1].timestamp >= current_time + timedelta(minutes=1):
                 # Store the blink rate for the last minute
-                blink_rates.append(minute_blink_count)
-                # Move to the next minute
-                current_time = current_time + timedelta(minutes=1)
+                blink_rate_over_time.append({
+                    "timestamp": current_time.isoformat(),
+                    "blink_rate": minute_blink_count
+                })
+                total_time += 1  # Increment total video time
+                current_time += timedelta(minutes=1)
                 minute_blink_count = 0  # Reset for the new minute
 
-        # Make sure the last minute is added if there are remaining blinks
+        # Ensure last interval is recorded
         if minute_blink_count > 0:
-            blink_rates.append(minute_blink_count)
+            blink_rate_over_time.append({
+                "timestamp": current_time.isoformat(),
+                "blink_rate": minute_blink_count
+            })
+            total_time += 1
 
-        return blink_rates
+        return blink_rate_over_time, total_time 
+    
+    def downsample_data(self, data):
+        if len(data) > 50:
+            indices = np.linspace(0, len(data) - 1, 50).astype(int)
+            return [data[i] for i in indices]
+        return data
+
     
 class RetrieveReadingMetricsView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
