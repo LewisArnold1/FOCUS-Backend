@@ -1,10 +1,12 @@
+import numpy as np
+from datetime import timedelta
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Max, Sum, Min
+from django.db.models import Max, Min
 from django.utils.timezone import now
 
-from datetime import timedelta
 from .models import SimpleEyeMetrics, UserSession
 
 class RetrieveLastBlinkRateView(APIView):
@@ -176,28 +178,30 @@ class RetrieveBreakCheckView(APIView):
     
     def get(self, request, *args, **kwargs):
 
+        time_limit = float(request.query_params.get('time_limit', 1))  # Default to 1 minute
+
         # Filter by user to retrieve the latest session ID and video ID
         current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
         latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
         if current_session_id is None or latest_video_id is None:
             return Response({"error": "No session or video data found."}, status=400)
 
-        # Define the time window (last 5 minutes)
-        five_minutes_ago = now() - timedelta(minutes=5)
+        # Define the time window
+        time_window = now() - timedelta(minutes=time_limit)
 
-        # Retrieve data for the last 5 minutes
+        # Retrieve data for the last time window 
         records = SimpleEyeMetrics.objects.filter(
             user=request.user, 
             session_id=current_session_id, 
             video_id=latest_video_id, 
-            timestamp__gte=five_minutes_ago
+            timestamp__gte=time_window
         )
 
         total_records = records.count()
 
-        # Check if we have at least 300 records i.e. 1 fps for 5 mins
-        if total_records() < 300:
-            return Response({"status": "insufficient_data"}, status=200)
+        # Check if we have enough data to determine focus and face detection levels in time window
+        if total_records < (time_limit * 60):
+            return Response({"status": f"insufficient_data, found {total_records} records, current time: {now()} ... latest frame: {SimpleEyeMetrics.objects.order_by('timestamp').last().timestamp}"}, status=200)
 
         # Calculate the percentage of True values for focus and face_detected
         focus_true_count = records.filter(focus=True).count()
@@ -216,3 +220,64 @@ class RetrieveBreakCheckView(APIView):
         }
 
         return Response(data, status=200)
+    
+class RetrieveReadingSpeedView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def get(self, request, *args, **kwargs):
+        # Get latest session and video ID
+        current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
+        latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
+
+        if current_session_id is None or latest_video_id is None:
+            return Response({"error": "No session or video data found."}, status=400)
+
+        # Fetch relevant reading records (only modes 2, 3, 4)
+        reading_records = SimpleEyeMetrics.objects.filter(
+            user=request.user,
+            session_id=current_session_id,
+            video_id=latest_video_id,
+            reading_mode__in=[2, 3, 4]
+        ).order_by("timestamp")
+
+        if not reading_records.exists():
+            return Response({
+                "total_words_read": None,
+                "average_wpm": None,
+                "reading_speed_over_time": None
+            }, status=200)
+
+        # Calculate reading speed metrics
+        reading_speed_metrics = self.calculate_reading_speed_metrics(reading_records)
+
+        return Response(reading_speed_metrics, status=200)
+
+    def calculate_reading_speed_metrics(self, reading_records):
+        total_words_read = 0
+        reading_speed_over_time = []
+        total_wpm = []
+        prev_timestamp = None
+
+        for record in reading_records:
+            if record.wpm is not None:
+                total_wpm.append(record.wpm)
+
+                if prev_timestamp:
+                    time_diff = (record.timestamp - prev_timestamp).total_seconds() / 60  # Convert to minutes
+                    words_read = record.wpm * time_diff
+                    total_words_read += words_read
+
+                    reading_speed_over_time.append({
+                        "timestamp": record.timestamp.isoformat(),
+                        "wpm": record.wpm
+                    })
+
+                prev_timestamp = record.timestamp
+
+        avg_wpm = np.mean(total_wpm) if total_wpm else None
+
+        return {
+            "total_words_read": round(total_words_read, 2),
+            "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
+            "reading_speed_over_time": reading_speed_over_time
+        }

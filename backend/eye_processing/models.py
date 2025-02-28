@@ -29,6 +29,9 @@ class SimpleEyeMetrics(models.Model):
     left_iris_velocity=models.FloatField(null=True, blank=True)
     right_iris_velocity=models.FloatField(null=True, blank=True)
     movement_type=models.CharField(max_length=10, default="fixation")
+    frame=models.TextField(null=True, blank=True)
+    reading_mode=models.IntegerField(default=3)
+    wpm=models.IntegerField(default=0)
 
     def __str__(self):
         return f"User: {self.user.username} - Session: {self.session_id} - Video: {self.video_id} - Timestamp: {self.timestamp}"
