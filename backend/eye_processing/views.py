@@ -302,7 +302,7 @@ class RetrieveReadingMetricsView(APIView):
 
             cumulative_time.append({
                 "timestamp": record.timestamp.isoformat(),
-                "cumulative_time": round(total_time, 2)
+                "cumulative_time": total_time
             })
 
             prev_timestamp = record.timestamp  # Update for next iteration
