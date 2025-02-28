@@ -26,6 +26,7 @@ def process_ears(frame):
     return blink_processor.process_ear(frame)
 
 def process_blinks(ear_values, timestamps, middle_frame_timestamp):
+    print('Process blinks reached')
     if len(timestamps) != len(ear_values):
         print('Issue with process_blinks: timestamps & EAR unequal length')
         return False
@@ -116,5 +117,7 @@ def process_blinks(ear_values, timestamps, middle_frame_timestamp):
     X_scaled = scaler.transform(feature_window)
     y_pred = svm_model.predict(X_scaled)
 
-        
+    print (f"predict: {y_pred}")
+
+    y_pred = False
     return y_pred
