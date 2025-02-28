@@ -78,12 +78,35 @@ class RetrieveLastBlinkRateView(APIView):
 
         return blink_rates
     
-class RetrieveAllUserSessionsView(APIView):
+class RetrieveReadingMetricsView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
 
     def get(self, request, *args, **kwargs):
+        display = request.query_params.get("display", "user")  
+        current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
+
+        if not current_session_id:
+            return Response({"error": "No session data found."}, status=400)
+
+        if display == "user":
+            return self.get_user_level_metrics(request.user)
+        elif display == "session":
+            return self.get_session_level_metrics(request.user, current_session_id)
+        elif display == "video":
+            current_video_id = SimpleEyeMetrics.objects.filter(
+                user=request.user, session_id=current_session_id
+                ).aggregate(Max('video_id'))['video_id__max']
+
+            if current_video_id is None:
+                return Response({"error": "No video data found."}, status=400)
+
+            return self.get_video_level_metrics(request.user, current_session_id, current_video_id)
+        else:
+            return Response({"error": "Invalid display parameter."}, status=400)
+
+    def get_user_level_metrics(self, user):
         # Retrieve all sessions for the authenticated user
-        user_sessions = UserSession.objects.filter(user=request.user)
+        user_sessions = UserSession.objects.filter(user=user)
 
         if not user_sessions.exists():
             return Response({"error": "No sessions found for this user."}, status=404)
@@ -91,34 +114,48 @@ class RetrieveAllUserSessionsView(APIView):
         # Prepare session data
         sessions_data = []
         for session in user_sessions:
-            total_reading_time, total_focus_time = self.calculate_total_session_times(request.user, session.session_id)
+            total_reading_time, total_focus_time = self.calculate_total_session_times(user, session.session_id)
 
-
-            # Get reading times for each video in this session
-            video_reading_times = SimpleEyeMetrics.objects.filter(
-                user=request.user, session_id=session.session_id
-            ).values('video_id').distinct()
-
-            # Format video reading times
-            video_data = [
-                {
-                    "video_id": video["video_id"],
-                    "total_reading_time": self.calculate_reading_time(request.user, session.session_id, video["video_id"]),
-                    "total_focus_time": self.calculate_focus_time(request.user, session.session_id, video["video_id"]),
-                }
-                for video in video_reading_times
-            ]
-
-            # Add session details to the response
             sessions_data.append({
                 "session_id": session.session_id,
-                "total_reading_time": total_reading_time,
-                "total_focus_time": total_focus_time,
-                "videos": video_data,
+                "total_reading_time": total_reading_time.total_seconds() / 60,
+                "total_focus_time": total_focus_time.total_seconds() / 60,
             })
 
-        # Return all sessions data
+        # Downsample to 50 points
+        if len(sessions_data) > 50:
+            indices = np.linspace(0, len(sessions_data) - 1, 50).astype(int)
+            sessions_data = [sessions_data[i] for i in indices]
+
         return Response({"sessions": sessions_data}, status=200)
+
+
+    def get_session_level_metrics(self, user, session_id):
+        # Get reading times for each video in this session
+        video_data = SimpleEyeMetrics.objects.filter(user=user, session_id=session_id).values('video_id').distinct()
+
+        video_metrics = []
+        for video in video_data:
+            video_id = video["video_id"]
+            reading_time = self.calculate_reading_time(user, session_id, video_id)
+            focus_time = self.calculate_focus_time(user, session_id, video_id)
+
+            video_metrics.append({
+                "video_id": video_id,
+                "total_reading_time": reading_time.total_seconds() / 60,
+                "total_focus_time": focus_time.total_seconds() / 60,
+            })
+
+        return Response({"videos": video_metrics}, status=200)
+    
+    def get_video_level_metrics(self, user, session_id, video_id):
+        reading_time = self.calculate_cumulative_time(user, session_id, video_id, "reading_time")
+        focus_time = self.calculate_cumulative_time(user, session_id, video_id, "focus_time")
+
+        return Response({
+            "cumulative_reading_time": reading_time,
+            "cumulative_focus_time": focus_time,
+        }, status=200)
 
     def calculate_reading_time(self, user, session_id, video_id):
         # Get the earliest and latest timestamps for the session and video
@@ -171,6 +208,36 @@ class RetrieveAllUserSessionsView(APIView):
             weighted_focus_time += video_focus_time
 
         return total_reading_time, weighted_focus_time
+    
+    def calculate_cumulative_time(self, user, session_id, video_id, time_field):
+        records = SimpleEyeMetrics.objects.filter(
+            user=user, session_id=session_id, video_id=video_id
+        ).order_by("timestamp")
+
+        if not records:
+            return []
+
+        cumulative_time = []
+        total_time = 0  # Total minutes
+        prev_timestamp = None
+
+        for record in records:
+            if prev_timestamp:
+                time_diff = (record.timestamp - prev_timestamp).total_seconds() / 60  # Convert to minutes
+
+                if time_field == "reading_time":
+                    total_time += time_diff  # Always accumulate time
+                elif time_field == "focus_time" and record.focus:
+                    total_time += time_diff  # Only accumulate if focused
+
+            cumulative_time.append({
+                "timestamp": record.timestamp.isoformat(),
+                "cumulative_time": round(total_time, 2)
+            })
+
+            prev_timestamp = record.timestamp  # Update for next iteration
+
+        return cumulative_time
     
 class RetrieveBreakCheckView(APIView):
 
