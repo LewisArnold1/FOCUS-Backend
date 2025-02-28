@@ -362,38 +362,107 @@ class RetrieveReadingSpeedView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
 
     def get(self, request, *args, **kwargs):
-        # Get latest session and video ID
+        display = request.query_params.get("display", "user")
         current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
-        latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
 
-        if current_session_id is None or latest_video_id is None:
-            return Response({"error": "No session or video data found."}, status=400)
+        if not current_session_id:
+            return Response({"error": "No session data found."}, status=400)
 
-        # Fetch relevant reading records (only modes 2, 3, 4)
+        if display == "user":
+            return self.get_user_level_metrics(request.user)
+        elif display == "session":
+            return self.get_session_level_metrics(request.user, current_session_id)
+        elif display == "video":
+            current_video_id = SimpleEyeMetrics.objects.filter(
+                user=request.user, session_id=current_session_id, reading_mode__in=[2, 3, 4]
+            ).aggregate(Max('video_id'))['video_id__max']
+
+            if current_video_id is None:
+                return Response({"error": "No valid reading videos found."}, status=400)
+
+            return self.get_video_level_metrics(request.user, current_session_id, current_video_id)
+        else:
+            return Response({"error": "Invalid display parameter."}, status=400)
+
+    def get_user_level_metrics(self, user):
+        user_sessions = UserSession.objects.filter(user=user)
+
+        if not user_sessions.exists():
+            return Response({"error": "No sessions found for this user."}, status=404)
+
+        session_reading_speeds = []
+        for session in user_sessions:
+            session_metrics = self.get_session_level_metrics(user, session.session_id, weighted=True)
+            if session_metrics:
+                session_reading_speeds.append(session_metrics)
+
+        if not session_reading_speeds:
+            return Response({"error": "No valid reading sessions found."}, status=404)
+
+        total_words_read = sum(session["total_words_read"] for session in session_reading_speeds)
+        total_time_weighted = sum(session["total_time"] for session in session_reading_speeds)
+
+        avg_wpm = (sum(session["average_wpm"] * (session["total_time"] / total_time_weighted)
+                       for session in session_reading_speeds) if total_time_weighted > 0 else None)
+
+        response_data = {
+            "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
+            "total_words_read": round(total_words_read, 2),
+            "sessions": session_reading_speeds
+        }
+
+        response_data["sessions"] = self.downsample_data(response_data["sessions"])
+        return Response(response_data, status=200)
+
+    def get_session_level_metrics(self, user, session_id, weighted=False):
+        video_data = SimpleEyeMetrics.objects.filter(
+            user=user, session_id=session_id, reading_mode__in=[2, 3, 4]
+        ).values('video_id').distinct()
+
+        if not video_data.exists():
+            return None if weighted else Response({"error": "No valid reading videos found in this session."}, status=404)
+
+        video_reading_speeds = []
+        for video in video_data:
+            video_metrics = self.get_video_level_metrics(user, session_id, video["video_id"], weighted=True)
+            if video_metrics:
+                video_reading_speeds.append(video_metrics)
+
+        total_words_read = sum(video["total_words_read"] for video in video_reading_speeds)
+        total_time_weighted = sum(video["total_time"] for video in video_reading_speeds)
+
+        avg_wpm = (sum(video["average_wpm"] * (video["total_time"] / total_time_weighted)
+                       for video in video_reading_speeds) if total_time_weighted > 0 else None)
+
+        session_metrics = {
+            "session_id": session_id,
+            "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
+            "total_words_read": round(total_words_read, 2),
+            "total_time": total_time_weighted
+        }
+
+        if weighted:
+            return session_metrics
+
+        return Response({"videos": video_reading_speeds, **session_metrics}, status=200)
+
+    def get_video_level_metrics(self, user, session_id, video_id, weighted=False):
         reading_records = SimpleEyeMetrics.objects.filter(
-            user=request.user,
-            session_id=current_session_id,
-            video_id=latest_video_id,
-            reading_mode__in=[2, 3, 4]
+            user=user, session_id=session_id, video_id=video_id, reading_mode__in=[2, 3, 4]
         ).order_by("timestamp")
 
         if not reading_records.exists():
-            return Response({
+            return None if weighted else Response({
                 "total_words_read": None,
                 "average_wpm": None,
                 "reading_speed_over_time": None
             }, status=200)
 
-        # Calculate reading speed metrics
-        reading_speed_metrics = self.calculate_reading_speed_metrics(reading_records)
-
-        return Response(reading_speed_metrics, status=200)
-
-    def calculate_reading_speed_metrics(self, reading_records):
         total_words_read = 0
         reading_speed_over_time = []
         total_wpm = []
         prev_timestamp = None
+        total_time = 0
 
         for record in reading_records:
             if record.wpm is not None:
@@ -403,6 +472,7 @@ class RetrieveReadingSpeedView(APIView):
                     time_diff = (record.timestamp - prev_timestamp).total_seconds() / 60  # Convert to minutes
                     words_read = record.wpm * time_diff
                     total_words_read += words_read
+                    total_time += time_diff
 
                     reading_speed_over_time.append({
                         "timestamp": record.timestamp.isoformat(),
@@ -413,8 +483,21 @@ class RetrieveReadingSpeedView(APIView):
 
         avg_wpm = np.mean(total_wpm) if total_wpm else None
 
-        return {
-            "total_words_read": round(total_words_read, 2),
+        video_metrics = {
+            "video_id": video_id,
             "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
-            "reading_speed_over_time": reading_speed_over_time
+            "total_words_read": round(total_words_read, 2),
+            "total_time": total_time
         }
+
+        if weighted:
+            return video_metrics
+
+        video_metrics["reading_speed_over_time"] = self.downsample_data(reading_speed_over_time)
+        return Response(video_metrics, status=200)
+
+    def downsample_data(self, data):
+        if len(data) > 50:
+            indices = np.linspace(0, len(data) - 1, 50).astype(int)
+            return [data[i] for i in indices]
+        return data
