@@ -113,14 +113,14 @@ def process_blinks(ear_values, timestamps, middle_frame_timestamp):
         print('wrong feature window length')
         return False
     
-    feature_window = np.array(feature_window).reshape(1, -1)
-
     if any(EAR is None for EAR in feature_window):
         return False
 
     if np.any(np.isnan(np.array(feature_window))):
         return False
     
+    feature_window = np.array(feature_window).reshape(1, -1)
+
     X_scaled = scaler.transform(feature_window)
     y_pred = svm_model.predict(X_scaled)
 
