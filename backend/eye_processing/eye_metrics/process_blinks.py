@@ -26,7 +26,6 @@ def process_ears(frame):
     return blink_processor.process_ear(frame)
 
 def process_blinks(ear_values, timestamps, middle_frame_timestamp):
-    print('Process blinks reached')
     if len(timestamps) != len(ear_values):
         print('Issue with process_blinks: timestamps & EAR unequal length')
         return False
@@ -67,7 +66,7 @@ def process_blinks(ear_values, timestamps, middle_frame_timestamp):
     
     if len(before_indices) != 10:
     # > 30 FPS or > 30 FPS
-        indices = np.linspace(0,len(before_EARs-1), 10).astype(int)
+        indices = np.linspace(0,len(before_EARs)-1, 10).astype(int)
         before_EARs = [ear_values[i] for i in indices]
         after_EARs = [ear_values[i] for i in indices]
 
@@ -114,10 +113,18 @@ def process_blinks(ear_values, timestamps, middle_frame_timestamp):
         print('wrong feature window length')
         return False
     
+    feature_window = np.array(feature_window).reshape(1, -1)
+
+    if any(EAR is None for EAR in feature_window):
+        return False
+
+    if np.any(np.isnan(np.array(feature_window))):
+        return False
+    
     X_scaled = scaler.transform(feature_window)
     y_pred = svm_model.predict(X_scaled)
 
-    print (f"predict: {y_pred}")
+    if y_pred == True:
+        print (f"predict: {y_pred}")
 
-    y_pred = False
     return y_pred
