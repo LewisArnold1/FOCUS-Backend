@@ -166,8 +166,7 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
 
                     # Check there are at least 10 frames before and 10 after
                     if len(before_indices) < half_window or len(after_indices) < half_window:
-                        # need to append none here? - only happens at start or end of vid so can be ignored
-                        continue
+                        continue # SVM cannot be applied to first and last 10 frames of a video
 
                     # Sample 10 frames within 0.35s before and 0.35s after
                     before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
@@ -182,7 +181,7 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
                     before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
                     after_indices = np.linspace(after_indices[0], after_indices[-1], 10).astype(int)
                     indices = np.concatenate((before_indices, [i], after_indices))
-                    window_features = window_features = [ear_values[idx] for idx in indices]
+                    window_features  = [ear_values[idx] for idx in indices]
 
             # Append feature window and label for this frame
             X_video.append(window_features)
