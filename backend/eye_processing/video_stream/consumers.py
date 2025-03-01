@@ -38,6 +38,8 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
 
     # total_frames = 0
 
+    tasks = []  # List to store asyncio tasks
+
     async def connect(self):
         query_string = self.scope['query_string'].decode('utf-8')
         print("Query string received:", query_string)
@@ -77,6 +79,12 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         from eye_processing.models import SimpleEyeMetrics
 
+        # Close all threads
+        for task in self.tasks:
+            task.cancel()  # Cancel the task
+
+        self.tasks.clear()
+
         try:
             # Set all frames to None for the user's current session and video
             await sync_to_async(lambda: SimpleEyeMetrics.objects.filter(
@@ -88,35 +96,41 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             print(f"Error clearing frames on disconnect: {e}")
 
+        await self.close()
+
     async def receive(self, text_data):
-        # Parse the received JSON message
-        data_json = json.loads(text_data)
-        frame_data = data_json.get('frame', None)
-        timestamp = data_json.get('timestamp', None)  # Extract timestamp
-        mode = data_json.get('mode', 'reading')  # Default to 'reading' if not provided
-        reading_mode = data_json.get('reading_mode', 3)
-        wpm = data_json.get('wpm', 0)
+        try:
+            # Parse the received JSON message
+            data_json = json.loads(text_data)
+            frame_data = data_json.get('frame', None)
+            timestamp = data_json.get('timestamp', None)  # Extract timestamp
+            mode = data_json.get('mode', 'reading')  # Default to 'reading' if not provided
+            reading_mode = data_json.get('reading_mode', 3)
+            wpm = data_json.get('wpm', 0)
 
-        # self.total_frames = self.total_frames + 1
-        # if(self.total_frames % 30 == 0):
-        #     print("Total Frames: ", self.total_frames)
+            # self.total_frames = self.total_frames + 1
+            # if(self.total_frames % 30 == 0):
+            #     print("Total Frames: ", self.total_frames)
+            #     print("Latency: ", datetime.now() - datetime.fromtimestamp(timestamp/1000))
 
-        if mode == "reading":
-            x_coordinate_px = data_json.get('xCoordinatePx', None)
-            y_coordinate_px = data_json.get('yCoordinatePx', None)
+            if mode == "reading":
+                x_coordinate_px = data_json.get('xCoordinatePx', None)
+                y_coordinate_px = data_json.get('yCoordinatePx', None)
 
-            if frame_data:
-                await self.process_reading_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm)
+                if frame_data:
+                    await self.process_reading_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm)
 
-        elif mode == "diagnostic":
-            draw_mesh = data_json.get('draw_mesh', False)
-            draw_contours = data_json.get('draw_contours', False)
-            show_axis = data_json.get('show_axis', False) 
-            draw_eye = data_json.get('draw_eye', False)
+            elif mode == "diagnostic":
+                draw_mesh = data_json.get('draw_mesh', False)
+                draw_contours = data_json.get('draw_contours', False)
+                show_axis = data_json.get('show_axis', False) 
+                draw_eye = data_json.get('draw_eye', False)
 
-            if frame_data:
-                await self.process_diagnostic_frame(frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye)
-
+                if frame_data:
+                    await self.process_diagnostic_frame(frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye)
+        except Exception as e:
+            print("Error processing frame:", e)
+            await self.disconnect(1000)
 
     async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm):
         try:
@@ -131,8 +145,13 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
-            # Process EAR values for the current frame
-            avg_ear = await asyncio.to_thread(process_ears, frame)
+            # Process EAR values for the current frame in a separate thread
+            task = asyncio.create_task(asyncio.to_thread(process_ears, frame))  # Add to tasks list
+            self.tasks.append(task)
+
+            # Wait for the result from the processing
+            avg_ear = await task
+
             blink_detected=False
 
             # Get session ID
@@ -189,7 +208,16 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                     ear_values = [entry.eye_aspect_ratio for entry in past_frames]
                     timestamps = [entry.timestamp for entry in past_frames]
                     middle_frame_timestamp = middle_frame_entry.timestamp
-                    blink_detected = await asyncio.to_thread(process_blinks, ear_values, timestamps, middle_frame_timestamp) if ear_values and timestamps else False
+                    
+                    # Add blink detection processing to the async task list
+                    if ear_values and timestamps:
+                        task = asyncio.create_task(asyncio.to_thread(process_blinks, ear_values, timestamps, middle_frame_timestamp))
+                        self.tasks.append(task)
+
+                        # Await the blink detection result
+                        blink_detected = await task
+                    else:
+                        blink_detected = False
 
                     if middle_frame is not None:
                         face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(middle_frame, middle_frame_entry.timestamp, blink_detected)
