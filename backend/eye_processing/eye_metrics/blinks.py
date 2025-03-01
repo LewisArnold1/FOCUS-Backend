@@ -34,7 +34,11 @@ class BlinkProcessor:
         return left_eye, right_eye
 
     def extract_main_face(self, rects):
-        print(f"Number of faces detected: {len(rects)}")
+        # print(f"Number of faces detected: {len(rects)}")
+        if len(rects)==0:
+            print("No face detected")
+        if len(rects)>1:
+            print("Multiple faces detected")
         if not rects:
             return None, None
         return max(rects, key=lambda rect: rect.width() * rect.height()), len(rects)
