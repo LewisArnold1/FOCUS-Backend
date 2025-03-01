@@ -31,6 +31,9 @@ def process_blinks(ear_values, timestamps, middle_frame_timestamp):
         return False
     
     time_period = (max(timestamps) - min(timestamps)).total_seconds()
+    if(time_period == 0):
+        print('Time period is 0')
+        return False
     fps = len(timestamps)/time_period
 
     # Check >= 12 FPS
