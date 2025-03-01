@@ -36,7 +36,7 @@ TIME_WINDOW = 0.5
 
 class VideoFrameConsumer(AsyncWebsocketConsumer):
 
-    # total_frames = 0
+    total_frames = 0
 
     tasks = []  # List to store asyncio tasks
 
@@ -108,10 +108,10 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             reading_mode = data_json.get('reading_mode', 3)
             wpm = data_json.get('wpm', 0)
 
-            # self.total_frames = self.total_frames + 1
-            # if(self.total_frames % 30 == 0):
-            #     print("Total Frames: ", self.total_frames)
-            #     print("Latency: ", datetime.now() - datetime.fromtimestamp(timestamp/1000))
+            self.total_frames = self.total_frames + 1
+            if(self.total_frames % 30 == 0 & self.total_frames != 600):
+                print("Total Frames: ", self.total_frames)
+                print("Latency: ", datetime.now() - datetime.fromtimestamp(timestamp/1000))
 
             if mode == "reading":
                 x_coordinate_px = data_json.get('xCoordinatePx', None)
@@ -265,7 +265,14 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
 
             # Call `process_eye` with visualisation options
-            face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
+            # face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
+
+            # Process EAR values for the current frame in a separate thread
+            task = asyncio.create_task(asyncio.to_thread(process_eye, frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye))  # Add to tasks list
+            self.tasks.append(task)
+
+            # Wait for the result from the processing
+            face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = await task
 
             # Encode the processed frame back to base64
             _, buffer = cv2.imencode('.jpg', diagnostic_frame)
