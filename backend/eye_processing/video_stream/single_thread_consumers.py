@@ -43,7 +43,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
 
     ear_list = [] # List to store EAR values for adaptive thresholding
 
-    # Accept the WebSocket connection request after authenticating the user
     async def connect(self):
         query_string = self.scope['query_string'].decode('utf-8')
         print("Query string received:", query_string)
@@ -78,7 +77,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             print("Authentication failed:", e)
             await self.close()
             
-    # Safely disconnect the WebSocket connection, cleaning up any data stores
     async def disconnect(self, close_code):
         ## Performance testing
         # print(self.frames)
@@ -87,7 +85,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         # self.latencies.clear()
         await self.close()
 
-    # Obtains frame data from the received Websocket message
     async def receive(self, text_data):
         try:
             # Parse the received JSON message
@@ -99,11 +96,11 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             wpm = data_json.get('wpm', 0)
 
             ## Performance testing
-            self.total_frames = self.total_frames + 1
-            if(self.total_frames % 30 == 0):
-                print("Total Frames: ", self.total_frames)
-                latency = datetime.now() - datetime.fromtimestamp(timestamp/1000)
-                print("Latency: ", latency)
+            # self.total_frames = self.total_frames + 1
+            # if(self.total_frames % 30 == 0):
+            #     print("Total Frames: ", self.total_frames)
+            #     latency = datetime.now() - datetime.fromtimestamp(timestamp/1000)
+            #     print("Latency: ", latency)
             #     self.frames.append(self.total_frames)
             #     self.latencies.append(str(latency))
 
@@ -126,7 +123,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             print("Error processing frame:", e)
             await self.disconnect(1000)
 
-    # Process frame sent from reading page
     async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm):
         try:
             # Decode the incoming frame
@@ -163,7 +159,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
 
             #############################################################################
 
-            # Process head and eye movements 
+            # Process the 
             face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(frame, timestamp_dt, blink_detected)
 
             # Extract eye metrics
@@ -276,7 +272,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
 
-    # Process frame sent from diagnostic page
     async def process_diagnostic_frame(self, frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye):
         try:
             # Decode the base64-encoded image
