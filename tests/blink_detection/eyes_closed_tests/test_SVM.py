@@ -176,8 +176,12 @@ def create_feature_matrices(ear_values_lists, timestamp_lists, labels_lists):
                     # Combine indices and get corresponding ears
                     indices = np.concatenate([before_indices, [i], after_indices])
                     window_features = [ear_values[idx] for idx in indices]
-                else:
-                # less than 25 fps
+                    
+                elif len(before_indices)<1 or len(after_indices)<1:
+                    continue # for less than 25 fps, require at least one frame either side
+
+                else: # less than 25 fp
+
                     # extend EAR values to synthesise 21 frames from less than 21
                     before_indices = np.linspace(before_indices[0], before_indices[-1], 10).astype(int)
                     after_indices = np.linspace(after_indices[0], after_indices[-1], 10).astype(int)
@@ -274,17 +278,17 @@ def main(test_ears_filenames, test_timestamp_filenames, test_labels_filenames, t
     
     return
 
-# Test on training data - participants 1 & 2 video 3s
-main(TRAIN_EARS_FILENAMES, TRAIN_TIMESTAMPS_FILENAMES, TRAIN_LABELS_FILENAMES, TRAIN_OUTPUT_FILENAMES)
+# # Test on training data - participants 1 & 2 video 3s
+# main(TRAIN_EARS_FILENAMES, TRAIN_TIMESTAMPS_FILENAMES, TRAIN_LABELS_FILENAMES, TRAIN_OUTPUT_FILENAMES)
 
-# Test on testing data: participant 1 & 2 video 3s + participant 3 all videos
-main(TEST_EARS_FILENAMES[0:5], TEST_TIMESTAMPS_FILENAMES[0:5], TEST_LABELS_FILENAMES[0:5], TEST_OUTPUT_FILENAMES[0:5])
+# # Test on testing data: participant 1 & 2 video 3s + participant 3 all videos
+# main(TEST_EARS_FILENAMES[0:5], TEST_TIMESTAMPS_FILENAMES[0:5], TEST_LABELS_FILENAMES[0:5], TEST_OUTPUT_FILENAMES[0:5])
 
-# Test with participant 3 low fps (mahie 17,14,17)
-main(TEST_EARS_FILENAMES[5:8], TEST_TIMESTAMPS_FILENAMES[5:8], TEST_LABELS_FILENAMES[5:8], TEST_OUTPUT_FILENAMES[5:8])
+# # Test with participant 3 low fps (mahie 17,14,17)
+# main(TEST_EARS_FILENAMES[5:8], TEST_TIMESTAMPS_FILENAMES[5:8], TEST_LABELS_FILENAMES[5:8], TEST_OUTPUT_FILENAMES[5:8])
 
-# Test with participant 4 (Soniya ~ 19 fps)
-main(TEST_EARS_FILENAMES[8:11], TEST_TIMESTAMPS_FILENAMES[8:11], TEST_LABELS_FILENAMES[8:11], TEST_OUTPUT_FILENAMES[8:11])
+# # Test with participant 4 (Soniya ~ 19 fps)
+# main(TEST_EARS_FILENAMES[8:11], TEST_TIMESTAMPS_FILENAMES[8:11], TEST_LABELS_FILENAMES[8:11], TEST_OUTPUT_FILENAMES[8:11])
 
 # Test with participant 4 low fps (Soniya ~ 7 fps)
-# main(TEST_EARS_FILENAMES[12:15], TEST_TIMESTAMPS_FILENAMES[11:14], TEST_LABELS_FILENAMES[11:14], TEST_OUTPUT_FILENAMES[11:14]) # - currently only one exists
+main(TEST_EARS_FILENAMES[11:14], TEST_TIMESTAMPS_FILENAMES[11:14], TEST_LABELS_FILENAMES[11:14], TEST_OUTPUT_FILENAMES[11:14])
