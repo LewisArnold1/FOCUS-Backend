@@ -1,3 +1,10 @@
+# Multi-process implementation of the WebSocket consumer for video streaming
+# This requires the use of `uvicorn` with the `--workers` flag to enable multi-process mode
+#
+# uvicorn backend.asgi:application --workers 8 # change no. of workers based on CPU availability
+#
+# Requires install using `pip install uvicorn[standard]`
+
 import base64
 import json
 import urllib.parse
@@ -9,20 +16,21 @@ import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 import base64
-import asyncio
+import pytz
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Max
-
-from eye_processing.eye_metrics.process_eye_metrics import process_eye
-from eye_processing.eye_metrics.process_blinks import process_ears, process_blinks
+from django.utils import timezone
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()  # Ensure Django is initialised before importing Django modules
 
+from eye_processing.models import SimpleEyeMetrics, UserSession
+from eye_processing.eye_metrics.process_eye_metrics import process_eye
+from eye_processing.eye_metrics.process_blinks import process_ears
+
 from asgiref.sync import sync_to_async
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
 
 def encode_frame(frame):
     _, buffer = cv2.imencode('.jpg', frame)
@@ -36,9 +44,12 @@ TIME_WINDOW = 0.5
 
 class VideoFrameConsumer(AsyncWebsocketConsumer):
 
+    ## Performance testing
     total_frames = 0
+    # frames = []  # Store frames for blink detection
+    # latencies = []  # Store latencies for each frame
 
-    tasks = []  # List to store asyncio tasks
+    ear_list = [] # List to store EAR values for adaptive thresholding
 
     async def connect(self):
         query_string = self.scope['query_string'].decode('utf-8')
@@ -60,8 +71,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             self.user = await sync_to_async(JWTAuthentication().get_user)(validated_token)
 
             # Fetch max video_id in an async-safe way
-            from eye_processing.models import SimpleEyeMetrics, UserSession
-
             max_session_id = await sync_to_async(UserSession.objects.filter(user=self.user).aggregate)(Max('session_id'))
             max_video_id = await sync_to_async(SimpleEyeMetrics.objects.filter(user=self.user, session_id=max_session_id['session_id__max']).aggregate)(Max('video_id'))
 
@@ -77,26 +86,13 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             await self.close()
             
     async def disconnect(self, close_code):
-        from eye_processing.models import SimpleEyeMetrics
-
-        # Close all threads
-        for task in self.tasks:
-            task.cancel()  # Cancel the task
-
-        self.tasks.clear()
-
-        try:
-            # Set all frames to None for the user's current session and video
-            await sync_to_async(lambda: SimpleEyeMetrics.objects.filter(
-                user=self.user, 
-                session_id=self.session_id, 
-                video_id=self.video_id
-            ).update(frame=None))()
-            
-        except Exception as e:
-            print(f"Error clearing frames on disconnect: {e}")
-
-        await self.close()
+        ## Performance testing
+        # print(self.frames)
+        # print(self.latencies)
+        # self.frames.clear()
+        # self.latencies.clear()
+        # await self.close()
+        return
 
     async def receive(self, text_data):
         try:
@@ -108,10 +104,15 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             reading_mode = data_json.get('reading_mode', 3)
             wpm = data_json.get('wpm', 0)
 
-            self.total_frames = self.total_frames + 1
-            if(self.total_frames % 30 == 0 & self.total_frames != 600):
-                print("Total Frames: ", self.total_frames)
-                print("Latency: ", datetime.now() - datetime.fromtimestamp(timestamp/1000))
+            ## Performance testing
+            # self.total_frames = self.total_frames + 1
+            # if(self.total_frames % 30 == 0):
+                # print("Total Frames: ", self.total_frames)
+                # latency = datetime.now() - datetime.fromtimestamp(timestamp/1000)
+                # latency = timezone.make_aware(latency, pytz.UTC)
+                # print("Latency: ", latency)
+            #     self.frames.append(self.total_frames)
+            #     self.latencies.append(str(latency))
 
             if mode == "reading":
                 x_coordinate_px = data_json.get('xCoordinatePx', None)
@@ -134,8 +135,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
 
     async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm):
         try:
-            from eye_processing.models import SimpleEyeMetrics, UserSession
-
             # Decode the incoming frame
             image_data = base64.b64decode(frame_data.split(',')[1])
             image = Image.open(BytesIO(image_data))
@@ -144,111 +143,142 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             # Convert timestamp
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
+            timestamp_dt = timezone.make_aware(timestamp_dt, pytz.UTC)
 
-            # Process EAR values for the current frame in a separate thread
-            task = asyncio.create_task(asyncio.to_thread(process_ears, frame))  # Add to tasks list
-            self.tasks.append(task)
-
-            # Wait for the result from the processing
-            avg_ear = await task
+            avg_ear = process_ears(frame) # Process EAR value for the current frame
 
             blink_detected=False
 
-            # Get session ID
+            ############################################################################# Adaptive thresholding for blink detection
+            threshold = 0.0
+
+            if(avg_ear != None):
+                if len(self.ear_list) < 30:
+                    self.ear_list.append(avg_ear)
+                else:
+                    # calculate the maximum EAR value in the list
+                    max_ear = max(self.ear_list)
+                    threshold = max_ear * 0.7
+                            
+                # Adaptive thresholding for blink detection
+                if avg_ear < threshold and threshold != 0.0: # Blinks are only detected after the first 30 frames, in order to accurately calculate the correct threshold
+                    blink_detected = True
+                    # print("Blink detected at frame: ", self.total_frames)
+                else:
+                    blink_detected = False
+                    # print("Blink not detected"
+
+            #############################################################################
+
+            # Process head and eye movements 
+            face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(frame, timestamp_dt, blink_detected)
+
+            # Extract eye metrics
             max_session_id = await sync_to_async(UserSession.objects.filter(user=self.user).aggregate)(Max('session_id'))
             session_id = max_session_id['session_id__max']
 
-            # Store EAR and frame in the database
+             # Save the metrics for this frame in the database with the user
             eye_metrics = SimpleEyeMetrics(
-                user=self.user,
+                user=self.user,  # Associate the logged-in user
                 session_id=session_id,
-                video_id=self.video_id,
+                video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
                 gaze_x=x_coordinate_px,
                 gaze_y=y_coordinate_px,
+                face_detected=face_detected,
+                normalised_eye_speed=normalised_eye_speed,
+                face_yaw=yaw,
+                face_roll=roll,
+                face_pitch=pitch,
                 eye_aspect_ratio=avg_ear,
-                frame=encode_frame(frame),  # Store Base64 frame
                 blink_detected=blink_detected,
-                reading_mode=reading_mode,
-                wpm=wpm
+                left_centre=left_centre, 
+                right_centre=right_centre,
+                focus=focus,
+                left_iris_velocity=left_iris_velocity,
+                right_iris_velocity=right_iris_velocity, 
+                movement_type=movement_type,
             )
-            await sync_to_async(eye_metrics.save)()
+            await sync_to_async(eye_metrics.save, thread_sensitive=True)()
 
+            ############################################################################# SVM classification for blink detection - No longer working under new FPS constraints (requires 30 FPS)
             # Get past frames within time_window * 2
-            start_time = timestamp_dt - timedelta(seconds=TIME_WINDOW * 2)
+            # start_time = timestamp_dt - timedelta(seconds=TIME_WINDOW * 2)
 
-            # Check if at least one frame exists before start_time
-            frame_before_window = await sync_to_async(SimpleEyeMetrics.objects.filter(
-                user=self.user, session_id=session_id,
-                video_id=self.video_id,
-                timestamp__lt=start_time
-            ).exists)()
+            # # Check if at least one frame exists before start_time
+            # frame_before_window = await sync_to_async(SimpleEyeMetrics.objects.filter(
+            #     user=self.user, session_id=session_id,
+            #     video_id=self.video_id,
+            #     timestamp__lt=start_time
+            # ).exists)()
 
-            middle_frame = None
+            # middle_frame = None
 
-            if frame_before_window:
+            # if frame_before_window:
 
-                # Retrieve frames in the time window
-                past_frames = await sync_to_async(list)(SimpleEyeMetrics.objects.filter(
-                    user=self.user, session_id=session_id,
-                    video_id=self.video_id,
-                    timestamp__gte=start_time,
-                    timestamp__lte=timestamp_dt
-                ).order_by("timestamp"))
+            #     # Retrieve frames in the time window
+            #     past_frames = await sync_to_async(list)(SimpleEyeMetrics.objects.filter(
+            #         user=self.user, session_id=session_id,
+            #         video_id=self.video_id,
+            #         timestamp__gte=start_time,
+            #         timestamp__lte=timestamp_dt
+            #     ).order_by("timestamp"))
 
-                # Extract middle frame 
-                middle_index = len(past_frames) // 2
-                middle_frame_entry = past_frames[middle_index] if past_frames else None
+            #     # Extract middle frame 
+            #     middle_index = len(past_frames) // 2
+            #     middle_frame_entry = past_frames[middle_index] if past_frames else None
 
-                if middle_frame_entry and middle_frame_entry.frame:
-                    # Decode middle frame
-                    middle_frame = decode_frame(middle_frame_entry.frame)
+            #     if middle_frame_entry and middle_frame_entry.frame:
+            #         # Decode middle frame
+            #         middle_frame = decode_frame(middle_frame_entry.frame)
 
-                    # Get EAR values for the full window
-                    ear_values = [entry.eye_aspect_ratio for entry in past_frames]
-                    timestamps = [entry.timestamp for entry in past_frames]
-                    middle_frame_timestamp = middle_frame_entry.timestamp
+            #         # Get EAR values for the full window
+            #         ear_values = [entry.eye_aspect_ratio for entry in past_frames]
+            #         timestamps = [entry.timestamp for entry in past_frames]
+            #         middle_frame_timestamp = middle_frame_entry.timestamp
                     
-                    # Add blink detection processing to the async task list
-                    if ear_values and timestamps:
-                        task = asyncio.create_task(asyncio.to_thread(process_blinks, ear_values, timestamps, middle_frame_timestamp))
-                        self.tasks.append(task)
+            #         # Add blink detection processing to the async task list
+            #         if ear_values and timestamps:
+            #             task = asyncio.create_task(asyncio.to_thread(process_blinks, ear_values, timestamps, middle_frame_timestamp))
+            #             self.tasks.append(task)
 
-                        # Await the blink detection result
-                        blink_detected = await task
-                    else:
-                        blink_detected = False
+            #             # Await the blink detection result
+            #             blink_detected = await task
+            #         else:
+            #             blink_detected = False
 
-                    if middle_frame is not None:
-                        face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(middle_frame, middle_frame_entry.timestamp, blink_detected)
+            #         if middle_frame is not None:
+            #             face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, _ = process_eye(middle_frame, middle_frame_entry.timestamp, blink_detected)
 
-                        # Update database for the middle frame
-                        await sync_to_async(SimpleEyeMetrics.objects.filter(
-                            user=self.user, session_id=session_id,
-                            video_id=self.video_id,
-                            timestamp=middle_frame_entry.timestamp
-                        ).update)(
-                            face_detected=face_detected,
-                            normalised_eye_speed=normalised_eye_speed,
-                            face_yaw=yaw,
-                            face_roll=roll,
-                            face_pitch=pitch,
-                            left_centre=left_centre,
-                            right_centre=right_centre,
-                            focus=focus,
-                            left_iris_velocity=left_iris_velocity,
-                            right_iris_velocity=right_iris_velocity,
-                            movement_type=movement_type,
-                            blink_detected=blink_detected
-                        )
+            #             # Update database for the middle frame
+            #             await sync_to_async(SimpleEyeMetrics.objects.filter(
+            #                 user=self.user, session_id=session_id,
+            #                 video_id=self.video_id,
+            #                 timestamp=middle_frame_entry.timestamp
+            #             ).update)(
+            #                 face_detected=face_detected,
+            #                 normalised_eye_speed=normalised_eye_speed,
+            #                 face_yaw=yaw,
+            #                 face_roll=roll,
+            #                 face_pitch=pitch,
+            #                 left_centre=left_centre,
+            #                 right_centre=right_centre,
+            #                 focus=focus,
+            #                 left_iris_velocity=left_iris_velocity,
+            #                 right_iris_velocity=right_iris_velocity,
+            #                 movement_type=movement_type,
+            #                 blink_detected=blink_detected
+            #             )
 
-                        # Cleanup: Delete old frames outside of time_window * 2
-                        await sync_to_async(lambda: SimpleEyeMetrics.objects.filter(
-                            user=self.user, 
-                            session_id=session_id,
-                            video_id=self.video_id,
-                            timestamp__lt=start_time
-                        ).update(frame=None))()
+            #             # Cleanup: Delete old frames outside of time_window * 2
+            #             await sync_to_async(lambda: SimpleEyeMetrics.objects.filter(
+            #                 user=self.user, 
+            #                 session_id=session_id,
+            #                 video_id=self.video_id,
+            #                 timestamp__lt=start_time
+            #             ).update(frame=None))()
+
+            #############################################################################
 
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
@@ -263,16 +293,10 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
+            timestamp_dt = timezone.make_aware(timestamp_dt, pytz.UTC)
 
             # Call `process_eye` with visualisation options
-            # face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
-
-            # Process EAR values for the current frame in a separate thread
-            task = asyncio.create_task(asyncio.to_thread(process_eye, frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye))  # Add to tasks list
-            self.tasks.append(task)
-
-            # Wait for the result from the processing
-            face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = await task
+            face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
 
             # Encode the processed frame back to base64
             _, buffer = cv2.imencode('.jpg', diagnostic_frame)

@@ -91,9 +91,83 @@ EAR_FILENAMES = np.array([EAR_1, EAR_2, EAR_3, EAR_4, EAR_5, EAR_6, EAR_7, EAR_8
 MANUAL_OUTPUT_FILENAMES = np.array([MANUAL_OUTPUT_1, MANUAL_OUTPUT_2, MANUAL_OUTPUT_3, MANUAL_OUTPUT_4, MANUAL_OUTPUT_5, MANUAL_OUTPUT_6, MANUAL_OUTPUT_7, MANUAL_OUTPUT_8, MANUAL_OUTPUT_9])
 AUTO_OUTPUT_FILENAMES = np.array([AUTO_OUTPUT_1, AUTO_OUTPUT_2, AUTO_OUTPUT_3, AUTO_OUTPUT_4, AUTO_OUTPUT_5, AUTO_OUTPUT_6, AUTO_OUTPUT_7, AUTO_OUTPUT_8, AUTO_OUTPUT_9])
 
+# Define low FPS filenames
+
+# Define participant 3 low fps filenames
+LOW_VIDEO_1 = "mahie_test_4_low_fps.avi"
+LOW_TIMESTAMP_1 = "mahie_test_4_low_fps_timestamps.txt"
+LOW_IDEAL_1 = "mahie_test_4_low_fps_ideal.csv"
+LOW_EAR_1 = "mahie_test_4_low_fps_ears.csv"
+LOW_MANUAL_OUTPUT_1 = "mahie_test_4_low_fps_manual.csv" 
+LOW_AUTO_OUTPUT_1 = "mahie_test_4_low_fps_auto.csv" 
+
+LOW_VIDEO_2 = "mahie_test_5_low_fps.avi"
+LOW_TIMESTAMP_2 = "mahie_test_5_low_fps_timestamps.txt"
+LOW_IDEAL_2 = "mahie_test_5_low_fps_ideal.csv"
+LOW_EAR_2 = "mahie_test_5_low_fps_ears.csv"
+LOW_MANUAL_OUTPUT_2 = "mahie_test_5_low_fps_manual.csv" 
+LOW_AUTO_OUTPUT_2 = "mahie_test_5_low_fps_auto.csv" 
+
+LOW_VIDEO_3 = "mahie_test_6_low_fps.avi"
+LOW_TIMESTAMP_3 = "mahie_test_6_low_fps_timestamps.txt"
+LOW_IDEAL_3 = "mahie_test_6_low_fps_ideal.csv"
+LOW_EAR_3 = "mahie_test_6_low_fps_ears.csv"
+LOW_MANUAL_OUTPUT_3 = "mahie_test_6_low_fps_manual.csv" 
+LOW_AUTO_OUTPUT_3 = "mahie_test_6_low_fps_auto.csv" 
+
+# Define participant 3 low fps filenames
+LOW_VIDEO_4 = "soniya_test_1.avi"
+LOW_TIMESTAMP_4 = "soniya_test_1_timestamps.txt"
+LOW_IDEAL_4 = "soniya_test_1_ideal.csv"
+LOW_EAR_4 = "soniya_test_1_ears.csv"
+LOW_MANUAL_OUTPUT_4 = "soniya_test_1_manual.csv" 
+LOW_AUTO_OUTPUT_4 = "soniya_test_1_auto.csv" 
+
+LOW_VIDEO_5 = "soniya_test_2.avi"
+LOW_TIMESTAMP_5 = "soniya_test_2_timestamps.txt"
+LOW_IDEAL_5 = "soniya_test_2_ideal.csv"
+LOW_EAR_5 = "soniya_test_2_ears.csv"
+LOW_MANUAL_OUTPUT_5 = "soniya_test_2_manual.csv" 
+LOW_AUTO_OUTPUT_5 = "soniya_test_2_auto.csv" 
+
+LOW_VIDEO_6 = "soniya_test_3.avi"
+LOW_TIMESTAMP_6 = "soniya_test_3_timestamps.txt"
+LOW_IDEAL_6 = "soniya_test_3_ideal.csv"
+LOW_EAR_6 = "soniya_test_3_ears.csv"
+LOW_MANUAL_OUTPUT_6 = "soniya_test_3_manual.csv" 
+LOW_AUTO_OUTPUT_6 = "soniya_test_3_auto.csv" 
+
+LOW_VIDEO_7 = "soniya_test_4_low_fps.avi"
+LOW_TIMESTAMP_7 = "soniya_test_4_low_fps_timestamps.txt"
+LOW_IDEAL_7 = "soniya_test_4_low_fps_ideal.csv"
+LOW_EAR_7 = "soniya_test_4_low_fps_ears.csv"
+LOW_MANUAL_OUTPUT_7 = "soniya_test_4_low_fps_manual.csv" 
+LOW_AUTO_OUTPUT_7 = "soniya_test_4_low_fps_auto.csv" 
+
+LOW_VIDEO_8 = "soniya_test_5_low_fps.avi"
+LOW_TIMESTAMP_8 = "soniya_test_5_low_fps_timestamps.txt"
+LOW_IDEAL_8 = "soniya_test_5_low_fps_ideal.csv"
+LOW_EAR_8 = "soniya_test_5_low_fps_ears.csv"
+LOW_MANUAL_OUTPUT_8 = "soniya_test_5_low_fps_manual.csv" 
+LOW_AUTO_OUTPUT_8 = "soniya_test_5_low_fps_auto.csv" 
+
+LOW_VIDEO_9 = "soniya_test_6_low_fps.avi"
+LOW_TIMESTAMP_9 = "soniya_test_6_low_fps_timestamps.txt"
+LOW_IDEAL_9 = "soniya_test_6_low_fps_ideal.csv"
+LOW_EAR_9 = "soniya_test_6_low_fps_ears.csv"
+LOW_MANUAL_OUTPUT_9 = "soniya_test_6_low_fps_manual.csv" 
+LOW_AUTO_OUTPUT_9 = "soniya_test_6_low_fps_auto.csv" 
+
+# Create arrays of filenames
+LOW_VIDEO_FILENAMES = np.array([LOW_VIDEO_1, LOW_VIDEO_2, LOW_VIDEO_3, LOW_VIDEO_4, LOW_VIDEO_5, LOW_VIDEO_6, LOW_VIDEO_7, LOW_VIDEO_8, LOW_VIDEO_9])
+LOW_TIMESTAMP_FILENAMES = np.array([LOW_TIMESTAMP_1, LOW_TIMESTAMP_2, LOW_TIMESTAMP_3, LOW_TIMESTAMP_4, LOW_TIMESTAMP_5, LOW_TIMESTAMP_6, LOW_TIMESTAMP_7, LOW_TIMESTAMP_8, LOW_TIMESTAMP_9])
+LOW_IDEAL_FILENAMES = np.array([LOW_IDEAL_1, LOW_IDEAL_2, LOW_IDEAL_3, LOW_IDEAL_4, LOW_IDEAL_5, LOW_IDEAL_6, LOW_IDEAL_7, LOW_IDEAL_8, LOW_IDEAL_9])
+LOW_EAR_FILENAMES = np.array([LOW_EAR_1, LOW_EAR_2, LOW_EAR_3, LOW_EAR_4, LOW_EAR_5, LOW_EAR_6, LOW_EAR_7, LOW_EAR_8, LOW_EAR_9])
+LOW_MANUAL_OUTPUT_FILENAMES = np.array([LOW_MANUAL_OUTPUT_1, LOW_MANUAL_OUTPUT_2, LOW_MANUAL_OUTPUT_3, LOW_MANUAL_OUTPUT_4, LOW_MANUAL_OUTPUT_5, LOW_MANUAL_OUTPUT_6, LOW_MANUAL_OUTPUT_7, LOW_MANUAL_OUTPUT_8, LOW_MANUAL_OUTPUT_9])
+LOW_AUTO_OUTPUT_FILENAMES = np.array([LOW_AUTO_OUTPUT_1, LOW_AUTO_OUTPUT_2, LOW_AUTO_OUTPUT_3, LOW_AUTO_OUTPUT_4, LOW_AUTO_OUTPUT_5, LOW_AUTO_OUTPUT_6, LOW_AUTO_OUTPUT_7, LOW_AUTO_OUTPUT_8, LOW_AUTO_OUTPUT_9])
+
 # Import the function to test
 from process_eye_metrics import process_eye
-from process_eye_metrics import process_eye_CNN
 
 def calculate_ears(video_filename,timestamp_filename,ear_filename):
     # Current directory
@@ -136,7 +210,7 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
             break
 
-        ear, _ = process_eye(frame)
+        ear = process_eye(frame)
         if ear is None:
             print(frame_idx)
         else:
@@ -153,7 +227,7 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
 
     print('Done')
 
-    return ear_list
+    return
 
 def test_manual(ear_filename, output_filename):
     # Paths
@@ -277,61 +351,6 @@ def test_auto(ear_filename,output_filename):
     print('Done')
 
     return
-
-# def test_CNN(video_filename,timestamp_filename,output_filename):
-#     # Current directory
-#     script_dir = os.path.dirname(os.path.abspath(__file__))
-
-#     # Tests folder
-#     tests_dir = os.path.join(script_dir, "..", "blink_test_files")
-
-#     # Full paths
-#     video_path = os.path.join(tests_dir, video_filename)   
-#     timestamp_path = os.path.join(tests_dir, timestamp_filename)
-#     output_path = os.path.join(tests_dir, output_filename)
-
-#     # Load timestamps
-#     if os.path.exists(timestamp_path):  # Check if the file exists
-#         with open(timestamp_path, "r") as json_file:
-#             timestamps_str = json.load(json_file)  # Load JSON data
-#         timestamps = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
-#     else:
-#         print("Timestamps file not found.")
-
-#     # Load test video
-#     cap = cv2.VideoCapture(video_path)
-#     if not cap.isOpened():
-#         print("Error: Cannot open video file.")
-#         return
-#     elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#         print("Timestamps or frames missing.")
-#         return
-#     else:
-#         print(f"Video has {len(timestamps)} frames/timestamps")
-    
-#     ''' CNN '''
-
-#     # Process each frame
-#     frame_idx = 0
-#     eyes_closed_list = []
-#     while cap.isOpened():
-#         ret, frame = cap.read()
-
-#         # Stop at last frame
-#         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#             break
-        
-#         eye, _ = process_eye_CNN(frame)
-#         eyes_closed_list.append(eye)
-
-#         # Increment frame counter        
-#         frame_idx += 1
-
-#      # Save output to CSV
-
-#     print('Done')
-
-#     return eyes_closed_list # No EAR list for CNN
 
 def calculate_metrics(ideal, eyes_closed_output):
     # Check arrays are same length
@@ -478,25 +497,41 @@ def pop(ideal_filename):
 # Test methods for each video
 
 for i in range(9):
+    print(VIDEO_FILENAMES[i])
+
     '''Calculate EAR at each frame, for all 9 videos'''
-    ear_list = calculate_ears(VIDEO_FILENAMES[i],TIMESTAMP_FILENAMES[i], EAR_FILENAMES[i])
+    calculate_ears(VIDEO_FILENAMES[i],TIMESTAMP_FILENAMES[i], EAR_FILENAMES[i])
 
     '''If outputs are 'no eye', re-record video with better lighting - alternatively if for only few frames, data may be cleaned'''
     # pop(IDEAL_FILENAMES[i])
 
-    '''Run manual thresholding (including threshold sweep)'''
+    # '''Run manual thresholding (including threshold sweep)'''
     test_manual(EAR_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
 
-    '''Run auto thresholding (including threshold sweep)'''
+    # '''Run auto thresholding (including threshold sweep)'''
     test_auto(EAR_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
-    '''Run CNN'''
-    # test_CNN(EAR_FILENAMES[i], CNN_OUTPUT_FILENAMES[i])
-
-    '''Test & Save Metrics for all'''
+    # '''Test & Save Metrics for all'''
     manual_metrics(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
     auto_metrics(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
     '''Segmented metrics - not discussed in report'''
-    manual_metrics_segmented(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
-    manual_metrics_segmented(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+    # manual_metrics_segmented(IDEAL_FILENAMES[i], MANUAL_OUTPUT_FILENAMES[i])
+    # manual_metrics_segmented(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
+
+# Run again for extra Low FPS vidoes
+for i in range(3,6):
+    print(LOW_VIDEO_FILENAMES[i])
+
+    '''Calculate EAR at each frame, for all 9 videos'''
+    calculate_ears(LOW_VIDEO_FILENAMES[i],LOW_TIMESTAMP_FILENAMES[i], LOW_EAR_FILENAMES[i])
+
+    '''Run manual thresholding (including threshold sweep)'''
+    test_manual(LOW_EAR_FILENAMES[i], LOW_MANUAL_OUTPUT_FILENAMES[i])
+
+    '''Run auto thresholding (including threshold sweep)'''
+    test_auto(LOW_EAR_FILENAMES[i], LOW_AUTO_OUTPUT_FILENAMES[i])
+
+    '''Test & Save Metrics for all'''
+    manual_metrics(LOW_IDEAL_FILENAMES[i], LOW_MANUAL_OUTPUT_FILENAMES[i])
+    auto_metrics(LOW_IDEAL_FILENAMES[i], LOW_AUTO_OUTPUT_FILENAMES[i])

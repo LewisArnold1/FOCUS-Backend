@@ -1,11 +1,8 @@
 from scipy.spatial import distance as dist
 
-
 class BlinkProcessor:
-    def __init__(self, eye_ar_consec_frames=2):
-        self.eye_ar_consec_frames = eye_ar_consec_frames
-        self.counter = 0
-        # self.total = 0
+    def __init__(self):
+        pass
 
     def eye_aspect_ratio(self, left_eye, right_eye):
         # Left Eye
@@ -24,7 +21,5 @@ class BlinkProcessor:
 
         return avg_EAR
     
-    def CNN(self, left_eye, right_eye):
-        eye_closed = 0 # Apply CNN to input frame
 
-        return eye_closed
+    
