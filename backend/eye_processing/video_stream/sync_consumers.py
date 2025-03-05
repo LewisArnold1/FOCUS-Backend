@@ -1,3 +1,9 @@
+# Synchronous (single-process) implementation of the WebSocket consumer for video streaming
+#
+# This uses `daphne` to run the ASGI application
+#
+# daphne backend.asgi:application
+
 import base64
 import json
 import urllib.parse
@@ -155,7 +161,7 @@ class VideoFrameConsumer(WebsocketConsumer):
                 # Adaptive thresholding for blink detection
                 if avg_ear < threshold and threshold != 0.0: # Blinks are only detected after the first 30 frames, in order to accurately calculate the correct threshold
                     blink_detected = True
-                    print("Blink detected at frame: ", self.total_frames)
+                    # print("Blink detected at frame: ", self.total_frames)
                 else:
                     blink_detected = False
                     # print("Blink not detected"

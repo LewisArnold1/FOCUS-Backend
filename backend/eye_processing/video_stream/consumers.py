@@ -1,3 +1,10 @@
+# Multi-process implementation of the WebSocket consumer for video streaming
+# This requires the use of `uvicorn` with the `--workers` flag to enable multi-process mode
+#
+# uvicorn backend.asgi:application --workers 8 # change no. of workers based on CPU availability
+#
+# Requires install using `pip install uvicorn[standard]`
+
 import base64
 import json
 import urllib.parse
@@ -9,9 +16,11 @@ import cv2
 import numpy as np
 from PIL import Image, UnidentifiedImageError
 import base64
+import pytz
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Max
+from django.utils import timezone
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()  # Ensure Django is initialised before importing Django modules
@@ -22,7 +31,6 @@ from eye_processing.eye_metrics.process_blinks import process_ears
 
 from asgiref.sync import sync_to_async
 from rest_framework_simplejwt.authentication import JWTAuthentication
-
 
 def encode_frame(frame):
     _, buffer = cv2.imencode('.jpg', frame)
@@ -43,7 +51,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
 
     ear_list = [] # List to store EAR values for adaptive thresholding
 
-    # Accept the WebSocket connection request after authenticating the user
     async def connect(self):
         query_string = self.scope['query_string'].decode('utf-8')
         print("Query string received:", query_string)
@@ -78,16 +85,15 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             print("Authentication failed:", e)
             await self.close()
             
-    # Safely disconnect the WebSocket connection, cleaning up any data stores
     async def disconnect(self, close_code):
         ## Performance testing
         # print(self.frames)
         # print(self.latencies)
         # self.frames.clear()
         # self.latencies.clear()
-        await self.close()
+        # await self.close()
+        return
 
-    # Obtains frame data from the received Websocket message
     async def receive(self, text_data):
         try:
             # Parse the received JSON message
@@ -99,11 +105,12 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             wpm = data_json.get('wpm', 0)
 
             ## Performance testing
-            self.total_frames = self.total_frames + 1
-            if(self.total_frames % 30 == 0):
-                print("Total Frames: ", self.total_frames)
-                latency = datetime.now() - datetime.fromtimestamp(timestamp/1000)
-                print("Latency: ", latency)
+            # self.total_frames = self.total_frames + 1
+            # if(self.total_frames % 30 == 0):
+                # print("Total Frames: ", self.total_frames)
+                # latency = datetime.now() - datetime.fromtimestamp(timestamp/1000)
+                # latency = timezone.make_aware(latency, pytz.UTC)
+                # print("Latency: ", latency)
             #     self.frames.append(self.total_frames)
             #     self.latencies.append(str(latency))
 
@@ -126,7 +133,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             print("Error processing frame:", e)
             await self.disconnect(1000)
 
-    # Process frame sent from reading page
     async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm):
         try:
             # Decode the incoming frame
@@ -137,6 +143,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             # Convert timestamp
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
+            timestamp_dt = timezone.make_aware(timestamp_dt, pytz.UTC)
 
             avg_ear = process_ears(frame) # Process EAR value for the current frame
 
@@ -192,7 +199,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 right_iris_velocity=right_iris_velocity, 
                 movement_type=movement_type,
             )
-            await sync_to_async(eye_metrics.save)()
+            await sync_to_async(eye_metrics.save, thread_sensitive=True)()
 
             ############################################################################# SVM classification for blink detection - No longer working under new FPS constraints (requires 30 FPS)
             # Get past frames within time_window * 2
@@ -276,7 +283,6 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
 
-    # Process frame sent from diagnostic page
     async def process_diagnostic_frame(self, frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye):
         try:
             # Decode the base64-encoded image
@@ -287,6 +293,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             # Convert the timestamp from milliseconds to a datetime object
             timestamp_s = timestamp / 1000
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
+            timestamp_dt = timezone.make_aware(timestamp_dt, pytz.UTC)
 
             # Call `process_eye` with visualisation options
             face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
