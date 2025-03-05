@@ -496,7 +496,7 @@ def pop(ideal_filename):
 
 # Test methods for each video
 
-for i in range(9):
+for i in range(2):
     print(VIDEO_FILENAMES[i])
 
     '''Calculate EAR at each frame, for all 9 videos'''
@@ -520,7 +520,7 @@ for i in range(9):
     # manual_metrics_segmented(IDEAL_FILENAMES[i], AUTO_OUTPUT_FILENAMES[i])
 
 # Run again for extra Low FPS vidoes
-for i in range(3,6):
+for i in range(9):
     print(LOW_VIDEO_FILENAMES[i])
 
     '''Calculate EAR at each frame, for all 9 videos'''
