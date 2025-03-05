@@ -8,44 +8,24 @@ sys.path.append(PROJECT_ROOT)
 try:
     from .face import FaceProcessor
     from .blinks import BlinkProcessor
-    from .iris import IrisProcessor
 except ImportError:
     from face import FaceProcessor
     from blinks import BlinkProcessor
-    from iris import IrisProcessor
 
 PREDICTOR_PATH = os.path.join(CURRENT_DIR, 'shape_predictor_68_face_landmarks.dat')
 
 face_processor = FaceProcessor(PREDICTOR_PATH)
 blink_processor = BlinkProcessor()
-iris_processor = IrisProcessor()
-
 
 def process_eye(frame):
     # Extract left and right eye landmarks
-    _, left_eye, right_eye, _ = face_processor.process_face(frame)
+    _, left_eye, right_eye = face_processor.process_face(frame)
     if left_eye is None or right_eye is None:
         print("No eye")
-        return 0, None
-
-    # Process pupil coordinates - ignored for blink test    
-    pupil = None
+        return
     
     # Calculate EAR
     ear = blink_processor.eye_aspect_ratio(left_eye, right_eye)
 
-    return ear, pupil
+    return ear
 
-def process_eye_CNN(frame):
-    # Extract left and right eye landmarks
-    _, left_eye, right_eye, _ = face_processor.process_face(frame)
-    if left_eye is None or right_eye is None:
-        print("No eye")
-        return 0, None
-
-    # Process pupil coordinates - ignored for blink test
-    pupil = None
-
-    closed = blink_processor.CNN(left_eye, right_eye)
-
-    return closed, pupil
