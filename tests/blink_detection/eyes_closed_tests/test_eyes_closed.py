@@ -227,7 +227,7 @@ def calculate_ears(video_filename,timestamp_filename,ear_filename):
 
     print('Done')
 
-    return ear_list
+    return
 
 def test_manual(ear_filename, output_filename):
     # Paths
@@ -351,61 +351,6 @@ def test_auto(ear_filename,output_filename):
     print('Done')
 
     return
-
-# def test_CNN(video_filename,timestamp_filename,output_filename):
-#     # Current directory
-#     script_dir = os.path.dirname(os.path.abspath(__file__))
-
-#     # Tests folder
-#     tests_dir = os.path.join(script_dir, "..", "blink_test_files")
-
-#     # Full paths
-#     video_path = os.path.join(tests_dir, video_filename)   
-#     timestamp_path = os.path.join(tests_dir, timestamp_filename)
-#     output_path = os.path.join(tests_dir, output_filename)
-
-#     # Load timestamps
-#     if os.path.exists(timestamp_path):  # Check if the file exists
-#         with open(timestamp_path, "r") as json_file:
-#             timestamps_str = json.load(json_file)  # Load JSON data
-#         timestamps = [datetime.strptime(ts, '%Y-%m-%d %H:%M:%S.%f') for ts in timestamps_str]  # Convert to datetime
-#     else:
-#         print("Timestamps file not found.")
-
-#     # Load test video
-#     cap = cv2.VideoCapture(video_path)
-#     if not cap.isOpened():
-#         print("Error: Cannot open video file.")
-#         return
-#     elif len(timestamps) != int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#         print("Timestamps or frames missing.")
-#         return
-#     else:
-#         print(f"Video has {len(timestamps)} frames/timestamps")
-    
-#     ''' CNN '''
-
-#     # Process each frame
-#     frame_idx = 0
-#     eyes_closed_list = []
-#     while cap.isOpened():
-#         ret, frame = cap.read()
-
-#         # Stop at last frame
-#         if not ret or frame_idx >= int(cap.get(cv2.CAP_PROP_FRAME_COUNT)):
-#             break
-        
-#         eye, _ = process_eye_CNN(frame)
-#         eyes_closed_list.append(eye)
-
-#         # Increment frame counter        
-#         frame_idx += 1
-
-#      # Save output to CSV
-
-#     print('Done')
-
-#     return eyes_closed_list # No EAR list for CNN
 
 def calculate_metrics(ideal, eyes_closed_output):
     # Check arrays are same length
@@ -555,7 +500,7 @@ for i in range(9):
     print(VIDEO_FILENAMES[i])
 
     '''Calculate EAR at each frame, for all 9 videos'''
-    ear_list = calculate_ears(VIDEO_FILENAMES[i],TIMESTAMP_FILENAMES[i], EAR_FILENAMES[i])
+    calculate_ears(VIDEO_FILENAMES[i],TIMESTAMP_FILENAMES[i], EAR_FILENAMES[i])
 
     '''If outputs are 'no eye', re-record video with better lighting - alternatively if for only few frames, data may be cleaned'''
     # pop(IDEAL_FILENAMES[i])
@@ -579,7 +524,7 @@ for i in range(3,6):
     print(LOW_VIDEO_FILENAMES[i])
 
     '''Calculate EAR at each frame, for all 9 videos'''
-    ear_list = calculate_ears(LOW_VIDEO_FILENAMES[i],LOW_TIMESTAMP_FILENAMES[i], LOW_EAR_FILENAMES[i])
+    calculate_ears(LOW_VIDEO_FILENAMES[i],LOW_TIMESTAMP_FILENAMES[i], LOW_EAR_FILENAMES[i])
 
     '''Run manual thresholding (including threshold sweep)'''
     test_manual(LOW_EAR_FILENAMES[i], LOW_MANUAL_OUTPUT_FILENAMES[i])
