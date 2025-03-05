@@ -32,6 +32,7 @@ from eye_processing.eye_metrics.process_blinks import process_ears
 from asgiref.sync import sync_to_async
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+
 def encode_frame(frame):
     _, buffer = cv2.imencode('.jpg', frame)
     return base64.b64encode(buffer).decode('utf-8')
@@ -105,12 +106,12 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             wpm = data_json.get('wpm', 0)
 
             ## Performance testing
-            # self.total_frames = self.total_frames + 1
-            # if(self.total_frames % 30 == 0):
-                # print("Total Frames: ", self.total_frames)
-                # latency = datetime.now() - datetime.fromtimestamp(timestamp/1000)
+            self.total_frames = self.total_frames + 1
+            if(self.total_frames % 30 == 0):
+                print("Total Frames: ", self.total_frames)
+                latency = datetime.now() - datetime.fromtimestamp(timestamp/1000)
                 # latency = timezone.make_aware(latency, pytz.UTC)
-                # print("Latency: ", latency)
+                print("Latency: ", latency)
             #     self.frames.append(self.total_frames)
             #     self.latencies.append(str(latency))
 
@@ -199,7 +200,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 right_iris_velocity=right_iris_velocity, 
                 movement_type=movement_type,
             )
-            await sync_to_async(eye_metrics.save, thread_sensitive=True)()
+            await sync_to_async(eye_metrics.save)()
 
             ############################################################################# SVM classification for blink detection - No longer working under new FPS constraints (requires 30 FPS)
             # Get past frames within time_window * 2
