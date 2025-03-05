@@ -1,5 +1,6 @@
 # blink_detection Test folder
 This folder contains files used to record videos and test the three blink detection methods defined in the Blink Detection paper.
+This folder requires the shape_predictor_68_face_landmarks.dat file on the same level to find facial landmarks using dlib.
 
 ## Folder Structure
 blink_detection Test Folder/
@@ -39,3 +40,6 @@ Stores all SVM classifiers created using the scikit learn library in eyes_closed
 This python file is used by participants to record their 1 minute videos used for testing.
 Videos and corresponding timestamps files are saved to the blink_test_files folder.
 
+
+
+shape_predictor_68_face_landmarks
