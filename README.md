@@ -11,10 +11,21 @@ Ensure the following are installed on your system:
 5. Git (for version control management)
 
 # Running the Backend Server
-Start the backend server using **Daphne** (ASGI):
+Start the backend server using **Uvicorn** (ASGI):
 
 ```
-daphne backend.asgi:application
+# Using one single process
+uvicorn backend.asgi:application
+```
+
+To run with multiple processes and benefit from multi-processing Websockets, use the flag `--workers` and specify the number of processes to launch.
+
+The number of workers you specify should not ideally exceed the number of logical processors you have. For example, for a 4-core 8-thread CPU with 8 logical processors, **8 worker processes** should be used.
+Please check the number of CPUs avaialable using Task Manager (Windows), `lscpu` command (Linux environments) or similar in Mac.
+
+```
+# If 8 logical CPUs are available
+uvicorn backend.asgi:application --workers 8
 ```
 
 ## PostgreSQL Setup Guide for Django
