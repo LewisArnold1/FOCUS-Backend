@@ -13,7 +13,7 @@ Ensure the following are installed on your system:
 # Running the Backend Server
 Start the backend server using **Uvicorn** (ASGI):
 
-```
+```bash
 # Using one single process
 uvicorn backend.asgi:application
 ```
@@ -23,7 +23,7 @@ To run with multiple processes and benefit from multi-processing Websockets, use
 The number of workers you specify should not ideally exceed the number of logical processors you have. For example, for a 4-core 8-thread CPU with 8 logical processors, **8 worker processes** should be used.
 Please check the number of CPUs avaialable using Task Manager (Windows), `lscpu` command (Linux environments) or similar in Mac.
 
-```
+```bash
 # If 8 logical CPUs are available
 uvicorn backend.asgi:application --workers 8
 ```
