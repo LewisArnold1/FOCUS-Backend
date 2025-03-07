@@ -179,3 +179,16 @@ CORS_EXPOSE_HEADERS = [
 # POSTGRES_LOCALLY = False
 if os.getenv('ENVIRONMENT') == 'production': # To setup the database in production
     DATABASES['default'] = dj_database_url.parse(os.getenv('DATABASE_URL'))
+    FRONTEND_URL = "https://focus-frontend-production.up.railway.app"
+else:
+    FRONTEND_URL = "http://localhost:5173"
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'apikey'
+EMAIL_HOST_PASSWORD = os.getenv('SEND_GRID_API_KEY') 
+
+DEFAULT_FROM_EMAIL = os.getenv('FROM_EMAIL')
