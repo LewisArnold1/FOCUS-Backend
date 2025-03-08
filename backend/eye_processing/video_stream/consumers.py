@@ -113,22 +113,27 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 # print("Latency: ", latency)
             #     self.frames.append(self.total_frames)
             #     self.latencies.append(str(latency))
+            if not frame_data:
+                return
 
             if mode == "reading":
                 x_coordinate_px = data_json.get('xCoordinatePx', None)
                 y_coordinate_px = data_json.get('yCoordinatePx', None)
-
-                if frame_data:
-                    await self.process_reading_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm)
+                await self.process_reading_frame(frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm)
 
             elif mode == "diagnostic":
-                draw_mesh = data_json.get('draw_mesh', False)
-                draw_contours = data_json.get('draw_contours', False)
-                show_axis = data_json.get('show_axis', False) 
-                draw_eye = data_json.get('draw_eye', False)
+                filter = data_json.get('filter', None)
+                if filter == "face":
+                    draw_mesh = data_json.get('draw_mesh', False)
+                    draw_contours = data_json.get('draw_contours', False)
+                    show_axis = data_json.get('show_axis', False) 
+                    draw_eye = data_json.get('draw_eye', False)
+                    await self.process_diagnostic_frame(frame_data, timestamp, filter, draw_mesh, draw_contours, show_axis, draw_eye)
 
-                if frame_data:
-                    await self.process_diagnostic_frame(frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye)
+                elif filter == "eye":
+                    zoom = data_json.get('zoom', False)
+                    await self.process_diagnostic_frame(frame_data, timestamp, filter, zoom)
+
         except Exception as e:
             print("Error processing frame:", e)
             await self.disconnect(1000)
@@ -283,7 +288,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)
 
-    async def process_diagnostic_frame(self, frame_data, timestamp, draw_mesh, draw_contours, show_axis, draw_eye):
+    async def process_diagnostic_frame(self, frame_data, timestamp, filter, **kwargs):
         try:
             # Decode the base64-encoded image
             image_data = base64.b64decode(frame_data.split(',')[1])
@@ -295,23 +300,54 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             timestamp_dt = datetime.fromtimestamp(timestamp_s)
             timestamp_dt = timezone.make_aware(timestamp_dt, pytz.UTC)
 
+            # Extract all parameters
+            draw_mesh = kwargs.get('draw_mesh', False)
+            draw_contours = kwargs.get('draw_contours', False)
+            show_axis = kwargs.get('show_axis', False)
+            draw_eye = kwargs.get('draw_eye', False)
+            zoom = kwargs.get('zoom', False)
+
             # Call `process_eye` with visualisation options
-            face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(frame, timestamp_dt, blink_detected=False, draw_mesh=draw_mesh, draw_contours=draw_contours, show_axis=show_axis, draw_eye=draw_eye)
+            face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame = process_eye(
+                frame, timestamp_dt, blink_detected=False, 
+                **{
+                    'draw_mesh': draw_mesh,
+                    'draw_contours': draw_contours,
+                    'show_axis': show_axis,
+                    'draw_eye': draw_eye,
+                    'filter': filter,
+                    'zoom': zoom
+                }
+            )
 
             # Encode the processed frame back to base64
             _, buffer = cv2.imencode('.jpg', diagnostic_frame)
             processed_frame_base64 = base64.b64encode(buffer).decode('utf-8')
 
-            # Send processed image back via WebSocket
-            await self.send(text_data=json.dumps({
-            "mode": "diagnostic",
-            "frame": f"data:image/jpeg;base64,{processed_frame_base64}",
-            "face_detected": face_detected,
-            "yaw": float(yaw) if yaw != None else None,
-            "pitch": float(pitch) if pitch != None else None,
-            "roll": float(roll) if roll != None else None,
-            "eye_speed": float(normalised_eye_speed) if normalised_eye_speed != None else None,
-            }))
+            # Prepare the WebSocket response based on the filter type
+            response_data = {
+                "mode": "diagnostic",
+                "frame": f"data:image/jpeg;base64,{processed_frame_base64}",
+                "face_detected": face_detected
+            }
+
+            if filter == "face":
+                response_data.update({
+                    "yaw": float(yaw) if yaw is not None else None,
+                    "pitch": float(pitch) if pitch is not None else None,
+                    "roll": float(roll) if roll is not None else None,
+                    "face_speed": float(normalised_eye_speed) if normalised_eye_speed is not None else None,
+                })
+            
+            elif filter == "eye":
+                response_data.update({
+                    "left_iris_velocity": float(left_iris_velocity) if left_iris_velocity is not None else None,
+                    "right_iris_velocity": float(right_iris_velocity) if right_iris_velocity is not None else None,
+                    "movement_type": movement_type if movement_type is not None else None
+                }
+
+            # Send the WebSocket response
+            await self.send(text_data=json.dumps(response_data))
 
         except (base64.binascii.Error, UnidentifiedImageError) as e:
             print("Error decoding image:", e)

@@ -53,7 +53,7 @@ class FaceProcessor:
         if draw_eye:
             self._draw_eye_annotations(frame, left_eye_pixels, right_eye_pixels, face_rect)
 
-        return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll, frame
+        return face_detected, left_eye_pixels, right_eye_pixels, normalised_eye_speed, yaw, pitch, roll, frame, face_rect
     
     def compute_face_axes(self, face_landmarks):
         # Extract key landmark positions (normalised coordinates)
