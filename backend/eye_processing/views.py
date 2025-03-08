@@ -400,10 +400,13 @@ class RetrieveReadingSpeedView(APIView):
             return Response({"error": "No valid reading sessions found."}, status=404)
 
         total_words_read = sum(session["total_words_read"] for session in session_reading_speeds)
-        total_time_weighted = sum(session["total_time"] for session in session_reading_speeds)
 
-        avg_wpm = (sum(session["average_wpm"] * (session["total_time"] / total_time_weighted)
-                       for session in session_reading_speeds) if total_time_weighted > 0 else None)
+        # Exclude sessions where WPM is None from the weighted average calculation
+        valid_sessions_for_wpm = [s for s in session_reading_speeds if s["average_wpm"] is not None]
+        total_time_wpm = sum(s["total_time"] for s in valid_sessions_for_wpm)
+
+        avg_wpm = (sum(s["average_wpm"] * (s["total_time"] / total_time_wpm)
+                   for s in valid_sessions_for_wpm) if total_time_wpm > 0 else None)
 
         response_data = {
             "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
