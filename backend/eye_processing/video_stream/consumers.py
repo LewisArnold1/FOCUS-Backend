@@ -344,7 +344,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                     "left_iris_velocity": float(left_iris_velocity) if left_iris_velocity is not None else None,
                     "right_iris_velocity": float(right_iris_velocity) if right_iris_velocity is not None else None,
                     "movement_type": movement_type if movement_type is not None else None
-                }
+                })
 
             # Send the WebSocket response
             await self.send(text_data=json.dumps(response_data))
