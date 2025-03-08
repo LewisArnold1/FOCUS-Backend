@@ -400,10 +400,13 @@ class RetrieveReadingSpeedView(APIView):
             return Response({"error": "No valid reading sessions found."}, status=404)
 
         total_words_read = sum(session["total_words_read"] for session in session_reading_speeds)
-        total_time_weighted = sum(session["total_time"] for session in session_reading_speeds)
 
-        avg_wpm = (sum(session["average_wpm"] * (session["total_time"] / total_time_weighted)
-                       for session in session_reading_speeds) if total_time_weighted > 0 else None)
+        # Exclude sessions where WPM is None from the weighted average calculation
+        valid_sessions_for_wpm = [s for s in session_reading_speeds if s['average_wpm'] != 0.0]
+        total_time_wpm = sum(s["total_time"] for s in valid_sessions_for_wpm)
+
+        avg_wpm = (sum(s["average_wpm"] * (s["total_time"] / total_time_wpm)
+                   for s in valid_sessions_for_wpm) if total_time_wpm > 0 else None)
 
         response_data = {
             "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
@@ -501,3 +504,139 @@ class RetrieveReadingSpeedView(APIView):
             indices = np.linspace(0, len(data) - 1, 50).astype(int)
             return [data[i] for i in indices]
         return data
+    
+class RetrieveEyeMovementMetricsView(APIView):
+    permission_classes = [IsAuthenticated]  
+
+    def get(self, request, *args, **kwargs):
+        display = request.query_params.get("display", "user")  
+        current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
+
+        if not current_session_id:
+            return Response({"error": "No session data found."}, status=400)
+
+        if display == "user":
+            return self.get_user_level_metrics(request.user)
+        elif display == "session":
+            return self.get_session_level_metrics(request.user, current_session_id)
+        elif display == "video":
+            current_video_id = SimpleEyeMetrics.objects.filter(
+                user=request.user, session_id=current_session_id
+            ).aggregate(Max('video_id'))['video_id__max']
+
+            if current_video_id is None:
+                return Response({"error": "No video data found."}, status=400)
+
+            return self.get_video_level_metrics(request.user, current_session_id, current_video_id)
+        else:
+            return Response({"error": "Invalid display parameter."}, status=400)
+
+    def get_user_level_metrics(self, user):
+        user_sessions = UserSession.objects.filter(user=user)
+
+        if not user_sessions.exists():
+            return Response({"error": "No sessions found for this user."}, status=404)
+
+        session_movement_data = []
+        for session in user_sessions:
+            fixation_count, saccade_count, total_time = self.get_session_level_metrics(user, session.session_id, weighted=True)
+            if fixation_count is not None:
+                session_movement_data.append((fixation_count, saccade_count, total_time))
+
+        total_time_weighted = sum(time for _, _, time in session_movement_data)
+
+        if session_movement_data and total_time_weighted > 0:
+            avg_fixation_count = sum(fix * (time / total_time_weighted) for fix, _, time in session_movement_data)
+            avg_saccade_count = sum(sac * (time / total_time_weighted) for _, sac, time in session_movement_data)
+
+            return Response({
+                "avg_fixation_count_per_session": round(avg_fixation_count, 2),
+                "avg_saccade_count_per_session": round(avg_saccade_count, 2),
+            }, status=200)
+
+        return Response({
+            "avg_fixation_count_per_session": None,
+            "avg_saccade_count_per_session": None,
+        }, status=200)
+
+    def get_session_level_metrics(self, user, session_id, weighted=False):
+        video_data = SimpleEyeMetrics.objects.filter(user=user, session_id=session_id).values('video_id').distinct()
+
+        video_movement_data = []
+        total_session_time = 0
+
+        for video in video_data:
+            video_id = video["video_id"]
+            fixation_count, saccade_count, video_time = self.get_video_level_metrics(user, session_id, video_id, weighted=True)
+            if fixation_count is not None:
+                video_movement_data.append((fixation_count, saccade_count, video_time))
+                total_session_time += video_time
+
+        if video_movement_data and total_session_time > 0:
+            avg_fixation_count = sum(fix * (time / total_session_time) for fix, _, time in video_movement_data)
+            avg_saccade_count = sum(sac * (time / total_session_time) for _, sac, time in video_movement_data)
+
+            if weighted:
+                return avg_fixation_count, avg_saccade_count, total_session_time
+
+            return Response({
+                "session_id": session_id,
+                "fixation_count": round(avg_fixation_count, 2),
+                "saccade_count": round(avg_saccade_count, 2),
+            }, status=200)
+
+        return None, None, 0
+
+    def get_video_level_metrics(self, user, session_id, video_id, weighted=False):
+        movement_records = SimpleEyeMetrics.objects.filter(
+            user=user, session_id=session_id, video_id=video_id
+        ).order_by("timestamp")
+
+        if not movement_records.exists():
+            return (None, None, 0) if weighted else Response({
+                "fixation_count": 0,
+                "saccade_count": 0
+            }, status=200)
+
+        fixation_count, saccade_count, total_time = self.calculate_fixation_saccade_count(movement_records)
+
+        if weighted:
+            return fixation_count, saccade_count, total_time
+
+        return Response({
+            "video_id": video_id,
+            "fixation_count": fixation_count,
+            "saccade_count": saccade_count,
+        }, status=200)
+
+    def calculate_fixation_saccade_count(self, movement_records, tolerance=1):
+        fixation_count = 0
+        saccade_count = 0
+        in_fixation = False
+        saccade_tolerance = 0  # Counter for tolerated saccades
+        total_time = 0  # Total time in minutes
+        prev_timestamp = None
+
+        for record in movement_records:
+            movement_type = record.movement_type  # Assuming 'fixation' or 'saccade'
+
+            if prev_timestamp:
+                time_diff = (record.timestamp - prev_timestamp).total_seconds() / 60  # Convert to minutes
+                total_time += time_diff
+
+            if movement_type == 'fixation':
+                if not in_fixation:
+                    fixation_count += 1  # Start new fixation
+                    in_fixation = True
+                saccade_tolerance = 0  # Reset tolerance counter
+
+            elif movement_type == 'saccade':
+                if in_fixation and saccade_tolerance < tolerance:
+                    saccade_tolerance += 1  # Allow a tolerated saccade within fixation
+                else:
+                    saccade_count += 1  # Count independent saccades
+                    in_fixation = False  # End fixation if tolerance is exceeded
+
+            prev_timestamp = record.timestamp
+
+        return fixation_count, saccade_count, total_time
