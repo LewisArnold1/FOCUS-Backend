@@ -1,5 +1,6 @@
 import cv2
 import os
+import traceback
 
 from .face import FaceProcessor
 from .iris import IrisProcessor
@@ -36,29 +37,35 @@ def process_eye(frame, timestamp_dt, blink_detected, **kwargs):
     
     focus = True
     left_centre, right_centre = None, None
+    left_iris_velocity, right_iris_velocity, movement_type = None, None, "None"
 
     if not blink_detected:
-        left_centre = iris_processor.process_iris(frame, left_eye)
-        right_centre = iris_processor.process_iris(frame, right_eye)
-        
-        if filter == "eye":
-            # Crop and draw pupil centers based on zoom mode
-            cropped_frame = None
-            if zoom:
-                # Crop around the eye region
-                cropped_frame = crop_around_eyes(frame, left_eye, right_eye)
-                draw_pupil_centers(cropped_frame, left_centre, right_centre)
-            else:
-                # Crop around the face region
-                cropped_frame = crop_around_face(frame, face_rect)
-                draw_pupil_centers(cropped_frame, left_centre, right_centre)
+        try:
+            left_centre = iris_processor.process_iris(frame, left_eye)
+            right_centre = iris_processor.process_iris(frame, right_eye)
+                    
+            if filter == "eye":
+                # Crop and draw pupil centers based on zoom mode
+                cropped_frame = None
+                if zoom:
+                    # Crop around the eye region
+                    cropped_frame = crop_around_eyes(frame, left_eye, right_eye)
+                    draw_pupil_centers(cropped_frame, left_centre, right_centre)
+                else:
+                    # Crop around the face region
+                    cropped_frame = crop_around_face(frame, face_rect)
+                    draw_pupil_centers(cropped_frame, left_centre, right_centre)
 
-            diagnostic_frame = cropped_frame
+                diagnostic_frame = cropped_frame
 
-        # Process fixations and saccades
-        left_iris_velocity, right_iris_velocity, movement_type = eye_movement_detector.process_eye_movements(
-            left_centre, right_centre, frame_width, frame_height, timestamp_dt
-        ) 
+                # Process fixations and saccades
+                left_iris_velocity, right_iris_velocity, movement_type = eye_movement_detector.process_eye_movements(
+                    left_centre, right_centre, frame_width, frame_height, timestamp_dt
+                )
+        except Exception as e:
+            print(f"Error: {e}")
+            print(traceback.format_exc())
+            return face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, None, None, "None", diagnostic_frame
 
     return face_detected, normalised_eye_speed, yaw, pitch, roll, left_centre, right_centre, focus, left_iris_velocity, right_iris_velocity, movement_type, diagnostic_frame
 

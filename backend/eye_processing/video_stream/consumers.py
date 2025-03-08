@@ -17,6 +17,7 @@ import numpy as np
 from PIL import Image, UnidentifiedImageError
 import base64
 import pytz
+import traceback
 
 from channels.generic.websocket import AsyncWebsocketConsumer
 from django.db.models import Max
@@ -113,6 +114,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 # print("Latency: ", latency)
             #     self.frames.append(self.total_frames)
             #     self.latencies.append(str(latency))
+            
             if not frame_data:
                 return
 
@@ -123,19 +125,26 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
 
             elif mode == "diagnostic":
                 filter = data_json.get('filter', None)
+                kwargs = {}
+
                 if filter == "face":
-                    draw_mesh = data_json.get('draw_mesh', False)
-                    draw_contours = data_json.get('draw_contours', False)
-                    show_axis = data_json.get('show_axis', False) 
-                    draw_eye = data_json.get('draw_eye', False)
-                    await self.process_diagnostic_frame(frame_data, timestamp, filter, draw_mesh, draw_contours, show_axis, draw_eye)
+                    kwargs = {
+                        "draw_mesh": data_json.get('draw_mesh', False),
+                        "draw_contours": data_json.get('draw_contours', False),
+                        "show_axis": data_json.get('show_axis', False),
+                        "draw_eye": data_json.get('draw_eye', False),
+                    }
 
                 elif filter == "eye":
-                    zoom = data_json.get('zoom', False)
-                    await self.process_diagnostic_frame(frame_data, timestamp, filter, zoom)
+                    kwargs = {
+                        "zoom": data_json.get('zoom', False),
+                    }
+
+                await self.process_diagnostic_frame(frame_data, timestamp, filter, **kwargs)
 
         except Exception as e:
             print("Error processing frame:", e)
+            print(traceback.format_exc())
             await self.disconnect(1000)
 
     async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm):
