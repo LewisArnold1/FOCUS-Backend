@@ -9,81 +9,174 @@ from django.utils.timezone import now
 
 from .models import SimpleEyeMetrics, UserSession
 
-class RetrieveLastBlinkRateView(APIView):
+class RetrieveBlinkRateView(APIView):
 
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
     
     def get(self, request, *args, **kwargs):
 
-        # Filter by user to retrieve the latest session ID and video ID
+        display = request.query_params.get("display", "user")
         current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
-        latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
+
+        if not current_session_id:
+            return Response({"error": "No session data found."}, status=400)
+
+        if display == "user":
+            return self.get_user_level_metrics(request.user)
+        elif display == "session":
+            return self.get_session_level_metrics(request.user, current_session_id)
+        elif display == "video":
+            current_video_id = SimpleEyeMetrics.objects.filter(
+                user=request.user, session_id=current_session_id
+            ).aggregate(Max('video_id'))['video_id__max']
+
+            if current_video_id is None:
+                return Response({"error": "No video data found."}, status=400)
+
+            return self.get_video_level_metrics(request.user, current_session_id, current_video_id)
+        else:
+            return Response({"error": "Invalid display parameter."}, status=400)
         
-        # Retrieve blink timestamps for blink rate calculation
+
+    def get_user_level_metrics(self, user):
+
+        user_sessions = UserSession.objects.filter(user=user)
+
+        if not user_sessions.exists():
+            return Response({"error": "No sessions found for this user."}, status=404)
+
+        session_blink_rates = []
+        for session in user_sessions:
+            session_rate, total_time = self.get_session_level_metrics(user, session.session_id, weighted=True)
+            if session_rate is not None:
+                session_blink_rates.append((session_rate, total_time))
+
+        # Compute weighted average blink rate
+        total_time_weighted = sum(time for _, time in session_blink_rates)
+        if session_blink_rates and total_time_weighted > 0:
+            avg_blink_rate = sum(rate * (time / total_time_weighted) for rate, time in session_blink_rates)
+            return Response({"avg_blink_rate_per_session": round(avg_blink_rate, 2)}, status=200)
+
+        return Response({"avg_blink_rate_per_session": None}, status=200)
+    
+    def get_session_level_metrics(self, user, session_id, weighted=False):
+        
+        video_data = SimpleEyeMetrics.objects.filter(user=user, session_id=session_id).values('video_id').distinct()
+
+        video_blink_rates = []
+        total_session_time = 0
+
+        for video in video_data:
+            video_id = video["video_id"]
+            video_rate, video_time = self.get_video_level_metrics(user, session_id, video_id, weighted=True)
+            if video_rate is not None:
+                video_blink_rates.append((video_rate, video_time))
+                total_session_time += video_time
+
+        # Compute weighted avg for session if needed
+        if video_blink_rates and total_session_time > 0:
+            avg_blink_rate = sum(rate * (time / total_session_time) for rate, time in video_blink_rates)
+            if weighted:
+                return avg_blink_rate, total_session_time  # Used for user-level aggregation
+            return None, 0
+
+        return None, 0
+    
+    def get_video_level_metrics(self, user, session_id, video_id, weighted=False):
         blink_records = SimpleEyeMetrics.objects.filter(
-            user=request.user, session_id=current_session_id, video_id=latest_video_id
+            user=user, session_id=session_id, video_id=video_id
         ).order_by('timestamp')
 
-        blink_rate = self.calculate_blink_rate(blink_records)
+        if not blink_records.exists():
+            return (None, 0) if weighted else Response({"blink_rate_over_time": []}, status=200)
 
-        # Only send blink_rate
-        data = {
-            "blink_rate": blink_rate  # Return only blink rate per minute as an array
-        }
-        
-        return Response(data, status=200)
+        blink_rate_over_time, total_video_time = self.calculate_blink_rate(blink_records)
+
+        if weighted:
+            avg_blink_rate = np.mean([rate["blink_rate"] for rate in blink_rate_over_time]) if blink_rate_over_time else None
+            return avg_blink_rate, total_video_time
+
+        # Downsample if necessary
+        blink_rate_over_time = self.downsample_data(blink_rate_over_time)
+
+        return Response({"blink_rate_over_time": blink_rate_over_time}, status=200)
     
-    def calculate_blink_rate(self, blink_timestamps):
-        """
-        Calculate blink rate per minute from blink timestamps.
-        Treats consecutive 1s as one blink until there is a 0.
-        """
-        if not blink_timestamps.exists():
-            return []
-
-        # Extract blink counts (0 or 1) per frame from the database
-        blink_counts = [entry.blink_count for entry in blink_timestamps]
-        
-        # Initialize variables
-        blink_rates = []  # Store the number of blinks per minute
-        blink_in_progress = False  # Flag to track ongoing blink
-        current_blink_count = 0  # Count of blinks in the current minute
-
-        start_time = blink_timestamps[0].timestamp
-        end_time = blink_timestamps[-1].timestamp
-
+    def calculate_blink_rate(self, blink_records):
+        blink_values = [entry.blink_detected for entry in blink_records]
+        blink_rate_over_time = []
+        total_time = 0  # Total video time in minutes
+        start_time = blink_records[0].timestamp
         current_time = start_time
         minute_blink_count = 0
 
-        # Loop through each timestamp and calculate blink rate
-        for index, blink in enumerate(blink_counts):
-            if blink == 1: 
-                if not blink_in_progress:  
-                    minute_blink_count += 1 
-                    blink_in_progress = True
-            else:  # Blink ended (0 detected)
-                blink_in_progress = False  # Reset the blink flag
+        # Count blinks only when there are at least 3 consecutive ones
+        i = 0
+        while i < len(blink_values) - 2:
+            if blink_values[i] == 1 and blink_values[i + 1] == 1 and blink_values[i + 2] == 1:
+                minute_blink_count += 1
+                # Skip to the end of this blink sequence to prevent overcounting
+                while i < len(blink_values) and blink_values[i] == 1:
+                    i += 1
+            else:
+                i += 1
 
-            # Check if the minute has passed (based on timestamp)
-            if blink_timestamps[index].timestamp >= current_time + timedelta(minutes=1):
+            # Check if the minute has passed
+            if (i - 1) >= 0 and (i - 1) < len(blink_records) and blink_records[i - 1].timestamp >= current_time + timedelta(minutes=1):
                 # Store the blink rate for the last minute
-                blink_rates.append(minute_blink_count)
-                # Move to the next minute
-                current_time = current_time + timedelta(minutes=1)
+                blink_rate_over_time.append({
+                    "timestamp": current_time.isoformat(),
+                    "blink_rate": minute_blink_count
+                })
+                total_time += 1  # Increment total video time
+                current_time += timedelta(minutes=1)
                 minute_blink_count = 0  # Reset for the new minute
 
-        # Make sure the last minute is added if there are remaining blinks
+        # Ensure last interval is recorded
         if minute_blink_count > 0:
-            blink_rates.append(minute_blink_count)
+            blink_rate_over_time.append({
+                "timestamp": current_time.isoformat(),
+                "blink_rate": minute_blink_count
+            })
+            total_time += 1
 
-        return blink_rates
+        return blink_rate_over_time, total_time 
     
-class RetrieveAllUserSessionsView(APIView):
+    def downsample_data(self, data):
+        if len(data) > 50:
+            indices = np.linspace(0, len(data) - 1, 50).astype(int)
+            return [data[i] for i in indices]
+        return data
+
+    
+class RetrieveReadingMetricsView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
 
     def get(self, request, *args, **kwargs):
+        display = request.query_params.get("display", "user")  
+        current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
+
+        if not current_session_id:
+            return Response({"error": "No session data found."}, status=400)
+
+        if display == "user":
+            return self.get_user_level_metrics(request.user)
+        elif display == "session":
+            return self.get_session_level_metrics(request.user, current_session_id)
+        elif display == "video":
+            current_video_id = SimpleEyeMetrics.objects.filter(
+                user=request.user, session_id=current_session_id
+                ).aggregate(Max('video_id'))['video_id__max']
+
+            if current_video_id is None:
+                return Response({"error": "No video data found."}, status=400)
+
+            return self.get_video_level_metrics(request.user, current_session_id, current_video_id)
+        else:
+            return Response({"error": "Invalid display parameter."}, status=400)
+
+    def get_user_level_metrics(self, user):
         # Retrieve all sessions for the authenticated user
-        user_sessions = UserSession.objects.filter(user=request.user)
+        user_sessions = UserSession.objects.filter(user=user)
 
         if not user_sessions.exists():
             return Response({"error": "No sessions found for this user."}, status=404)
@@ -91,34 +184,48 @@ class RetrieveAllUserSessionsView(APIView):
         # Prepare session data
         sessions_data = []
         for session in user_sessions:
-            total_reading_time, total_focus_time = self.calculate_total_session_times(request.user, session.session_id)
+            total_reading_time, total_focus_time = self.calculate_total_session_times(user, session.session_id)
 
-
-            # Get reading times for each video in this session
-            video_reading_times = SimpleEyeMetrics.objects.filter(
-                user=request.user, session_id=session.session_id
-            ).values('video_id').distinct()
-
-            # Format video reading times
-            video_data = [
-                {
-                    "video_id": video["video_id"],
-                    "total_reading_time": self.calculate_reading_time(request.user, session.session_id, video["video_id"]),
-                    "total_focus_time": self.calculate_focus_time(request.user, session.session_id, video["video_id"]),
-                }
-                for video in video_reading_times
-            ]
-
-            # Add session details to the response
             sessions_data.append({
                 "session_id": session.session_id,
-                "total_reading_time": total_reading_time,
-                "total_focus_time": total_focus_time,
-                "videos": video_data,
+                "total_reading_time": total_reading_time.total_seconds() / 60,
+                "total_focus_time": total_focus_time.total_seconds() / 60,
             })
 
-        # Return all sessions data
+        # Downsample to 50 points
+        if len(sessions_data) > 50:
+            indices = np.linspace(0, len(sessions_data) - 1, 50).astype(int)
+            sessions_data = [sessions_data[i] for i in indices]
+
         return Response({"sessions": sessions_data}, status=200)
+
+
+    def get_session_level_metrics(self, user, session_id):
+        # Get reading times for each video in this session
+        video_data = SimpleEyeMetrics.objects.filter(user=user, session_id=session_id).values('video_id').distinct()
+
+        video_metrics = []
+        for video in video_data:
+            video_id = video["video_id"]
+            reading_time = self.calculate_reading_time(user, session_id, video_id)
+            focus_time = self.calculate_focus_time(user, session_id, video_id)
+
+            video_metrics.append({
+                "video_id": video_id,
+                "total_reading_time": reading_time.total_seconds() / 60,
+                "total_focus_time": focus_time.total_seconds() / 60,
+            })
+
+        return Response({"videos": video_metrics}, status=200)
+    
+    def get_video_level_metrics(self, user, session_id, video_id):
+        reading_time = self.calculate_cumulative_time(user, session_id, video_id, "reading_time")
+        focus_time = self.calculate_cumulative_time(user, session_id, video_id, "focus_time")
+
+        return Response({
+            "cumulative_reading_time": reading_time,
+            "cumulative_focus_time": focus_time,
+        }, status=200)
 
     def calculate_reading_time(self, user, session_id, video_id):
         # Get the earliest and latest timestamps for the session and video
@@ -171,6 +278,36 @@ class RetrieveAllUserSessionsView(APIView):
             weighted_focus_time += video_focus_time
 
         return total_reading_time, weighted_focus_time
+    
+    def calculate_cumulative_time(self, user, session_id, video_id, time_field):
+        records = SimpleEyeMetrics.objects.filter(
+            user=user, session_id=session_id, video_id=video_id
+        ).order_by("timestamp")
+
+        if not records:
+            return []
+
+        cumulative_time = []
+        total_time = 0  # Total minutes
+        prev_timestamp = None
+
+        for record in records:
+            if prev_timestamp:
+                time_diff = (record.timestamp - prev_timestamp).total_seconds() / 60  # Convert to minutes
+
+                if time_field == "reading_time":
+                    total_time += time_diff  # Always accumulate time
+                elif time_field == "focus_time" and record.focus:
+                    total_time += time_diff  # Only accumulate if focused
+
+            cumulative_time.append({
+                "timestamp": record.timestamp.isoformat(),
+                "cumulative_time": total_time
+            })
+
+            prev_timestamp = record.timestamp  # Update for next iteration
+
+        return cumulative_time
     
 class RetrieveBreakCheckView(APIView):
 
@@ -225,38 +362,107 @@ class RetrieveReadingSpeedView(APIView):
     permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
 
     def get(self, request, *args, **kwargs):
-        # Get latest session and video ID
+        display = request.query_params.get("display", "user")
         current_session_id = SimpleEyeMetrics.objects.filter(user=request.user).aggregate(Max('session_id'))['session_id__max']
-        latest_video_id = SimpleEyeMetrics.objects.filter(user=request.user, session_id=current_session_id).aggregate(Max('video_id'))['video_id__max']
 
-        if current_session_id is None or latest_video_id is None:
-            return Response({"error": "No session or video data found."}, status=400)
+        if not current_session_id:
+            return Response({"error": "No session data found."}, status=400)
 
-        # Fetch relevant reading records (only modes 2, 3, 4)
+        if display == "user":
+            return self.get_user_level_metrics(request.user)
+        elif display == "session":
+            return self.get_session_level_metrics(request.user, current_session_id)
+        elif display == "video":
+            current_video_id = SimpleEyeMetrics.objects.filter(
+                user=request.user, session_id=current_session_id, reading_mode__in=[2, 3, 4]
+            ).aggregate(Max('video_id'))['video_id__max']
+
+            if current_video_id is None:
+                return Response({"error": "No valid reading videos found."}, status=400)
+
+            return self.get_video_level_metrics(request.user, current_session_id, current_video_id)
+        else:
+            return Response({"error": "Invalid display parameter."}, status=400)
+
+    def get_user_level_metrics(self, user):
+        user_sessions = UserSession.objects.filter(user=user)
+
+        if not user_sessions.exists():
+            return Response({"error": "No sessions found for this user."}, status=404)
+
+        session_reading_speeds = []
+        for session in user_sessions:
+            session_metrics = self.get_session_level_metrics(user, session.session_id, weighted=True)
+            if session_metrics:
+                session_reading_speeds.append(session_metrics)
+
+        if not session_reading_speeds:
+            return Response({"error": "No valid reading sessions found."}, status=404)
+
+        total_words_read = sum(session["total_words_read"] for session in session_reading_speeds)
+        total_time_weighted = sum(session["total_time"] for session in session_reading_speeds)
+
+        avg_wpm = (sum(session["average_wpm"] * (session["total_time"] / total_time_weighted)
+                       for session in session_reading_speeds) if total_time_weighted > 0 else None)
+
+        response_data = {
+            "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
+            "total_words_read": round(total_words_read, 2),
+            "sessions": session_reading_speeds
+        }
+
+        response_data["sessions"] = self.downsample_data(response_data["sessions"])
+        return Response(response_data, status=200)
+
+    def get_session_level_metrics(self, user, session_id, weighted=False):
+        video_data = SimpleEyeMetrics.objects.filter(
+            user=user, session_id=session_id, reading_mode__in=[2, 3, 4]
+        ).values('video_id').distinct()
+
+        if not video_data.exists():
+            return None if weighted else Response({"error": "No valid reading videos found in this session."}, status=404)
+
+        video_reading_speeds = []
+        for video in video_data:
+            video_metrics = self.get_video_level_metrics(user, session_id, video["video_id"], weighted=True)
+            if video_metrics:
+                video_reading_speeds.append(video_metrics)
+
+        total_words_read = sum(video["total_words_read"] for video in video_reading_speeds)
+        total_time_weighted = sum(video["total_time"] for video in video_reading_speeds)
+
+        avg_wpm = (sum(video["average_wpm"] * (video["total_time"] / total_time_weighted)
+                       for video in video_reading_speeds) if total_time_weighted > 0 else None)
+
+        session_metrics = {
+            "session_id": session_id,
+            "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
+            "total_words_read": round(total_words_read, 2),
+            "total_time": total_time_weighted
+        }
+
+        if weighted:
+            return session_metrics
+
+        return Response({"videos": video_reading_speeds, **session_metrics}, status=200)
+
+    def get_video_level_metrics(self, user, session_id, video_id, weighted=False):
         reading_records = SimpleEyeMetrics.objects.filter(
-            user=request.user,
-            session_id=current_session_id,
-            video_id=latest_video_id,
-            reading_mode__in=[2, 3, 4]
+            user=user, session_id=session_id, video_id=video_id, reading_mode__in=[2, 3, 4]
         ).order_by("timestamp")
 
         if not reading_records.exists():
-            return Response({
+            return None if weighted else Response({
                 "total_words_read": None,
                 "average_wpm": None,
                 "reading_speed_over_time": None
             }, status=200)
 
-        # Calculate reading speed metrics
-        reading_speed_metrics = self.calculate_reading_speed_metrics(reading_records)
-
-        return Response(reading_speed_metrics, status=200)
-
-    def calculate_reading_speed_metrics(self, reading_records):
         total_words_read = 0
         reading_speed_over_time = []
         total_wpm = []
         prev_timestamp = None
+        total_time = 0
 
         for record in reading_records:
             if record.wpm is not None:
@@ -266,6 +472,7 @@ class RetrieveReadingSpeedView(APIView):
                     time_diff = (record.timestamp - prev_timestamp).total_seconds() / 60  # Convert to minutes
                     words_read = record.wpm * time_diff
                     total_words_read += words_read
+                    total_time += time_diff
 
                     reading_speed_over_time.append({
                         "timestamp": record.timestamp.isoformat(),
@@ -276,8 +483,21 @@ class RetrieveReadingSpeedView(APIView):
 
         avg_wpm = np.mean(total_wpm) if total_wpm else None
 
-        return {
-            "total_words_read": round(total_words_read, 2),
+        video_metrics = {
+            "video_id": video_id,
             "average_wpm": round(avg_wpm, 2) if avg_wpm is not None else None,
-            "reading_speed_over_time": reading_speed_over_time
+            "total_words_read": round(total_words_read, 2),
+            "total_time": total_time
         }
+
+        if weighted:
+            return video_metrics
+
+        video_metrics["reading_speed_over_time"] = self.downsample_data(reading_speed_over_time)
+        return Response(video_metrics, status=200)
+
+    def downsample_data(self, data):
+        if len(data) > 50:
+            indices = np.linspace(0, len(data) - 1, 50).astype(int)
+            return [data[i] for i in indices]
+        return data
