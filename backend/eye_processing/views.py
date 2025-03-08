@@ -402,7 +402,7 @@ class RetrieveReadingSpeedView(APIView):
         total_words_read = sum(session["total_words_read"] for session in session_reading_speeds)
 
         # Exclude sessions where WPM is None from the weighted average calculation
-        valid_sessions_for_wpm = [s for s in session_reading_speeds if s["average_wpm"] is not None]
+        valid_sessions_for_wpm = [s for s in session_reading_speeds if s['average_wpm'] != 0.0]
         total_time_wpm = sum(s["total_time"] for s in valid_sessions_for_wpm)
 
         avg_wpm = (sum(s["average_wpm"] * (s["total_time"] / total_time_wpm)
