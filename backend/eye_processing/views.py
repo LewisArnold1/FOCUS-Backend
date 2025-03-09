@@ -68,7 +68,7 @@ class RetrieveBlinkRateView(APIView):
             if video_rate is not None:
                 video_blink_rates.append({
                     "video_id": video_id,
-                    "weighted_blink_rate": round(video_rate, 2)
+                    "blink_rate": round(video_rate, 2)
                 })
 
         if not video_blink_rates:
