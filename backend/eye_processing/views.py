@@ -55,6 +55,7 @@ class RetrieveBlinkRateView(APIView):
         total_time_weighted = sum(time for _, time in session_blink_rates)
         if session_blink_rates and total_time_weighted > 0:
             avg_blink_rate = sum(rate * (time / total_time_weighted) for rate, time in session_blink_rates)
+            print(avg_blink_rate)
             return Response({"avg_blink_rate_per_session": round(avg_blink_rate, 2)}, status=200)
 
         return Response({"avg_blink_rate_per_session": None}, status=200)
@@ -65,6 +66,7 @@ class RetrieveBlinkRateView(APIView):
 
         video_blink_rates = []
         total_session_time = 0
+        avg_blink_rate = 0
 
         for video in video_data:
             video_id = video["video_id"]
@@ -73,14 +75,16 @@ class RetrieveBlinkRateView(APIView):
                 video_blink_rates.append((video_rate, video_time))
                 total_session_time += video_time
 
+        if len(video_blink_rates) == 0:
+            return (None, 0) if weighted else Response({"blink_rate_over_time": []}, status=200)
+
         # Compute weighted avg for session if needed
         if video_blink_rates and total_session_time > 0:
             avg_blink_rate = sum(rate * (time / total_session_time) for rate, time in video_blink_rates)
             if weighted:
                 return avg_blink_rate, total_session_time  # Used for user-level aggregation
-            return None, 0
-
-        return None, 0
+            
+        return Response({"avg_blink_rate_per_video": avg_blink_rate}, status=200)
     
     def get_video_level_metrics(self, user, session_id, video_id, weighted=False):
         blink_records = SimpleEyeMetrics.objects.filter(

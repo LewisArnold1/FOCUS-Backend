@@ -144,7 +144,7 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
 
         except Exception as e:
             print("Error processing frame:", e)
-            print(traceback.format_exc())
+            # print(traceback.format_exc())
             await self.disconnect(1000)
 
     async def process_reading_frame(self, frame_data, timestamp, x_coordinate_px, y_coordinate_px, reading_mode, wpm):
@@ -197,6 +197,8 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 session_id=session_id,
                 video_id=self.video_id, # Associate current videoID
                 timestamp=timestamp_dt,
+                reading_mode=reading_mode,
+                wpm=wpm,
                 gaze_x=x_coordinate_px,
                 gaze_y=y_coordinate_px,
                 face_detected=face_detected,
