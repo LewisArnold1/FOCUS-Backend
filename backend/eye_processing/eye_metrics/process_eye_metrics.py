@@ -41,20 +41,22 @@ def process_eye(frame, timestamp_dt, blink_detected, **kwargs):
 
     if not blink_detected:
         try:
-            left_centre = iris_processor.process_iris(frame, left_eye)
-            right_centre = iris_processor.process_iris(frame, right_eye)
+            _, _, left_centre = iris_processor.process_iris(frame, left_eye)
+            _, _, right_centre = iris_processor.process_iris(frame, right_eye)
                     
             if filter == "eye":
-                # Crop and draw pupil centers based on zoom mode
                 cropped_frame = None
+                left_eye_bbox = (min(left_eye[:, 0]), min(left_eye[:, 1]), max(left_eye[:, 0]) - min(left_eye[:, 0]), max(left_eye[:, 1]) - min(left_eye[:, 1]))
+                right_eye_bbox = (min(right_eye[:, 0]), min(right_eye[:, 1]), max(right_eye[:, 0]) - min(right_eye[:, 0]), max(right_eye[:, 1]) - min(right_eye[:, 1]))
+
                 if zoom:
                     # Crop around the eye region
                     cropped_frame = crop_around_eyes(frame, left_eye, right_eye)
-                    draw_pupil_centers(cropped_frame, left_centre, right_centre)
+                    draw_pupil_centers(cropped_frame, zoom, left_centre, right_centre, left_eye_bbox, right_eye_bbox)
                 else:
                     # Crop around the face region
                     cropped_frame = crop_around_face(frame, face_rect)
-                    draw_pupil_centers(cropped_frame, left_centre, right_centre)
+                    draw_pupil_centers(cropped_frame, zoom, left_centre, right_centre, left_eye_bbox, right_eye_bbox)
 
                 diagnostic_frame = cropped_frame
 
@@ -94,9 +96,32 @@ def crop_around_eyes(frame, left_eye, right_eye, padding=20):
     cropped = frame[y_min:y_max, x_min:x_max]
     return cropped
 
-def draw_pupil_centers(frame, left_centre, right_centre, radius=6, thickness=2):
-    if left_centre is not None:
-        cv2.circle(frame, left_centre, radius, (0, 255, 0), thickness, lineType=cv2.LINE_AA)
-    if right_centre is not None:
-        cv2.circle(frame, right_centre, radius, (0, 0, 255), thickness, lineType=cv2.LINE_AA)
+def draw_pupil_centers(frame, zoom, left_centre, right_centre, left_eye_bbox, right_eye_bbox, radius=6, thickness=2, padding=20):
+    if zoom:
+        left_full_x, left_full_y, right_full_y, right_full_x =  None, None, None, None
+
+        if left_centre is not None:
+            left_full_x = left_centre[0] + padding
+            left_full_y = left_centre[1] + padding
+            cv2.circle(frame, (left_full_x, left_full_y), radius, (0, 255, 0), thickness, lineType=cv2.LINE_AA)
+
+        if right_centre is not None:
+            # Get the shift between the right and left eyes
+            eye_shift_x = right_eye_bbox[0] - left_eye_bbox[0]
+            eye_shift_y = right_eye_bbox[1] - left_eye_bbox[1]
+
+            right_full_x = right_centre[0] + padding + eye_shift_x
+            right_full_y = right_centre[1] + padding + eye_shift_y
+            cv2.circle(frame, (right_full_x, right_full_y), radius, (0, 0, 255), thickness, lineType=cv2.LINE_AA)
+
+    else:
+        if left_centre is not None:
+            left_full_x = left_centre[0] + left_eye_bbox[0]
+            left_full_y = left_centre[1] + left_eye_bbox[1]
+            cv2.circle(frame, (left_full_x, left_full_y), radius, (0, 255, 0), thickness, lineType=cv2.LINE_AA)
+
+        if right_centre is not None:
+            right_full_x = right_centre[0] + right_eye_bbox[0]
+            right_full_y = right_centre[1] + right_eye_bbox[1]
+            cv2.circle(frame, (right_full_x, right_full_y), radius, (0, 0, 255), thickness, lineType=cv2.LINE_AA)
 
