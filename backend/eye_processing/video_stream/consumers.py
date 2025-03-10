@@ -212,6 +212,8 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
                 left_iris_velocity=left_iris_velocity,
                 right_iris_velocity=right_iris_velocity, 
                 movement_type=movement_type,
+                reading_mode=reading_mode,
+                wpm=wpm
             )
             await sync_to_async(eye_metrics.save, thread_sensitive=True)()
 
