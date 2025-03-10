@@ -108,10 +108,10 @@ class VideoFrameConsumer(AsyncWebsocketConsumer):
             ## Performance testing
             # self.total_frames = self.total_frames + 1
             # if(self.total_frames % 30 == 0):
-                # print("Total Frames: ", self.total_frames)
-                # latency = datetime.now() - datetime.fromtimestamp(timestamp/1000)
-                # latency = timezone.make_aware(latency, pytz.UTC)
-                # print("Latency: ", latency)
+            #     print("Total Frames: ", self.total_frames)
+            #     timestamp_calc = datetime.fromtimestamp(timestamp / 1000, tz=pytz.UTC)
+            #     latency = timezone.now() - timestamp_calc
+            #     print("Latency: ", latency)
             #     self.frames.append(self.total_frames)
             #     self.latencies.append(str(latency))
             
